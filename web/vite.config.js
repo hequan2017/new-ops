@@ -5,14 +5,12 @@ import { loadEnv } from 'vite'
 import vuePlugin from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import VueFilePathPlugin from './vitePlugin/componentName/index.js'
-import { svgBuilder } from 'vite-auto-import-svg'
+import { svgBuilder } from './vitePlugin/svgBuilder/index.js'
 import vueRootValidator from 'vite-check-multiple-dom'
-import { AddSecret } from './vitePlugin/secret'
 import UnoCSS from '@unocss/vite'
 
 // @see https://cn.vitejs.dev/config/
 export default ({ mode }) => {
-  AddSecret('')
   const env = loadEnv(mode, process.cwd())
   viteLogo(env)
 
@@ -64,9 +62,9 @@ export default ({ mode }) => {
       target: 'es2015',
       rolldownOptions: {
         output: {
-          entryFileNames: 'assets/087AC4D233B64EB0[name].[hash].js',
-          chunkFileNames: 'assets/087AC4D233B64EB0[name].[hash].js',
-          assetFileNames: 'assets/087AC4D233B64EB0[name].[hash].[ext]'
+          entryFileNames: 'assets/baize-[name].[hash].js',
+          chunkFileNames: 'assets/baize-[name].[hash].js',
+          assetFileNames: 'assets/baize-[name].[hash].[ext]'
         }
       }
     },
@@ -75,7 +73,7 @@ export default ({ mode }) => {
       vueDevTools({ launchEditor: env.VITE_EDITOR }),
       vuePlugin(),
       svgBuilder(['./src/plugin/', './src/assets/icons/'], base, outDir, 'assets', mode),
-      [Banner(`\n Build based on new-ops \n Time : ${timestamp}`)],
+      [Banner(`\n Build based on BaiZe (白泽) · new-ops \n Time : ${timestamp}`)],
       VueFilePathPlugin('./src/pathInfo.json'),
       UnoCSS(),
       vueRootValidator()
