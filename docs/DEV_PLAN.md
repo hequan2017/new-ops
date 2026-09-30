@@ -2,7 +2,7 @@
 
 > 底座：[gin-vue-admin](https://github.com/flipped-aurora/gin-vue-admin) `main`（e8d675c, 2026-09-20，v2.9.2-stable 之后版本）
 > 目标：把本人历史上散落的运维开发平台/工具的功能，整合到一个**插件化的统一运维开发平台**里，一次开发、长期维护。
-> 文档版本：v1.0（2026-09-30）
+> 文档版本：v1.1（2026-09-30，新增第六节专项计划：Agent / Docker 管理 / K8s 管理）
 
 ---
 
@@ -82,7 +82,7 @@
 1. **一切业务皆 GVA 插件**：`server/plugin/<name>` + `web/src/plugin/<name>`，底座目录尽量零修改，保证后续能合并上游 main。已有插件体系（`plugin/announcement`、`plugin/email`、`plugin/plugin-tool`）即模板。
 2. **CMDB 是唯一数据心脏**：主机、凭据、产品线、机房等基础数据只存一份，term/job/pipeline/container/k8s/gpu 全部引用资产表外键。
 3. **安全红线**：凭据 AES-256-GCM 加密落库、API 永不回显明文；WebSSH 会话可审计（命令记录/录像，参考 go-webssh）；全部写操作进 GVA 操作日志；跳板/终端链路支持主机公钥指纹校验。
-4. **先直连后 Agent**：M1-M5 直接用 SSH / Docker API / K8s API 直连（历史项目验证过的路线）；M6 起引入轻量 Go Agent（参考 quan-agent 的只读 Skill 设计）做采集与执行代理。
+4. **先直连后 Agent**：M1-M5 直接用 SSH / Docker API / K8s API 直连（历史项目验证过的路线）；随后引入轻量 Go Agent（参考 quan-agent 的只读 Skill 设计）做采集与执行代理，并作为 Docker/K8s 管理的第二种接入形态，分期见「六、专项开发计划」。
 5. **实时通道统一**：WebSocket（终端/日志 tail）与 SSE（流水线日志，参考 new-jenkins）统一封装在底座网关层，业务插件只注册 channel。
 
 ### 3.2 架构总览
@@ -129,11 +129,11 @@
 - 触发器：cron / webhook / 工单发版审批通过自动触发
 - 发布目标绑定资产与凭据（打通 asset）
 
-**P1 — container 容器管理**
+**P1 — container 容器管理**（分期细化见第六节 C1-C3）
 - Docker 接入点纳管（unix/TCP+TLS）、连通巡检（GPU 系列成熟代码）
 - 容器列表/启停/删除/日志流/exec 交互终端（ai-devops）、镜像/网络/卷管理
 
-**P1 — k8s 集群管理**
+**P1 — k8s 集群管理**（分期细化见第六节 K1-K4）
 - 多集群接入（kubeconfig 加密存储+连接池）、Namespace/Node/工作负载(Deployment/StatefulSet/DaemonSet 扩缩容与滚动重启)/Pod 列表详情日志
 - Pod WebShell（seal 验证过的路线）、集群/节点/Pod 指标、AI 故障诊断（状态+事件+日志喂 LLM，docker-gpu-manage 已验证）
 - 命名空间级 RBAC（全局/集群/命名空间三级）
@@ -171,12 +171,14 @@
 | **M1 资产中心** | asset 插件：资产 CRUD/采集三通道/凭据保险库/产品线机房/导入导出/数据权限 | 2-3 周 | SSH 采集回填资产；凭据密文存储且接口不回显 |
 | **M2 终端作业** | term + job：WebSSH/级联/审计/SFTP/日志 tail、批量命令脚本变量组 | 2-3 周 | 浏览器经跳板连终端且留审计；百台批量执行不雪崩 |
 | **M3 流水线** | pipeline：引擎迁移自 new-jenkins + 工单发版闭环 | 2 周 | webhook 触发→审批→发布→SSE 日志全链路 |
-| **M4 容器与 K8s** | container + k8s：Docker 全家桶、多集群/Pod WebShell/AI 诊断/三级 RBAC | 3 周 | 两套真实环境纳管通过 |
+| **M4 容器与 K8s（一期）** | container(C1) + k8s(K1,K2)：Docker 生命周期/镜像/网络/卷/事件订阅、多集群注册、Node/工作负载/Pod WebShell | 3 周 | 两套真实环境纳管通过 |
 | **M5 GPU 算力** | gpu：节点/规格/实例/防超卖/HAMi/跳板机 | 3 周 | 按规格开通虚拟 GPU 实例并可达资源上限 |
 | **M6 数据库与监控** | dbops + monitor：goInception 工单、采集告警钉钉 | 2 周 | SQL 工单审批上线留备份；告警触达钉钉 |
 | **M7 工单与 AI** | workflow + org + aiops：工单引擎、钉钉登录同步、MCP 巡检 | 2 周 | 钉钉扫码登录可用；MCP 工具可被 AI 助手调用 |
+| **M8 容器与 K8s（二期）** | container(C2,C3) + k8s(K3)：Compose/镜像库联动、Helm、三级 RBAC、AI 诊断、GPU 资源视图 | 2-3 周 | Helm 安装/回滚可用；命名空间级权限生效 |
+| **M9 Agent 通道** | agent(A1,A2,A3)：反向长连接、采集上报、执行代理、流水线远程执行器 | 3 周 | Agent 注册/心跳/采集闭环；流水线可在 Agent 主机执行且工作空间隔离 |
 
-M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M4-M5 替代 Docker/K8s/GPU 系列；之后旧仓库逐一归档标注"功能已并入 new-ops"。
+M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M4-M5 替代 Docker/K8s/GPU 系列；M8-M9 补齐容器二期与 Agent 通道；之后旧仓库逐一归档标注"功能已并入 new-ops"。全计划合计约 22-23 周。
 
 ### M1 任务清单（细化到可开工）
 
@@ -202,10 +204,93 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 ---
 
-## 六、目录结构规划（新增部分）
+## 六、专项开发计划（Agent / Docker 管理 / K8s 管理）
+
+三个专项的关系：**Agent 是 Docker/K8s 管理的第二种接入形态**（SSH/Docker API/K8s API 直连之外），也是指标采集与远程执行的统一通道；Docker 节点与 K8s 集群均挂在 asset 资产体系之下，凭据统一走凭据保险库。
+
+### 6.1 Agent（独立二进制 `agent/` + 底座 Agent 网关）
+
+**定位**：单文件 Go 二进制（go:embed 内嵌资源、无外部依赖，quan-agent 验证过的模式），Linux x86_64/arm64 优先，Windows 次之。
+
+**通信设计**：
+- 出站长连接（WebSocket，复用底座实时网关与鉴权中间件）——解决 NAT/防火墙后节点平台不可达的核心痛点；
+- 认证：注册 Token 绑定资产 ID，TLS 必选、mTLS 可选；主机公钥指纹校验（accept-new，quan-agent 模式）；
+- 四类消息：注册 → 心跳（30s）→ 任务下发/结果回传 → 指标上报；断线重连 <10s，消息幂等（任务 ID 去重）。
+
+**安全红线**：默认只读 Skill 集（系统概览/CPU 负载/内存/磁盘 inode/systemd 异常/TCP-UDP 监听/Docker 状态，直接对齐 quan-agent 七个 Skill）；执行类任务按资产组授权并全量审计；自动升级需签名校验。
+
+**分期**：
+| 阶段 | 内容 | 前置 |
+|---|---|---|
+| **A1** | 注册/心跳/系统指标采集（CPU/内存/磁盘/网络/负载），资产页展示 Agent 在线状态；monitor 的性能采集从分钟级 SSH 主动采集升级为秒级上报 | M9 |
+| **A2** | 执行代理：job 插件批量命令/脚本支持 SSH / Agent 双执行后端可选；文件分发 | M9 |
+| **A3** | 流水线远程执行器：Pipeline step 可指定在资产/Agent 主机上执行，工作空间按构建隔离——解决 new-jenkins README 声明的"执行器跑在服务进程主机、无工作空间隔离"边界 | M9 |
+| **A4** | 容器/K8s Agent 模式：代理所在主机 Docker socket 与集群内 ServiceAccount（一键 Deployment YAML），作为 C3/K4 的内网纳管通道 | M8 后 |
+
+**数据模型**：`agent_instance`(asset_id, version, os/arch, labels, status, last_heartbeat, token_hash)、`agent_task`(下发/结果/超时/重试)；server 侧新增 Agent 网关模块（连接注册表 + 消息路由），不新建插件。
+
+**验收**：单实例 server 承载 100 Agent 并发心跳与指标上报；Agent 崩溃/断网不影响 server；升级幂等可回滚。
+
+### 6.2 Docker 管理（插件 container，分期 C1-C3）
+
+**功能来源**：ai-devops（容器/镜像/网络/卷/exec 终端）、GPU 系列（TLS 接入点/巡检）、docker-gpu-manage（端口转发）、DockerGPU（状态回写）。
+
+**C1（M4，随一期交付）**
+- [ ] 接入点管理：endpoint CRUD（unix socket / TCP+TLS），TLS 证书走凭据保险库，定时连通巡检（30s 合并巡检，tianqi 模式）
+- [ ] 容器全生命周期：列表/详情/启动/停止/重启/删除（联动数据卷清理）；创建容器支持镜像、端口映射、环境变量、挂载、CPU/内存限制、重启策略
+- [ ] 日志流（tail -f over WebSocket）与 exec 交互终端（exec + hijack 桥接 WebSocket，窗口自适应，ai-devops 已验证）
+- [ ] 状态一致性：操作后 inspect 回写（DockerGPU 模式）+ docker events 事件订阅实时同步
+
+**C2（M8）**
+- [ ] 镜像管理：列表/拉取（进度流）/删除/tag/导入导出，与 gpu 镜像库联动
+- [ ] 网络与卷：network 创建（子网/IPAM）、volume 列表与清理、端口转发规则管理（TCP/UDP、启停开关，docker-gpu-manage）
+- [ ] 资源统计：docker stats（CPU/内存/网络/块 IO）接入 monitor 图表化
+- [ ] Compose：compose 文件上传与校验、up/down/ps
+
+**C3（M8+）**
+- [ ] 模板化一键部署：应用模板（compose + 参数渲染）
+- [ ] Agent 模式接入（联动 A4）：内网 Docker 节点纳管
+- [ ] 节点池统一：Docker 节点为 asset 资产子类型，GPU 节点 = 带显卡标签的 Docker 节点——避免 GPU 系列历史上多套节点表的问题
+
+**数据模型**：`docker_endpoint`、`docker_container`（关联 asset 主机）；镜像/网络/卷实时查询不落库，仅缓存。
+
+**验收**：真实 3 节点（含 1 台 TLS）纳管；容器写操作全部进审计；exec 终端 30 分钟不断流。
+
+### 6.3 K8s 管理（插件 k8s，分期 K1-K4）
+
+**功能来源**：seal（Pod WebSSH）、ai-devops（接入+诊断）、docker-gpu-manage（多集群/工作负载/三级 RBAC）、autoops（资源概览）。
+
+**K1（M4）**
+- [ ] 集群注册：kubeconfig 上传（AES-256-GCM 落库、凭据保险库）、连接测试、连接池与超时管理（docker-gpu-manage 模式）
+- [ ] 集群总览：版本/API Server/节点数/资源用量（metrics-server）、Namespace 列表
+- [ ] Node 管理：列表/详情（allocatable/capacity/conditions/taints）、cordon/uncordon/drain
+
+**K2（M4）**
+- [ ] 工作负载：Deployment/StatefulSet/DaemonSet 列表/详情/YAML 查看、扩缩容、滚动重启、YAML 编辑下发（diff 预览确认）
+- [ ] Pod：多 namespace 列表/详情（容器状态+事件）/日志（实时流+下载）/WebShell（多容器 subprotocol 选择，seal 路线）/删除
+- [ ] 配置资源：ConfigMap/Secret（值脱敏展示）/PVC/Service/Ingress/Event
+
+**K3（M8）**
+- [ ] Helm：chart 仓库管理、release 安装/升级/回滚/卸载（values 表单 + YAML 双模式）
+- [ ] 三级 RBAC 落地：全局/集群/命名空间授权模型（casbin 资源规则扩展），普通用户仅见授权 namespace
+- [ ] AI 诊断：Pod 异常状态+事件+日志片段 → LLM 分析与修复建议（docker-gpu-manage 已验证，经 aiops 模型网关）
+- [ ] GPU 资源视图：节点 GPU 型号与分配情况（DevicePlugin 指标），与 gpu 插件联动
+
+**K4（M8+，可选）**
+- [ ] Agent 模式纳管（联动 A4）：内网集群经 k8s-agent 反向连接
+- [ ] 应用商店（YAML/CRD 模板库）、对接 K8s audit webhook
+
+**数据模型**：`k8s_cluster`(name, kubeconfig_cipher, labels, status)、namespace 授权表（cluster_id, namespace, user/role）；资源对象实时查询不落库。
+
+**验收**：两套真实集群纳管（含 1 个内网集群走 K4）；Pod WebShell/日志流 30 分钟稳定；删除类接口全部二次确认 + 审计。
+
+---
+
+## 七、目录结构规划（新增部分）
 
 ```
 new-ops/
+├── agent/                       # M9 专项：轻量 Go Agent（独立二进制，反向连接 server）
 ├── server/
 │   ├── plugin/                  # GVA 既有插件机制
 │   │   ├── announcement/ email/ plugin-tool/ auto/   (上游自带)
@@ -225,18 +310,19 @@ new-ops/
 
 ---
 
-## 七、风险与对策
+## 八、风险与对策
 
 | 风险 | 对策 |
 |---|---|
 | 上游 GVA main 演进导致合并冲突 | 底座零修改原则；业务全在 plugin/ 目录；每季度合并一次上游 tag |
 | 单人维护 15+ 插件摊子过大 | 严格按里程碑交付，P3/远期插件不提前开工；每个插件 M 完成即发布 tag |
 | WebSSH/终端类功能的安全责任重 | 凭据加密+审计回放+指纹校验三项安全红线不裁剪；README 明示安全边界（沿袭 new-jenkins 做法） |
-| SSH/Docker/K8s 直连在大规模下不稳 | M1-M5 直连上限明确写文档；Agent 执行器作为 M6 后的硬性演进项 |
+| SSH/Docker/K8s 直连在大规模下不稳 | M1-M5 直连上限明确写文档；Agent 通道按第六节分期落地（M9 执行器 + A4 Agent 模式纳管内网节点） |
 | 旧平台数据结构差异大 | 只迁移核心资产表，历史数据留旧库存档，新平台不背历史包袱 |
 
 ---
 
-## 八、决议记录
+## 九、决议记录
 
 - 2026-09-30：确定以 gin-vue-admin main（e8d675c）为底座新建仓库 `new-ops`，本计划为第一版；功能盘点基于本人 GitHub 各仓库 README（当日版本）。
+- 2026-09-30（v1.1）：新增第六节「Agent / Docker 管理 / K8s 管理」专项开发计划；里程碑扩展至 M9（合计约 22-23 周）；目录结构增加独立 `agent/` 二进制工程。
