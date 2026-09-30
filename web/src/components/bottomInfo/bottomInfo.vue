@@ -14,7 +14,7 @@ Licensed under the Apache License, Version 2.0. See the repository LICENSE file.
         <a
           class="font-bold text-active"
           href="https://github.com/hequan2017/new-ops"
-          >new-ops</a
+          >白泽 BaiZe</a
         >
       </span>
     </div>
@@ -25,7 +25,7 @@ Licensed under the Apache License, Version 2.0. See the repository LICENSE file.
         <a
           class="font-bold text-active"
           href="https://github.com/hequan2017"
-          >hequan2017团队</a
+          >hequan2017</a
         >
       </span>
     </div>
@@ -38,8 +38,8 @@ Licensed under the Apache License, Version 2.0. See the repository LICENSE file.
   })
 
   console.log(
-    `%c powered by %c hequan2017e %c`,
-    'background:#0081ff; padding: 1px; border-radius: 3px 0 0 3px; color: #fff',
+    `%c powered by %c 白泽 BaiZe %c`,
+    'background:#4f46e5; padding: 1px; border-radius: 3px 0 0 3px; color: #fff',
     'background:#354855; padding: 1px 5px; border-radius: 0 3px 3px 0; color: #fff; font-weight: bold;',
     'background:transparent'
   )

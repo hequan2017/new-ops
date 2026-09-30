@@ -6,9 +6,9 @@
       >
         <div class="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p class="text-xs tracking-[0.2em] text-slate-500 dark:text-slate-400">NEW-OPS</p>
+            <p class="text-xs tracking-[0.2em] text-slate-500 dark:text-slate-400">BAIZE · NEW-OPS</p>
             <h1 class="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100 lg:text-2xl">
-              欢迎使用 new-ops · 统一运维开发平台
+              欢迎使用 白泽 · 统一运维开发平台
             </h1>
             <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
               {{ today }} · 项目正在开发中，业务功能按里程碑逐步交付

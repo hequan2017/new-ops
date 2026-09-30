@@ -6,7 +6,7 @@ import packageInfo from '../../package.json'
 const greenText = (text) => `\x1b[32m${text}\x1b[0m`
 
 export const config = {
-  appName: 'new-ops',
+  appName: '白泽',
   showViteLogo: true,
   keepAliveTabs: false,
   logs: []
@@ -16,7 +16,7 @@ export const viteLogo = (env) => {
   if (config.showViteLogo) {
     console.log(
       greenText(
-        `> 欢迎使用new-ops，开源地址：https://github.com/hequan2017/new-ops`
+        `> 欢迎使用白泽（BaiZe）· 统一运维开发平台，开源地址：https://github.com/hequan2017/new-ops`
       )
     )
     console.log(greenText(`> 当前版本:v${packageInfo.version}`))

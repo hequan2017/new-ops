@@ -11,8 +11,8 @@ const props = defineProps({
   }
 })
 
-const darkLogoPath = "/logo.png";  // 系统没有暗黑模式logo，如果需要暗黑模式logo请自行修改文件路径。
-const lightLogoPath = "/logo.png";
+const darkLogoPath = "/logo.svg"; // 白泽品牌 logo（SVG，明暗两用）
+const lightLogoPath = "/logo.svg";
 
 const appStore = useAppStore();
 const { isDark } = storeToRefs(appStore);
@@ -44,13 +44,13 @@ watchEffect(async () => {
     return
   }
 
-  // 到这里就包没有提供两种 logo 了
+  // 到这里就说明没有提供 logo 了
   showTextPlaceholder.value = true;
   console.error(
-    '错误: 在公共目录中找不到logo.png（或logo-dark.png）。'
+    '错误: 在公共目录中找不到logo.svg。'
   );
   console.warn(
-    '解决方案: 请在您的公共目录(/public)中放置logo.png和/或logo-dark.png文件，或确保路径正确。'
+    '解决方案: 请在您的公共目录(/public)中放置logo.svg文件，或确保路径正确。'
   );
 });
 
@@ -68,15 +68,12 @@ function getSize() {
   <img v-if="!showTextPlaceholder && logoSrc" :src="logoSrc" :alt="$NEW_OPS.appName" class="object-contain"
     :style="{
       ...getSize()
-    }" :class="{
-      'filter invert-[90%] hue-rotate-180 brightness-110':
-        isDark && logoSrc === '/logo.png',
     }" />
   <div v-else-if="showTextPlaceholder"
     class="rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-gray-700 dark:text-gray-200 font-bold text-xs"
     :style="{
       ...getSize()
     }">
-    OPS
+    白泽
   </div>
 </template>

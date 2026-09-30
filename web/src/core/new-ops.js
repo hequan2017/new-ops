@@ -10,7 +10,7 @@ export default {
   install: (app) => {
     register(app)
     console.log(`
-       欢迎使用 new-ops
+       欢迎使用 白泽（BaiZe）· 统一运维开发平台
        当前版本:v${packageInfo.version}
        项目地址：https://github.com/hequan2017/new-ops
        默认自动化文档地址:http://127.0.0.1:${import.meta.env.VITE_SERVER_PORT}/swagger/index.html
