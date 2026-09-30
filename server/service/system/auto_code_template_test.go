@@ -9,6 +9,9 @@ import (
 )
 
 func Test_autoCodeTemplate_Create(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过依赖全局配置的集成测试")
+	}
 	type args struct {
 		ctx  context.Context
 		info request.AutoCode
@@ -31,6 +34,9 @@ func Test_autoCodeTemplate_Create(t *testing.T) {
 }
 
 func Test_autoCodeTemplate_Preview(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过依赖全局配置的集成测试")
+	}
 	type args struct {
 		ctx  context.Context
 		info request.AutoCode

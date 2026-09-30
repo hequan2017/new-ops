@@ -270,8 +270,8 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 - [ ] docker-compose（mysql+redis+server+web）与 Makefile（dev/build/push）
 - [ ] GitHub Actions CI：push 触发 server(go build/vet/test) + web(build)
 - [ ] config.yaml 分环境（dev/prod）、凭据主密钥环境变量化
-- [ ] docs/plugin-dev-guide.md 插件开发规范（目录结构、注册、菜单/API/casbin 初始化脚本、代码生成器配合）
-- [ ] asset/term/job/pipeline/container/k8s/gpu/dbops/monitor/workflow 插件骨架目录与占位注册
+- [x] docs/plugin-dev-guide.md 插件开发规范（目录结构、注册、菜单/API/casbin 初始化脚本、代码生成器配合）
+- [x] asset/term/job/pipeline/container/k8s/gpu/dbops/monitor/workflow 插件骨架目录与占位注册
 
 ### M1 任务清单（细化到可开工）
 
@@ -527,3 +527,4 @@ web/src/plugin/asset/
 | 2026-09-30 | 人工 | 品牌化：中文名定为「白泽 BaiZe」，自制 SVG logo、站点名/登录页/仪表盘/横幅/文档全面应用 | 10-01 上午场 M0 开工 |
 | 2026-09-30 | 人工 | deploy-test.sh 升级为一键部署：全新安装（自动建库+随机密码）与增量更新同命令，参数化可部署任意机器；双路径实测通过 | 10-01 上午场 M0 开工 |
 | 2026-09-30 | 人工 | 强制移除底部技术支持标识/全站水印/授权引导（bottomInfo 删除、watermark 摘除、购买授权文案清理）；仪表盘新增「关于版权标识与授权」展示卡片 | 10-01 上午场 M0 开工 |
+| 2026-09-30 | 人工 | **M0 全量完成**：example 移除（文件管理保留）、10 插件骨架注册、CI、Makefile、config 分环境、插件开发规范；修复 utils/ast 测试污染源文件问题（-short 隔离） | 10-01 上午场 M1 开工（凭据保险库 + SSH 采集） |

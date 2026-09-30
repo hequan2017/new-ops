@@ -7,6 +7,9 @@ import (
 )
 
 func TestPluginEnter_Injection(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过会修改源码文件的 AST 集成测试")
+	}
 	type fields struct {
 		Type            Type
 		Path            string

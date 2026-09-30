@@ -10,6 +10,9 @@ import (
 )
 
 func Test_autoCodePackage_Create(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过依赖全局配置的集成测试")
+	}
 	type args struct {
 		ctx  context.Context
 		info *request.SysAutoCodePackageCreate
@@ -53,6 +56,9 @@ func Test_autoCodePackage_Create(t *testing.T) {
 }
 
 func Test_autoCodePackage_templates(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过依赖全局配置的集成测试")
+	}
 	type args struct {
 		ctx       context.Context
 		entity    model.SysAutoCodePackage

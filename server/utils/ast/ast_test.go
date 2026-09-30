@@ -12,6 +12,9 @@ import (
 )
 
 func TestAst(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过依赖全局配置的集成测试")
+	}
 	filename := filepath.Join(global.GVA_CONFIG.AutoCode.Root, global.GVA_CONFIG.AutoCode.Server, "plugin", "gva", "plugin.go")
 	fileSet := token.NewFileSet()
 	file, err := parser.ParseFile(fileSet, filename, nil, parser.ParseComments)
