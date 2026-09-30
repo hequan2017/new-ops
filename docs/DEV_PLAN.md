@@ -2,7 +2,7 @@
 
 > 底座：[gin-vue-admin](https://github.com/flipped-aurora/gin-vue-admin) `main`（e8d675c, 2026-09-20，v2.9.2-stable 之后版本）
 > 目标：把本人历史上散落的运维开发平台/工具的功能，整合到一个**插件化的统一运维开发平台**里，一次开发、长期维护。
-> 文档版本：v1.1（2026-09-30，新增第六节专项计划：Agent / Docker 管理 / K8s 管理）
+> 文档版本：v1.2（2026-09-30，深度优化：M0/M2/M3 任务清单、每场 2 小时会话执行协议、核心数据模型汇总、质量门禁、开发日志）
 
 ---
 
@@ -161,6 +161,32 @@
 
 **远期**：pxe（IP 池/PXE/IPMI/Redfish 装机，pcfarm-admin 移植）、pcdn（边缘节点与带宽统计）、kb（运维知识库，autoops）、qa（设备验收/压测烤机，model-ops）、train（训练平台拆分）
 
+### 3.4 核心数据模型汇总
+
+统一约定：业务表使用 GVA 代码生成器惯例字段（id/created_at/updated_at/deleted_at）；资产类业务通过 `asset_id` 外键挂到资产中心；数据权限统一由 casbin 资源规则实现，不各写一套。
+
+| 插件 | 核心表 | 关键字段 / 说明 |
+|---|---|---|
+| asset | asset_host | hostname/ip/os/cpu/mem/disk/sn/vendor/room_id/rack/u_pos/status/owner |
+| | asset_product_line（+主机多对多） | name/level/owner |
+| | asset_room / asset_rack | 区域、机柜容量与在用 |
+| | asset_group / asset_host_group | 数据权限授权单元 |
+| | cred_credential | type(ssh密码/私钥/云AK/DockerTLS/kubeconfig)、cipher(AES-256-GCM)、明文末4位、引用计数 |
+| | asset_collect_record | 采集来源(ssh/云/agent)、原始JSON、时间 |
+| term | term_session / term_command_log | 资产/用户/起止/录像文件路径；命令、时间、风险等级 |
+| job | job_script / job_variable_group / job_exec_record | 类型(shell/py/yml)与版本；变量组↔资产；状态/结果/耗时 |
+| pipeline | pipeline / pipeline_stage / pipeline_step / pipeline_build / build_log | 定义三层模型；构建序号/状态机/参数快照/触发方式；日志按 stdout/stderr/system |
+| container | docker_endpoint / docker_container | 地址/TLS凭据ID/巡检状态；endpoint_id/容器ID/关联资产 |
+| k8s | k8s_cluster / k8s_ns_grant | kubeconfig 密文/labels/状态；cluster+namespace↔user/role |
+| gpu | gpu_node / gpu_spec / gpu_image / gpu_instance | 节点(资产ID/显卡/可用余量)；规格(型号/数量/定价)；实例(状态/端口/HAMi 参数) |
+| dbops | dbops_instance / dbops_order | 实例与账号(密文)；SQL 工单(goInception 结果/环境/状态) |
+| monitor | monitor_metric / monitor_alert_rule / monitor_alert_event | 指标(asset_id/name/value/ts)；规则(阈值/持续/通知渠道)；事件 |
+| workflow | wf_definition / wf_instance / wf_task | 状态机定义(husky 模型)；实例/当前节点/审批人/结论 |
+| org | org_dingtalk_config / org_sync_record | corpid/凭据；同步批次 |
+| agent | agent_instance / agent_task | 见第七节 6.1 |
+
+**设计红线**：凭据表只存密文与末 4 位；删除默认软删除；变更历史统一 `*_history` 表（asset 先行，其余插件随 M2 起跟进）。
+
 ---
 
 ## 四、里程碑
@@ -180,6 +206,16 @@
 
 M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M4-M5 替代 Docker/K8s/GPU 系列；M8-M9 补齐容器二期与 Agent 通道；之后旧仓库逐一归档标注"功能已并入 new-ops"。全计划合计约 22-23 周。
 
+### M0 任务清单（细化到可开工）
+
+- [ ] 仓库品牌化：README 改写（项目定位+DEV_PLAN 链接）、web 标题/Logo、首次登录强制改密提示
+- [ ] 移除 example 演示模块路由与菜单（保留代码生成器模板本身）
+- [ ] docker-compose（mysql+redis+server+web）与 Makefile（dev/build/push）
+- [ ] GitHub Actions CI：push 触发 server(go build/vet/test) + web(build)
+- [ ] config.yaml 分环境（dev/prod）、凭据主密钥环境变量化
+- [ ] docs/plugin-dev-guide.md 插件开发规范（目录结构、注册、菜单/API/casbin 初始化脚本、代码生成器配合）
+- [ ] asset/term/job/pipeline/container/k8s/gpu/dbops/monitor/workflow 插件骨架目录与占位注册
+
 ### M1 任务清单（细化到可开工）
 
 - [ ] 定稿资产表/产品线/机房/凭据表模型与 ER 图
@@ -191,6 +227,34 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 - [ ] 数据权限：资产组 + Casbin 资源规则
 - [ ] 单元测试 + Swagger 注释 + 插件开发规范文档
 
+### M2 任务清单
+
+- [ ] 底座 WebSocket 网关与鉴权中间件；xterm.js 终端组件封装（重连/自适应/心跳）
+- [ ] WebSSH 连接管理：密码/私钥/keyboard-interactive、ProxyJump 级联≤5 层、主机指纹校验
+- [ ] 会话审计：命令抽取落库 + 全量录像文件 + 审计回放页
+- [ ] SFTP 文件浏览器（列表/上传/下载/删除）
+- [ ] 批量执行：并发池（上限/超时/取消）、脚本库 CRUD+版本、变量组关联资产
+- [ ] 远程日志 tail、CIDR 网段发现一键导入资产
+
+### M3 任务清单
+
+- [ ] pipeline/stage/step 三层模型表与 CRUD、前端编排页
+- [ ] 执行器：构建状态机、参数校验与变量替换、人工审批 gate、并行阶段、continue_on_error
+- [ ] SSE 日志网关 + 构建日志落库分页拉取
+- [ ] 触发器：cron（注册到底座定时任务）/webhook/手动
+- [ ] 工单发版闭环：workflow 审批通过事件钩子 → 自动触发流水线
+- [ ] 构建历史：即时取消、复用历史参数重跑
+
+### 开发会话执行协议（每场 2 小时，完成即提交）
+
+自动化任务与人工开发均按此节奏执行：
+
+1. **开场（5 分钟）**：读 DEV_PLAN、`git log --oneline -20`、`git status`；从当前里程碑任务清单取未勾选项作为本场范围，按 M0→M1→…→M9 顺序推进，先收尾上一场未完成项。
+2. **开发（约 100 分钟）**：小步提交，一个功能单元一个 commit（conventional commits，中文描述）；后端每步 `go build ./...` 且 `go vet ./...` 干净，关键逻辑带单测；前端改动跑 `npm run build` 验证。**main 任何时刻保持可编译**，禁止把编译不过的状态推送上去。
+3. **收尾（15 分钟）**：勾选 DEV_PLAN 完成项 → 在「开发日志」表追加一行（日期/场次/完成/下一步）→ `git commit` → `git push origin main`（失败重试 1 次，仍失败则报告原始错误留待人工）。**每场结束必须完成至少一次成功的 commit+push，硬性要求。**
+4. **未完成项**：任务清单复选框旁标注"进行中：<断点说明>"，下一场从断点接续；宁小勿烂，不追求一场做完整个里程碑。
+5. **每场完成定义（DoD）**：代码 + 编译通过 + 关键单测 + Swagger 注释 + 菜单/API/casbin 初始化脚本（随插件 migration 提交）+ DEV_PLAN 勾选与开发日志更新 + push 成功。
+
 ---
 
 ## 五、关键设计决策
@@ -201,6 +265,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 4. **GPU 防超卖**：节点可用量 = 物理规格 - Σ(运行实例规格)，分配时行级锁 + 事务；HAMi 虚拟显存以 `CUDA_DEVICE_MEMORY_LIMIT` 注入，节点侧标注是否支持切分。
 5. **实时通道**：底座提供 `/ws/*`（xterm、日志 tail、容器 exec）与 `/sse/*`（流水线日志）统一网关与鉴权中间件，业务插件只注册业务 channel，避免每个插件自拉 websocket。
 6. **兼容旧平台**：提供只读的数据导入脚本（旧库→新 CMDB），旧仓库 README 顶部统一加"已并入 new-ops"声明与跳转。
+7. **质量门禁与 CI**：GitHub Actions 在每次 push 时跑 server（go build/vet/test）与 web（build）；配合第四节的会话执行协议，main 恒为可编译状态；每插件核心 service 层单测覆盖目标 ≥60%（mock global.DB，沿 GVA service 模式）；Swagger 注释随代码同步更新。
 
 ---
 
@@ -326,3 +391,14 @@ new-ops/
 
 - 2026-09-30：确定以 gin-vue-admin main（e8d675c）为底座新建仓库 `new-ops`，本计划为第一版；功能盘点基于本人 GitHub 各仓库 README（当日版本）。
 - 2026-09-30（v1.1）：新增第六节「Agent / Docker 管理 / K8s 管理」专项开发计划；里程碑扩展至 M9（合计约 22-23 周）；目录结构增加独立 `agent/` 二进制工程。
+- 2026-09-30（v1.2）：深度优化——补齐 M0/M2/M3 任务清单；新增「开发会话执行协议」（每场 2 小时完成即提交推送、main 恒可编译）与「开发日志」；新增 3.4 核心数据模型汇总与关键设计 7 质量门禁/CI；自动化任务提示词与协议对齐。
+
+---
+
+## 十、开发日志
+
+> 每场开发结束由执行方追加一行（自动化任务收尾步骤含此动作）。
+
+| 日期 | 场次 | 完成 | 下一步 |
+|---|---|---|---|
+| 2026-09-30 | 人工 | DEV_PLAN v1.1→v1.2 深度优化定稿；自动化任务配置并与协议对齐 | 10-01 上午场：M0 开工（品牌化与 compose/CI） |
