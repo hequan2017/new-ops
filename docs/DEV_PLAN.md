@@ -348,7 +348,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 | 机器 | Ubuntu 22.04.5 x86_64，125G 内存，Docker 29 + Compose v5，SSH 免密（`ssh root@192.168.112.138`） |
 | 入口 | 前端 http://192.168.112.138:8081 （nginx:alpine 容器 `new-ops-web`，host 网络）；后端 :8888（systemd `new-ops-server`） |
 | 目录 | `/opt/new-ops/{bin,web,data,logs,resource,config.yaml}`；SQLite 库 `data/new_ops.db`（无 MySQL/Redis 依赖） |
-| 部署 | `bash scripts/deploy-test.sh`（构建→上传→重启→冒烟）；`config.yaml` 为有状态文件（含初始化信息），脚本不覆盖，仅首次安装手工下发 |
+| 部署 | `bash scripts/deploy-test.sh` 一键部署：全新安装与增量更新同一命令，自动完成构建→上传→systemd/nginx 安装→SQLite 初始化→冒烟；支持环境变量覆盖目标机器/端口/目录/服务名（详见脚本头部），可一键部署到任何 Ubuntu+Docker 机器。`config.yaml` 为有状态文件（含初始化信息），更新模式不覆盖 |
 | 帐号 | 管理员 `admin`（密码记录在本地运维记忆，不入仓库）；测试机配置 `open-captcha: 999999`（等效关闭验证码，便于自动化冒烟） |
 | 端口约定 | 8080 被机器上其他容器占用；new-ops web 固定 8081、server 固定 8888 |
 
@@ -525,3 +525,4 @@ web/src/plugin/asset/
 | 2026-09-30 | 人工 | 全局去品牌化更名 new-ops（module 路径/前端/配置，build+vet 通过）；测试环境 192.168.112.138 首次部署并冒烟通过；deploy-test.sh 固化部署流程 | 10-01 上午场 M0 开工 |
 | 2026-09-30 | 人工 | 前端彻底去 GVA：移除插件市场（页面/菜单/代理/API）、仪表盘换简洁欢迎页、删 about/官方外链、gva-* 类名改 ops-*、AI 组件更名 ai-ops；测试库旧菜单已清，部署验证通过 | 10-01 上午场 M0 开工 |
 | 2026-09-30 | 人工 | 品牌化：中文名定为「白泽 BaiZe」，自制 SVG logo、站点名/登录页/仪表盘/横幅/文档全面应用 | 10-01 上午场 M0 开工 |
+| 2026-09-30 | 人工 | deploy-test.sh 升级为一键部署：全新安装（自动建库+随机密码）与增量更新同命令，参数化可部署任意机器；双路径实测通过 | 10-01 上午场 M0 开工 |
