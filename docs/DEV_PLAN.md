@@ -2,7 +2,7 @@
 
 > 底座：[gin-vue-admin](https://github.com/flipped-aurora/gin-vue-admin) `main`（e8d675c, 2026-09-20，v2.9.2-stable 之后版本）
 > 目标：把本人历史上散落的运维开发平台/工具的功能，整合到一个**插件化的统一运维开发平台**里，一次开发、长期维护。
-> 文档版本：v1.2（2026-09-30，深度优化：M0/M2/M3 任务清单、每场 2 小时会话执行协议、核心数据模型汇总、质量门禁、开发日志）
+> 文档版本：v1.3（2026-09-30，细化：十四场排期表、M4-M7 任务清单、技术选型清单、API/错误码规范、插件目录模板）
 
 ---
 
@@ -187,6 +187,32 @@
 
 **设计红线**：凭据表只存密文与末 4 位；删除默认软删除；变更历史统一 `*_history` 表（asset 先行，其余插件随 M2 起跟进）。
 
+### 3.5 技术选型与依赖清单
+
+所有新增第三方依赖必须在此表登记后使用，开发会话不得随意引入同类替代库（防止依赖膨胀）：
+
+| 关注点 | 选型 | 说明 | 已验证来源 |
+|---|---|---|---|
+| SSH / SFTP | `golang.org/x/crypto/ssh` + `github.com/pkg/sftp` | 纯 Go 实现，支持 keyboard-interactive | go-webssh |
+| 终端通道 | `gorilla/websocket` + xterm.js(+fit addon) | 统一走底座 `/ws/*` 网关 | new-jenkins / tianqi |
+| Docker | Docker SDK（moby/client） | 支持 TLS 连接远程节点 | GPU 系列 |
+| Kubernetes | `k8s.io/client-go` | kubeconfig 动态加载 + 连接池 | seal / docker-gpu-manage |
+| 凭据加密 | `crypto/aes` + GCM（信封加密） | 标准库优先，主密钥环境变量注入 | go-webssh |
+| 云同步 | 阿里云 ECS SDK | 仅 ECS，AccessKey 走凭据保险库 | raptor |
+| SQL 审核 | goInception + soar 外部二进制 | 进程调用 + 结果解析 | seal |
+| 流水线日志 | SSE（net/http flusher） | `/sse/pipeline/*` | new-jenkins |
+| 定时任务 | GVA 内置 timer/cron | 注册制，不另引 cron 库 | GVA |
+| API 文档 | swaggo 注释 | 随代码同步 | GVA |
+
+**原则**：标准库能解决的不引第三方；同类场景全平台只用一个库。
+
+### 3.6 接口与错误码规范
+
+- 路由：REST 资源用 `/api/<插件>/<资源>`，动作类用 POST 子资源（如 `/api/asset/host/:id/collect`）；WebSocket `/ws/<插件>/*`，SSE `/sse/<插件>/*`。
+- 响应：沿用 GVA 统一结构 `{code, data, msg}`；列表分页用 GVA `pageInfo`；过滤参数统一 `keyword`（模糊）/ `status` / 时间区间。
+- 错误码分段（每插件独占一段，避免跨插件冲突）：asset=1000-1099、term=1100-1199、job=1200-1299、pipeline=1300-1399、container=1400-1499、k8s=1500-1599、gpu=1600-1699、dbops=1700-1799、monitor=1800-1899、workflow=1900-1999、agent/org/aiops=2000-2199；通用错误沿用 GVA 现有 7xxx 段。
+- 审计：所有写操作（POST/PUT/DELETE）统一过 GVA 操作日志中间件；凭据类接口强制脱敏，任何接口不得返回明文密钥。
+
 ---
 
 ## 四、里程碑
@@ -205,6 +231,29 @@
 | **M9 Agent 通道** | agent(A1,A2,A3)：反向长连接、采集上报、执行代理、流水线远程执行器 | 3 周 | Agent 注册/心跳/采集闭环；流水线可在 Agent 主机执行且工作空间隔离 |
 
 M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M4-M5 替代 Docker/K8s/GPU 系列；M8-M9 补齐容器二期与 Agent 通道；之后旧仓库逐一归档标注"功能已并入 new-ops"。全计划合计约 22-23 周。
+
+> 口径：里程碑预估的「周」按本计划会话节奏计，1 周 = 每天 2 场 × 2 小时 = 28 小时，与下方十四场排期表一致。
+
+### 十四场排期表（10-01～10-07 自动化开发）
+
+> 本场序号 = 「开发日志」已有行数 + 1，对照本表取本场目标；进度超前则提前取下一场目标，滞后则顺延并以任务清单未勾选项为准。7 天 × 2 场 × 2h = 28h，按此容量前 7 天推进 M0 全部 + M1 主体 + M2 起步。
+
+| 场 | 时间 | 本场目标（对应任务清单项） |
+|---|---|---|
+| 1 | 10-01 上午 | M0：README/标题品牌化、移除 example 路由菜单、docker-compose + Makefile |
+| 2 | 10-01 下午 | M0：GitHub Actions CI、config 分环境、10 个插件骨架注册、plugin-dev-guide 初稿；M0 收尾自查 |
+| 3 | 10-02 上午 | M1：asset_host/产品线/机房机柜 表结构+migration+代码生成器起 CRUD |
+| 4 | 10-02 下午 | M1：资产 CRUD 前端联调、Excel 导入导出 |
+| 5 | 10-03 上午 | M1：凭据保险库（AES-256-GCM 信封加密、脱敏回显、引用计数、审计） |
+| 6 | 10-03 下午 | M1：Go SSH 采集器 + 采集记录页 |
+| 7 | 10-04 上午 | M1：阿里云 ECS 同步（AK 管理+定时+手动触发） |
+| 8 | 10-04 下午 | M1：数据权限（asset_group + casbin 资源规则） |
+| 9 | 10-05 上午 | M1：资产变更历史 + 仪表盘统计；单测/Swagger 补齐 |
+| 10 | 10-05 下午 | M1 验收自测收尾；M2 开工：WebSocket 网关 + xterm 组件封装 |
+| 11 | 10-06 上午 | M2：WebSSH 连接（密码/私钥/键盘交互）+ 窗口自适应 |
+| 12 | 10-06 下午 | M2：ProxyJump 级联 + 主机指纹校验 |
+| 13 | 10-07 上午 | M2：会话审计（命令抽取落库 + 录像落盘） |
+| 14 | 10-07 下午 | 收尾：README/plugin-dev-guide 定稿、tag v0.1.0、把 M2 剩余项（SFTP/批量执行/tail/网段发现）写入下一排期 |
 
 ### M0 任务清单（细化到可开工）
 
@@ -244,6 +293,33 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 - [ ] 触发器：cron（注册到底座定时任务）/webhook/手动
 - [ ] 工单发版闭环：workflow 审批通过事件钩子 → 自动触发流水线
 - [ ] 构建历史：即时取消、复用历史参数重跑
+
+### M4 任务清单（container C1 + k8s K1/K2，细节见第六节 6.2/6.3）
+
+- [ ] container：endpoint CRUD + TLS 凭据入保险库 + 30s 巡检；容器生命周期与创建参数（端口/挂载/环境变量/资源限制）
+- [ ] container：日志流 + exec 终端（WebSocket 桥接）；inspect 回写 + docker events 订阅
+- [ ] k8s：集群注册（kubeconfig 加密）+ 连接测试 + 连接池；集群总览（metrics-server 用量）；Node 管理（cordon/drain）
+- [ ] k8s：工作负载（列表/YAML/扩缩容/滚动重启）；Pod（列表/详情/日志/WebShell/删除）；ConfigMap/Secret(脱敏)/PVC/Service/Ingress/Event
+- [ ] 两套真实环境联调 + 管理员/普通用户两级数据隔离验证
+
+### M5 任务清单（gpu）
+
+- [ ] gpu_node/gpu_spec/gpu_image CRUD 与定价上架
+- [ ] 实例开通：智能匹配（扣减已用量防超卖，事务+行锁）+ Docker 创建（DeviceRequest GPU 直通、CPU/内存限制、独立数据卷）
+- [ ] HAMi 显存切分注入（环境变量组）；实例生命周期操作 + 状态自动同步
+- [ ] 实例监控（docker stats + GPU 指标）+ SSH 跳板机（2026 端口，选连自己的容器）+ 端口转发管理
+
+### M6 任务清单（dbops + monitor）
+
+- [ ] dbops：MySQL 实例/账号纳管（密文）；SQL 上线工单（goInception 审核/执行/备份、soar 优化建议、多环境）
+- [ ] monitor：SSH 采集任务（CPU/内存/磁盘/网络）+ 指标留存与自动清理 + ECharts 图表页
+- [ ] monitor：告警规则引擎（阈值/持续时间/静默窗口）+ 钉钉机器人推送 + 端口探活
+
+### M7 任务清单（workflow + org + aiops）
+
+- [ ] workflow：状态机定义/实例/审批任务 API 与页面；发版、SQL、资源申请三类模板
+- [ ] org：钉钉扫码登录（JWT 打通）、部门/用户定时同步、机器人告警复用
+- [ ] aiops：MCP Server 工具注册（基于 GVA mcp/ 骨架）、AI 诊断网关（统一 LLM 调用、密钥管理、prompt 模板）
 
 ### 开发会话执行协议（每场 2 小时，完成即提交）
 
@@ -373,6 +449,23 @@ new-ops/
 └── scripts/                     # 旧平台数据导入脚本
 ```
 
+**单个插件的内部结构模板**（以 asset 为例，其余插件同构，开发会话照此落位）：
+
+```shell
+server/plugin/asset/
+├── plugin.go            # 插件注册入口（实现 GVA Plugin 接口）
+├── initialize/          # 路由注册 + 菜单/API/casbin 初始化数据（migration）
+├── api/v1/              # 接口层（参数绑定与响应，不含业务）
+├── router/              # 路由分组
+├── service/             # 业务逻辑（单元测试写在这里，mock global.DB）
+├── model/               # model / request / response
+└── config/              # 插件级配置结构（对接 config.yaml）
+web/src/plugin/asset/
+├── view/                # 页面组件（与动态菜单路由对应）
+├── api/                 # 后端接口封装（axios）
+└── router/              # 静态兜底路由（正常走数据库动态菜单）
+```
+
 ---
 
 ## 八、风险与对策
@@ -392,6 +485,7 @@ new-ops/
 - 2026-09-30：确定以 gin-vue-admin main（e8d675c）为底座新建仓库 `new-ops`，本计划为第一版；功能盘点基于本人 GitHub 各仓库 README（当日版本）。
 - 2026-09-30（v1.1）：新增第六节「Agent / Docker 管理 / K8s 管理」专项开发计划；里程碑扩展至 M9（合计约 22-23 周）；目录结构增加独立 `agent/` 二进制工程。
 - 2026-09-30（v1.2）：深度优化——补齐 M0/M2/M3 任务清单；新增「开发会话执行协议」（每场 2 小时完成即提交推送、main 恒可编译）与「开发日志」；新增 3.4 核心数据模型汇总与关键设计 7 质量门禁/CI；自动化任务提示词与协议对齐。
+- 2026-09-30（v1.3）：继续细化——新增「十四场排期表」（逐场目标，10-01~10-07）；补齐 M4-M7 任务清单；新增 3.5 技术选型与依赖清单（新增依赖须登记）、3.6 接口与错误码规范（插件错误码分段）；第七节补充单插件内部目录模板。
 
 ---
 
@@ -402,3 +496,4 @@ new-ops/
 | 日期 | 场次 | 完成 | 下一步 |
 |---|---|---|---|
 | 2026-09-30 | 人工 | DEV_PLAN v1.1→v1.2 深度优化定稿；自动化任务配置并与协议对齐 | 10-01 上午场：M0 开工（品牌化与 compose/CI） |
+| 2026-09-30 | 人工 | DEV_PLAN v1.2→v1.3 细化：十四场排期表、M4-M7 清单、依赖/API 规范、插件目录模板 | 不变：10-01 上午场 M0 开工 |
