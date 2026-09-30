@@ -25,39 +25,68 @@
 
       <el-card shadow="never">
         <template #header>
-          <span class="font-semibold">当前状态</span>
+          <span class="font-semibold">关于版权标识与授权</span>
         </template>
-        <el-alert
-          type="warning"
-          :closable="false"
-          show-icon
-          title="🚧 项目正在开发中"
-          description="当前为 gin-vue-admin 底座环境。资产管理、终端作业、流水线、容器与 K8s、GPU 算力等业务插件正在按开发计划（docs/DEV_PLAN.md）分阶段交付，完成后将在本页面汇总常用入口。"
-        />
-        <div class="mt-4 grid grid-cols-1 gap-3 text-sm text-slate-600 sm:grid-cols-3 dark:text-slate-300">
+        <div class="grid grid-cols-1 gap-3 text-sm lg:grid-cols-3">
           <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <div class="font-semibold text-slate-800 dark:text-slate-100">基座就绪</div>
-            <div class="mt-1">RBAC 权限、用户角色菜单、代码生成器、插件机制、操作日志</div>
+            <div class="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
+              <el-icon class="text-emerald-500"><CircleCheckFilled /></el-icon>
+              本项目：白泽（BaiZe）
+            </div>
+            <div class="mt-2 text-slate-600 dark:text-slate-300">
+              以 <b>Apache License 2.0</b> 开源，无商业授权限制，可自由用于个人与商业场景（保留许可证与版权声明即可）。
+            </div>
           </div>
           <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <div class="font-semibold text-slate-800 dark:text-slate-100">开发中</div>
-            <div class="mt-1">M1 资产中心（主机资产、凭据保险库、SSH 采集、云同步）</div>
+            <div class="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
+              <el-icon class="text-emerald-500"><CircleCheckFilled /></el-icon>
+              底座：gin-vue-admin
+            </div>
+            <div class="mt-2 text-slate-600 dark:text-slate-300">
+              基于 gin-vue-admin（Apache License 2.0）构建，归属声明保留于仓库 LICENSE 与 README。
+            </div>
           </div>
           <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <div class="font-semibold text-slate-800 dark:text-slate-100">规划中</div>
-            <div class="mt-1">终端作业、流水线发布、Docker/K8s、GPU 算力、监控告警、AI 运维</div>
+            <div class="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
+              <el-icon class="text-emerald-500"><CircleCheckFilled /></el-icon>
+              技术支持标识与指纹
+            </div>
+            <div class="mt-2 text-slate-600 dark:text-slate-300">
+              系统底部技术支持标识、全站水印及内置隐蔽指纹均已移除，界面不含任何推广与授权引导内容。
+            </div>
           </div>
         </div>
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-500">
+          完整许可证文本见仓库根目录 LICENSE 文件；<a
+            class="text-blue-500"
+            href="https://github.com/flipped-aurora/gin-vue-admin"
+            target="_blank"
+          >上游项目</a
+          >与<a
+            class="text-blue-500"
+            :href="repoUrl"
+            target="_blank"
+          >本项目仓库</a
+          >。
+        </div>
       </el-card>
+
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        title="🚧 项目正在开发中"
+        description="当前为 gin-vue-admin 底座环境。资产管理、终端作业、流水线、容器与 K8s、GPU 算力等业务插件正在按开发计划（docs/DEV_PLAN.md）分阶段交付。"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
   import { computed } from 'vue'
-  import { Link } from '@element-plus/icons-vue'
+  import { Link, CircleCheckFilled } from '@element-plus/icons-vue'
 
-  const REPO_URL = 'https://github.com/hequan2017/new-ops'
+  const repoUrl = 'https://github.com/hequan2017/new-ops'
 
   const today = computed(() => {
     try {
@@ -72,7 +101,7 @@
   })
 
   const openRepo = () => {
-    window.open(`${REPO_URL}/blob/main/docs/DEV_PLAN.md`, '_blank')
+    window.open(`${repoUrl}/blob/main/docs/DEV_PLAN.md`, '_blank')
   }
 
   defineOptions({

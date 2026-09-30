@@ -75,13 +75,6 @@
             </template>
             <el-switch v-model="config.weakness" @change="appStore.toggleWeakness" />
           </SettingItem>
-
-          <SettingItem label="显示水印">
-            <template #suffix>
-              <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">在页面显示水印标识</span>
-            </template>
-            <el-switch v-model="config.show_watermark" @change="appStore.toggleConfigWatermark" />
-          </SettingItem>
         </div>
       </div>
     </div>

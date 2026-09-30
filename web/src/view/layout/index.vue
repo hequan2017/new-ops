@@ -2,14 +2,6 @@
   <div
     class="bg-gray-50 text-slate-700 dark:text-slate-500 dark:bg-slate-800 w-screen h-screen"
   >
-    <el-watermark
-      v-if="config.show_watermark"
-      :font="font"
-      :z-index="9999"
-      :gap="[180, 150]"
-      class="!absolute !inset-0 !pointer-events-none"
-      :content="userStore.userInfo.nickName"
-    />
     <ops-header />
     <div class="flex flex-row w-full ops-container pt-16 box-border !h-full">
       <ops-aside
@@ -45,7 +37,6 @@
               </transition>
             </div>
           </router-view>
-          <BottomInfo />
         </div>
       </div>
     </div>
@@ -57,7 +48,6 @@
   import OpsHeader from '@/view/layout/header/index.vue'
   import useResponsive from '@/hooks/responsive'
   import OpsTabs from './tabs/index.vue'
-  import BottomInfo from '@/components/bottomInfo/bottomInfo.vue'
   import { emitter } from '@/utils/bus.js'
   import { ref, onMounted, nextTick, reactive, watchEffect } from 'vue'
   import { useRouter, useRoute } from 'vue-router'
@@ -74,13 +64,6 @@
   })
 
   useResponsive(true)
-  const font = reactive({
-    color: 'rgba(0, 0, 0, .15)'
-  })
-
-  watchEffect(() => {
-    font.color = isDark.value ? 'rgba(255,255,255, .15)' : 'rgba(0, 0, 0, .15)'
-  })
 
   const router = useRouter()
   const route = useRoute()

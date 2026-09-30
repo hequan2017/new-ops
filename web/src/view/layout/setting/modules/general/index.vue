@@ -139,10 +139,10 @@
                   GitHub 仓库
                 </a>
                 <span class="text-gray-400 dark:text-gray-500">·</span>
-                <a href="https://www.new-ops.com/" target="_blank"
+                <a href="https://github.com/hequan2017/new-ops/blob/main/docs/DEV_PLAN.md" target="_blank"
                   class="font-medium transition-colors duration-150 hover:underline"
                   :style="{ color: config.primaryColor }">
-                  官方文档
+                  开发计划
                 </a>
               </div>
             </div>

@@ -25,9 +25,9 @@
           <p class="text-gray-600 dark:text-gray-300 mb-2">
             2.请您确认是否已经阅读过<a
               class="text-blue-600 font-bold"
-              href="https://www.new-ops.com"
+              href="https://github.com/hequan2017/new-ops#readme"
               target="_blank"
-              >官方文档</a
+              >项目文档</a
             >
             <a
               class="text-blue-600 font-bold"
@@ -158,7 +158,7 @@
   }
 
   const goDoc = () => {
-    window.open('https://www.new-ops.com/guide/start-quickly/env.html')
+    window.open('https://github.com/hequan2017/new-ops#readme')
   }
 
   const out = ref(false)
@@ -287,7 +287,7 @@
           }
         ).then(() => {
           // 点击确认按钮，打开AI配置文档
-          window.open('https://www.new-ops.com/guide/server/mcp.html', '_blank')
+          window.open('https://github.com/hequan2017/new-ops#readme', '_blank')
           router.push({ name: 'Login' })
         }).catch(() => {
           // 点击取消按钮或关闭弹窗，直接跳转到登录页

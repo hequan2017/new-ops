@@ -39,7 +39,7 @@
   const router = useRouter()
   const route = useRoute()
 
-  const url = route.query.url || 'https://www.new-ops.com'
+  const url = route.query.url || 'https://github.com/hequan2017/new-ops'
 
   onMounted(() => {
     // 挂载一些通用的事件

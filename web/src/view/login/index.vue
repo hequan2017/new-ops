@@ -101,29 +101,12 @@
       </div>
     </div>
 
-    <BottomInfo class="left-0 right-0 absolute bottom-3 mx-auto w-full z-20">
-      <div class="links items-center justify-center gap-2 hidden md:flex">
-        <a
-          href="https://github.com/hequan2017/new-ops/blob/main/docs/DEV_PLAN.md"
-          target="_blank"
-        >
-          <img src="@/assets/docs.png" class="w-8 h-8" alt="开发计划" />
-        </a>
-        <a
-          href="https://github.com/hequan2017/new-ops"
-          target="_blank"
-        >
-          <img src="@/assets/github.png" class="w-8 h-8" alt="github" />
-        </a>
-      </div>
-    </BottomInfo>
   </div>
 </template>
 
 <script setup>
   import { captcha } from '@/api/user'
   import { checkDB } from '@/api/initdb'
-  import BottomInfo from '@/components/bottomInfo/bottomInfo.vue'
   import { reactive, ref } from 'vue'
   import { ElMessage } from 'element-plus'
   import { useRouter } from 'vue-router'

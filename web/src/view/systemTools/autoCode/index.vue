@@ -6,12 +6,7 @@
     />
     <div class="ops-search-box" v-if="!isAdd">
       <div class="text-lg mb-2 text-gray-600">
-        使用AI创建<a
-          class="text-blue-600 text-sm ml-4"
-          href="https://plugin.new-ops.com/#/layout/userInfo/center"
-          target="_blank"
-          >获取AiPath</a
-        >
+        使用AI创建
       </div>
       <div class="relative">
         <el-input

@@ -278,7 +278,7 @@
 
   const getSolution = async (id) => {
     const confirmed = await ElMessageBox.confirm(
-      '日志将通过 AI-PATH 传输至 AI 服务用于错误分析，并在服务平台短暂存储作为 AI 上下文。是否确认进行 AI 处理？（此功能仅向授权用户开放）',
+      '日志将通过 AI-PATH 传输至 AI 服务用于错误分析，并在服务平台短暂存储作为 AI 上下文。是否确认进行 AI 处理？',
       '提示(Beta)',
       {
         confirmButtonText: '确认',

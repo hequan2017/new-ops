@@ -31,18 +31,6 @@ export const viteLogo = (env) => {
     console.log(
       greenText(`> 默认前端文件运行地址:http://127.0.0.1:${env.VITE_CLI_PORT}`)
     )
-    console.log(
-      greenText(
-        `--------------------------------------版权声明--------------------------------------`
-      )
-    )
-    console.log(greenText(`** 版权所有方：hequan2017开源团队 **`))
-    console.log(greenText(`** 版权持有公司：北京翻转极光科技有限责任公司 **`))
-    console.log(
-      greenText(
-        `** 剔除授权标识需购买商用授权：https://plugin.new-ops.com/license **`
-      )
-    )
     console.log('\n')
   }
 }

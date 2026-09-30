@@ -1,9 +1,5 @@
 <template>
   <div class="ops-table-box ai-workflow-page space-y-4">
-    <warning-bar
-      href="https://plugin.new-ops.com/license"
-      title="本功能由于算力不足限制，已调整为仅对授权用户开放。"
-    />
     <el-card shadow="never">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="max-w-3xl">

@@ -1,17 +1,8 @@
 <template>
   <div>
-    <warning-bar
-        href="https://plugin.new-ops.com/license"
-        title="此功能只针对授权用户开放，点我【购买授权】"
-    />
 <div class="ops-search-box">
       <div class="text-xl mb-2 text-gray-600 dark:text-slate-300">
-        AI前端工程师<a
-          class="text-blue-600 text-sm ml-4 dark:text-blue-400"
-          href="https://plugin.new-ops.com/#/layout/userInfo/center"
-          target="_blank"
-        >获取AiPath</a
-      >
+        AI前端工程师
       </div>
       
       <!-- 选项模式 -->
@@ -124,12 +115,7 @@
           <el-tooltip effect="light">
             <template #content>
               <div>
-                此功能仅针对授权用户开放，前往<a
-                  class="text-blue-600"
-                  href="https://plugin.new-ops.com/license"
-                  target="_blank"
-              >购买授权</a
-              >
+                需在 config.yaml 的 ai-path 属性中配置 AI 服务地址后使用。
               </div>
             </template>
             <el-button
