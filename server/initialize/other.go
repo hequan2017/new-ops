@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
-	"github.com/flipped-aurora/gin-vue-admin/server/utils"
+	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/utils"
 )
 
 func OtherInit() {

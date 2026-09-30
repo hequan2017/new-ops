@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/common"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/common/response"
+	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/model/common"
+	"github.com/hequan2017/new-ops/server/model/common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/goccy/go-json"
 	"go.uber.org/zap"

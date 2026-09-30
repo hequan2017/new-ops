@@ -3,7 +3,7 @@ package mcpTool
 import (
 	"context"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/model/system"
+	"github.com/hequan2017/new-ops/server/model/system"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 

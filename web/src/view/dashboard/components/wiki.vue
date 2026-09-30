@@ -24,15 +24,15 @@
     },
     {
       title: 'GVA 文档',
-      url: 'https://www.gin-vue-admin.com/'
+      url: 'https://www.new-ops.com/'
     },
     {
       title: '插件市场',
-      url: 'https://plugin.gin-vue-admin.com/'
+      url: 'https://plugin.new-ops.com/'
     },
     {
       title: 'github 仓库',
-      url: 'https://github.com/flipped-aurora/gin-vue-admin'
+      url: 'https://github.com/hequan2017/new-ops'
     }
   ]
 </script>

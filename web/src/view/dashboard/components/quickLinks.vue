@@ -74,9 +74,9 @@
   ]
 
   const recentVisits = [
-    { icon: Reading, title: '授权购买', path: 'https://plugin.gin-vue-admin.com/license' },
-    { icon: Document, title: '插件市场', path: 'https://plugin.gin-vue-admin.com/#/layout/home' },
-    { icon: Link, title: '项目仓库', path: 'https://github.com/flipped-aurora/gin-vue-admin' }
+    { icon: Reading, title: '授权购买', path: 'https://plugin.new-ops.com/license' },
+    { icon: Document, title: '插件市场', path: 'https://plugin.new-ops.com/#/layout/home' },
+    { icon: Link, title: '项目仓库', path: 'https://github.com/hequan2017/new-ops' }
   ]
 </script>
 

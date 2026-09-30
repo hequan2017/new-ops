@@ -3,7 +3,7 @@
 package docs
 
 import (
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
+	"github.com/hequan2017/new-ops/server/global"
 	"github.com/swaggo/swag"
 )
 
@@ -7197,7 +7197,7 @@ const docTemplate = `{
                     }
                 },
                 "email": {
-                    "$ref": "#/definitions/github_com_flipped-aurora_gin-vue-admin_server_config.Email"
+                    "$ref": "#/definitions/github_com_hequan2017_new-ops_server_config.Email"
                 },
                 "excel": {
                     "$ref": "#/definitions/config.Excel"
@@ -7667,7 +7667,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_flipped-aurora_gin-vue-admin_server_config.Email": {
+        "github_com_hequan2017_new-ops_server_config.Email": {
             "type": "object",
             "properties": {
                 "from": {
@@ -9303,7 +9303,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Gin-Vue-Admin Swagger API接口文档",
+	Title:            "new-ops Swagger API接口文档",
 	Description:      "使用gin+vue进行极速开发的全栈开发基础平台",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

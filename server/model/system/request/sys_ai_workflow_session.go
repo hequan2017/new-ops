@@ -1,9 +1,9 @@
 package request
 
 import (
-	common "github.com/flipped-aurora/gin-vue-admin/server/model/common"
-	commonReq "github.com/flipped-aurora/gin-vue-admin/server/model/common/request"
-	system "github.com/flipped-aurora/gin-vue-admin/server/model/system"
+	common "github.com/hequan2017/new-ops/server/model/common"
+	commonReq "github.com/hequan2017/new-ops/server/model/common/request"
+	system "github.com/hequan2017/new-ops/server/model/system"
 )
 
 type SysAIWorkflowSessionUpsert struct {

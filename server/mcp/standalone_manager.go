@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
+	"github.com/hequan2017/new-ops/server/global"
 )
 
 const (
@@ -171,7 +171,7 @@ func StartManagedStandalone(ctx context.Context) (ManagedStandaloneStatus, error
 	cmd.Dir = workDir
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	cmd.Env = append(os.Environ(), "GVA_MCP_CONFIG="+configPath)
+	cmd.Env = append(os.Environ(), "NEW_OPS_MCP_CONFIG="+configPath)
 	prepareDetachedProcess(cmd)
 
 	if err := cmd.Start(); err != nil {
@@ -303,9 +303,9 @@ func resolveManagedStartCommand() (string, []string, string, string, error) {
 		return "", nil, "", "", err
 	}
 
-	if explicit := strings.TrimSpace(os.Getenv("GVA_MCP_BIN")); explicit != "" {
+	if explicit := strings.TrimSpace(os.Getenv("NEW_OPS_MCP_BIN")); explicit != "" {
 		if !fileExists(explicit) {
-			return "", nil, "", "", fmt.Errorf("GVA_MCP_BIN 指向的文件不存在: %s", explicit)
+			return "", nil, "", "", fmt.Errorf("NEW_OPS_MCP_BIN 指向的文件不存在: %s", explicit)
 		}
 		return explicit, []string{"-config", configPath}, filepath.Dir(explicit), configPath, nil
 	}

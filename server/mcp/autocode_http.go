@@ -3,9 +3,9 @@ package mcpTool
 import (
 	"context"
 
-	commonReq "github.com/flipped-aurora/gin-vue-admin/server/model/common/request"
-	model "github.com/flipped-aurora/gin-vue-admin/server/model/system"
-	systemReq "github.com/flipped-aurora/gin-vue-admin/server/model/system/request"
+	commonReq "github.com/hequan2017/new-ops/server/model/common/request"
+	model "github.com/hequan2017/new-ops/server/model/system"
+	systemReq "github.com/hequan2017/new-ops/server/model/system/request"
 )
 
 func fetchAutoCodePackages(ctx context.Context) ([]model.SysAutoCodePackage, error) {

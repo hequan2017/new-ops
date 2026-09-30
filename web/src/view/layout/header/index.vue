@@ -18,7 +18,7 @@
             'min-w-fit'
           "
         >
-          {{ $GIN_VUE_ADMIN.appName }}
+          {{ $NEW_OPS.appName }}
         </div>
       </div>
 

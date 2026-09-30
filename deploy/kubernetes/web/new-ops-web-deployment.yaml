@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gva-web
+  name: new-ops-web
   annotations:
-    flipped-aurora/gin-vue-admin: ui
-    github: "https://github.com/flipped-aurora/gin-vue-admin.git"
+    hequan2017/new-ops: ui
+    github: "https://github.com/hequan2017/new-ops.git"
     app.kubernetes.io/version: 0.0.1
   labels:
-    app: gva-web
-    version: gva-vue3
+    app: new-ops-web
+    version: new-ops-vue3
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gva-web
-      version: gva-vue3
+      app: new-ops-web
+      version: new-ops-vue3
   template:
     metadata:
       labels:
-        app: gva-web
-        version: gva-vue3
+        app: new-ops-web
+        version: new-ops-vue3
     spec:
       containers:
-        - name: gin-vue-admin-nginx-container
+        - name: new-ops-nginx-container
           image: registry.cn-hangzhou.aliyuncs.com/gva/web:latest
           imagePullPolicy: Always
           ports:

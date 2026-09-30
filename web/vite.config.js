@@ -57,7 +57,7 @@ export default ({ mode }) => {
         },
         '/plugin': {
           // 需要代理的路径   例如 '/api'
-          target: `https://plugin.gin-vue-admin.com/api/`, // 代理到 目标路径
+          target: `https://plugin.new-ops.com/api/`, // 代理到 目标路径
           changeOrigin: true,
           rewrite: (path) =>
             path.replace(new RegExp('^/plugin'), '')
@@ -82,7 +82,7 @@ export default ({ mode }) => {
       vueDevTools({ launchEditor: env.VITE_EDITOR }),
       vuePlugin(),
       svgBuilder(['./src/plugin/', './src/assets/icons/'], base, outDir, 'assets', mode),
-      [Banner(`\n Build based on gin-vue-admin \n Time : ${timestamp}`)],
+      [Banner(`\n Build based on new-ops \n Time : ${timestamp}`)],
       VueFilePathPlugin('./src/pathInfo.json'),
       UnoCSS(),
       vueRootValidator()

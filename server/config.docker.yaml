@@ -1,4 +1,4 @@
-# github.com/flipped-aurora/gin-vue-admin/server Global Configuration
+# github.com/hequan2017/new-ops/server Global Configuration
 
 # jwt configuration
 jwt:
@@ -10,7 +10,7 @@ jwt:
 zap:
     level: info
     format: console
-    prefix: "[github.com/flipped-aurora/gin-vue-admin/server]"
+    prefix: "[github.com/hequan2017/new-ops/server]"
     director: log
     show-line: true
     encode-level: LowercaseColorLevelEncoder
@@ -97,7 +97,7 @@ captcha:
     open-captcha-timeout: 3600 # open-captcha大于0时才生效
 
 # mysql connect configuration
-# 未初始化之前请勿手动修改数据库信息！！！如果一定要手动初始化请看（https://gin-vue-admin.com/docs/first_master）
+# 未初始化之前请勿手动修改数据库信息！！！如果一定要手动初始化请看（https://new-ops.com/docs/first_master）
 mysql:
     path: ""
     port: ""
@@ -111,7 +111,7 @@ mysql:
     log-zap: false
 
 # pgsql connect configuration
-# 未初始化之前请勿手动修改数据库信息！！！如果一定要手动初始化请看（https://gin-vue-admin.com/docs/first_master）
+# 未初始化之前请勿手动修改数据库信息！！！如果一定要手动初始化请看（https://new-ops.com/docs/first_master）
 pgsql:
     path: ""
     port: ""
@@ -181,7 +181,7 @@ autocode:
     web: web/src
     root: "" # root 自动适配项目根目录, 请不要手动配置,他会在项目加载的时候识别出根路径
     server: server
-    module: 'github.com/flipped-aurora/gin-vue-admin/server'
+    module: 'github.com/hequan2017/new-ops/server'
     ai-path: ""  # AI服务路径
 
 # qiniu configuration (请自行七牛申请对应的 公钥 私钥 bucket 和 域名地址)
@@ -219,8 +219,8 @@ tencent-cos:
     region: ap-shanghai
     secret-id: your-secret-id
     secret-key: your-secret-key
-    base-url: https://gin.vue.admin
-    path-prefix: github.com/flipped-aurora/gin-vue-admin/server
+    base-url: https://new.ops
+    path-prefix: github.com/hequan2017/new-ops/server
 
 # aws s3 configuration (minio compatible)
 aws-s3:
@@ -231,13 +231,13 @@ aws-s3:
     disable-ssl: false
     secret-id: your-secret-id
     secret-key: your-secret-key
-    base-url: https://gin.vue.admin
-    path-prefix: github.com/flipped-aurora/gin-vue-admin/server
+    base-url: https://new.ops
+    path-prefix: github.com/hequan2017/new-ops/server
 
 # cloudflare r2 configuration
 cloudflare-r2:
     bucket: xxxx0bucket
-    base-url: https://gin.vue.admin.com
+    base-url: https://new.ops.com
     path: uploads
     account-id: xxx_account_id
     access-key-id: xxx_key_id
@@ -276,7 +276,7 @@ cors:
           expose-headers: Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Content-Type
           allow-credentials: true # 布尔值
 mcp:
-    name: GVA_MCP
+    name: NEW_OPS_MCP
     version: v1.0.0
     addr: 8889
     separate: false

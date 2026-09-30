@@ -1,7 +1,7 @@
 package response
 
 import (
-	"github.com/flipped-aurora/gin-vue-admin/server/model/system"
+	"github.com/hequan2017/new-ops/server/model/system"
 )
 
 type SysUserResponse struct {

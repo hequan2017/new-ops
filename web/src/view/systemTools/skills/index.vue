@@ -1,7 +1,7 @@
 ﻿<template>
   <div class="h-full">
     <warning-bar
-        href="https://plugin.gin-vue-admin.com/license"
+        href="https://plugin.new-ops.com/license"
         title="此功能仅在开发阶段使用，用户构建本项目内的skills技能库。"
     />
     <el-row :gutter="12" class="h-full">
@@ -479,7 +479,7 @@
           <template #default="{ row }">
             <a
               class="text-blue-500 hover:text-blue-700 cursor-pointer"
-              :href="`https://plugin.gin-vue-admin.com/details/${row.ID}`"
+              :href="`https://plugin.new-ops.com/details/${row.ID}`"
               target="_blank"
             >{{ row.name }}</a>
           </template>
@@ -500,7 +500,7 @@
             <a
               v-else
               class="text-blue-500 hover:text-blue-700 text-sm"
-              :href="`https://plugin.gin-vue-admin.com/details/${row.ID}`"
+              :href="`https://plugin.new-ops.com/details/${row.ID}`"
               target="_blank"
             >去购买</a>
           </template>
@@ -1308,7 +1308,7 @@
     return options
   })
 
-  const pluginMarketLoginURL = 'https://plugin.gin-vue-admin.com'
+  const pluginMarketLoginURL = 'https://plugin.new-ops.com'
 
   const isPluginMarketAuthError = (message) => {
     const msg = (message || '').toString()

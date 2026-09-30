@@ -7,7 +7,7 @@ Licensed under the Apache License, Version 2.0. See the repository LICENSE file.
 
 import child_process from 'child_process'
 
-var url = 'https://www.gin-vue-admin.com'
+var url = 'https://www.new-ops.com'
 var cmd = ''
 switch (process.platform) {
   case 'win32':

@@ -2,8 +2,8 @@ package internal
 
 import (
 	"fmt"
-	"github.com/flipped-aurora/gin-vue-admin/server/config"
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
+	"github.com/hequan2017/new-ops/server/config"
+	"github.com/hequan2017/new-ops/server/global"
 	"gorm.io/gorm/logger"
 )
 

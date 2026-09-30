@@ -1,6 +1,6 @@
 package response
 
-import "github.com/flipped-aurora/gin-vue-admin/server/config"
+import "github.com/hequan2017/new-ops/server/config"
 
 type SysConfigResponse struct {
 	Config config.Server `json:"config"`

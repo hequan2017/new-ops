@@ -15,9 +15,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/system"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/system/request"
+	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/model/system"
+	"github.com/hequan2017/new-ops/server/model/system/request"
 	"gopkg.in/yaml.v3"
 )
 
@@ -399,7 +399,7 @@ func (s *SkillsService) DownloadOnlineSkill(_ context.Context, req request.Downl
 		return fmt.Errorf("构建下载请求失败: %w", err)
 	}
 
-	downloadReq, err := http.NewRequest(http.MethodPost, "https://plugin.gin-vue-admin.com/api/shopPlugin/downloadSkill", bytes.NewReader(body))
+	downloadReq, err := http.NewRequest(http.MethodPost, "https://plugin.new-ops.com/api/shopPlugin/downloadSkill", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("构建下载请求失败: %w", err)
 	}

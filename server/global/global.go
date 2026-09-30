@@ -8,14 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/qiniu/qmgo"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/utils/timer"
+	"github.com/hequan2017/new-ops/server/utils/timer"
 	"github.com/songzhibin97/gkit/cache/local_cache"
 
 	"golang.org/x/sync/singleflight"
 
 	"go.uber.org/zap"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/config"
+	"github.com/hequan2017/new-ops/server/config"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
@@ -36,7 +36,7 @@ var (
 	GVA_Concurrency_Control             = &singleflight.Group{}
 	GVA_ROUTERS             gin.RoutesInfo
 	GVA_ACTIVE_DBNAME       *string
-	GVA_MCP_SERVER          *server.MCPServer
+	NEW_OPS_MCP_SERVER          *server.MCPServer
 	BlackCache              local_cache.Cache
 	lock                    sync.RWMutex
 )

@@ -1,4 +1,4 @@
-module github.com/flipped-aurora/gin-vue-admin/server
+module github.com/hequan2017/new-ops/server
 
 go 1.24.0
 

@@ -1,10 +1,10 @@
 package system
 
 import (
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/common/request"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/system"
-	systemReq "github.com/flipped-aurora/gin-vue-admin/server/model/system/request"
+	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/model/common/request"
+	"github.com/hequan2017/new-ops/server/model/system"
+	systemReq "github.com/hequan2017/new-ops/server/model/system/request"
 )
 
 //@author: [granty1](https://github.com/granty1)

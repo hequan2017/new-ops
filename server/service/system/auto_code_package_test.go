@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	model "github.com/flipped-aurora/gin-vue-admin/server/model/system"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/system/request"
+	model "github.com/hequan2017/new-ops/server/model/system"
+	"github.com/hequan2017/new-ops/server/model/system/request"
 )
 
 func Test_autoCodePackage_Create(t *testing.T) {
@@ -95,8 +95,8 @@ func Test_autoCodePackage_templates(t *testing.T) {
 			}
 			for key, value := range gotCode {
 				t.Logf("\n")
-				t.Logf(key)
-				t.Logf(value)
+				t.Logf("%s", key)
+				t.Logf("%s", value)
 				t.Logf("\n")
 			}
 			t.Log(gotCreates)

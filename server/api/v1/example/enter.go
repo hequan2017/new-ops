@@ -1,6 +1,6 @@
 package example
 
-import "github.com/flipped-aurora/gin-vue-admin/server/service"
+import "github.com/hequan2017/new-ops/server/service"
 
 type ApiGroup struct {
 	CustomerApi

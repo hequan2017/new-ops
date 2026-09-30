@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
-	"github.com/flipped-aurora/gin-vue-admin/server/initialize"
-	mcpTool "github.com/flipped-aurora/gin-vue-admin/server/mcp"
-	"github.com/flipped-aurora/gin-vue-admin/server/service/system"
+	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/initialize"
+	mcpTool "github.com/hequan2017/new-ops/server/mcp"
+	"github.com/hequan2017/new-ops/server/service/system"
 	"go.uber.org/zap"
 )
 
@@ -34,11 +34,11 @@ func RunServer() {
 	mcpBaseURL := mcpTool.ResolveMCPServiceURL()
 
 	fmt.Printf(`
-	欢迎使用 gin-vue-admin
+	欢迎使用 new-ops
 	当前版本:%s
-	项目地址:https://github.com/flipped-aurora/gin-vue-admin
-	授权版体验:https://vip.gin-vue-admin.com
-	插件市场:https://plugin.gin-vue-admin.com
+	项目地址:https://github.com/hequan2017/new-ops
+	授权版体验:https://vip.new-ops.com
+	插件市场:https://plugin.new-ops.com
 	默认自动化文档地址:http://127.0.0.1%s/swagger/index.html
 	MCP 独立服务请手动启动: go run ./cmd/mcp -config ./cmd/mcp/config.yaml
 	默认MCP StreamHTTP地址:%s

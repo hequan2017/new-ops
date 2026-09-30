@@ -3,7 +3,7 @@
 package initialize
 
 import (
-	"github.com/flipped-aurora/gin-vue-admin/server/utils"
+	"github.com/hequan2017/new-ops/server/utils"
 )
 
 // 初始化全局函数

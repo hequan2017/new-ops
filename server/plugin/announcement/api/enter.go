@@ -1,6 +1,6 @@
 package api
 
-import "github.com/flipped-aurora/gin-vue-admin/server/plugin/announcement/service"
+import "github.com/hequan2017/new-ops/server/plugin/announcement/service"
 
 var (
 	Api         = new(api)

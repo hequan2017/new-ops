@@ -1,5 +1,5 @@
 mcp:
-  name: GVA_MCP
+  name: NEW_OPS_MCP
   version: v1.0.0
   path: /mcp
   addr: 8889

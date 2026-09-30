@@ -59,5 +59,5 @@ export const register = (app) => {
   }
   app.component('SvgIcon', svgIcon)
   registerIcons(app)
-  app.config.globalProperties.$GIN_VUE_ADMIN = config
+  app.config.globalProperties.$NEW_OPS = config
 }

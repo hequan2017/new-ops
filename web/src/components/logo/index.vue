@@ -65,7 +65,7 @@ function getSize() {
 </script>
 
 <template>
-  <img v-if="!showTextPlaceholder && logoSrc" :src="logoSrc" :alt="$GIN_VUE_ADMIN.appName" class="object-contain"
+  <img v-if="!showTextPlaceholder && logoSrc" :src="logoSrc" :alt="$NEW_OPS.appName" class="object-contain"
     :style="{
       ...getSize()
     }" :class="{

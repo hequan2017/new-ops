@@ -2,8 +2,8 @@ package system
 
 import (
 	"fmt"
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/system/response"
+	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/model/system/response"
 	"path/filepath"
 	"strings"
 )
@@ -32,7 +32,7 @@ func (a *autoCodeSqlite) GetDB(businessDB string) (data []response.Db, err error
 			fileExt := filepath.Ext(fileName)
 			fileNameWithoutExt := strings.TrimSuffix(fileName, fileExt)
 
-			entities = append(entities, response.Db{fileNameWithoutExt})
+			entities = append(entities, response.Db{Database: fileNameWithoutExt})
 		}
 	}
 	// entities = append(entities, response.Db{global.GVA_CONFIG.Sqlite.Dbname})
@@ -52,7 +52,7 @@ func (a *autoCodeSqlite) GetTables(businessDB string, dbName string) (data []res
 		err = global.GVA_DBList[businessDB].Raw(sql).Find(&tabelNames).Error
 	}
 	for _, tabelName := range tabelNames {
-		entities = append(entities, response.Table{tabelName})
+		entities = append(entities, response.Table{TableName: tabelName})
 	}
 	return entities, err
 }

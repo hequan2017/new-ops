@@ -22,15 +22,15 @@
   const banners = [
     {
       img: banner,
-      link: 'https://plugin.gin-vue-admin.com/license'
+      link: 'https://plugin.new-ops.com/license'
     },
     {
       img: banner2,
-      link: 'https://plugin.gin-vue-admin.com'
+      link: 'https://plugin.new-ops.com'
     },
     {
       img: 'https://qmplusimg.henrongyi.top/gvaDemo/k8s.jpg',
-      link: 'https://plugin.gin-vue-admin.com/#/layout/newPluginInfo?id=42'
+      link: 'https://plugin.new-ops.com/#/layout/newPluginInfo?id=42'
     }
   ]
 </script>

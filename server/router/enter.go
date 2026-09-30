@@ -1,8 +1,8 @@
 package router
 
 import (
-	"github.com/flipped-aurora/gin-vue-admin/server/router/example"
-	"github.com/flipped-aurora/gin-vue-admin/server/router/system"
+	"github.com/hequan2017/new-ops/server/router/example"
+	"github.com/hequan2017/new-ops/server/router/system"
 )
 
 var RouterGroupApp = new(RouterGroup)

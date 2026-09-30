@@ -3,10 +3,10 @@ package system
 import (
 	"context"
 	"fmt"
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/common"
-	"github.com/flipped-aurora/gin-vue-admin/server/model/system"
-	systemReq "github.com/flipped-aurora/gin-vue-admin/server/model/system/request"
+	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/model/common"
+	"github.com/hequan2017/new-ops/server/model/system"
+	systemReq "github.com/hequan2017/new-ops/server/model/system/request"
 )
 
 type SysErrorService struct{}

@@ -3,15 +3,15 @@ kind: ConfigMap
 metadata:
   name: config.yaml
   annotations:
-    flipped-aurora/gin-vue-admin: backend
-    github: "https://github.com/flipped-aurora/gin-vue-admin.git"
+    hequan2017/new-ops: backend
+    github: "https://github.com/hequan2017/new-ops.git"
     app.kubernetes.io/version: 0.0.1
   labels:
-    app: gva-server
-    version: gva-vue3
+    app: new-ops-server
+    version: new-ops-vue3
 data:
   config.yaml: |
-    # github.com/flipped-aurora/gin-vue-admin/server Global Configuration
+    # github.com/hequan2017/new-ops/server Global Configuration
 
     # jwt configuration
     jwt:
@@ -23,7 +23,7 @@ data:
     zap:
       level: 'info'
       format: 'console'
-      prefix: '[github.com/flipped-aurora/gin-vue-admin/server]'
+      prefix: '[github.com/hequan2017/new-ops/server]'
       director: 'log'
       link-name: 'latest_log'
       show-line: true
@@ -66,7 +66,7 @@ data:
       img-height: 80
 
     # mysql connect configuration
-    # 未初始化之前请勿手动修改数据库信息！！！如果一定要手动初始化请看（https://www.github.com/flipped-aurora/gin-vue-admin/server.com/docs/first）
+    # 未初始化之前请勿手动修改数据库信息！！！如果一定要手动初始化请看（https://www.github.com/hequan2017/new-ops/server.com/docs/first）
     mysql:
       path: ''
       config: ''
@@ -125,8 +125,8 @@ data:
       region: 'ap-shanghai'
       secret-id: 'xxxxxxxx'
       secret-key: 'xxxxxxxx'
-      base-url: 'https://gin.vue.admin'
-      path-prefix: 'github.com/flipped-aurora/gin-vue-admin/server'
+      base-url: 'https://new.ops'
+      path-prefix: 'github.com/hequan2017/new-ops/server'
 
     # excel configuration
     excel:

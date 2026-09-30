@@ -8,7 +8,7 @@
       <div class="text-lg mb-2 text-gray-600">
         使用AI创建<a
           class="text-blue-600 text-sm ml-4"
-          href="https://plugin.gin-vue-admin.com/#/layout/userInfo/center"
+          href="https://plugin.new-ops.com/#/layout/userInfo/center"
           target="_blank"
           >获取AiPath</a
         >
@@ -31,7 +31,7 @@
               <div>
                 【完全免费】前往<a
                   class="text-blue-600"
-                  href="https://plugin.gin-vue-admin.com/#/layout/userInfo/center"
+                  href="https://plugin.new-ops.com/#/layout/userInfo/center"
                   target="_blank"
               >插件市场个人中心</a
               >申请AIPath，填入config.yaml的ai-path属性即可使用。
@@ -56,7 +56,7 @@
               <div>
                 【完全免费】前往<a
                   class="text-blue-600"
-                  href="https://plugin.gin-vue-admin.com/#/layout/userInfo/center"
+                  href="https://plugin.new-ops.com/#/layout/userInfo/center"
                   target="_blank"
                   >插件市场个人中心</a
                 >申请AIPath，填入config.yaml的ai-path属性即可使用。

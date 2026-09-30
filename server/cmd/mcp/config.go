@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/config"
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
+	"github.com/hequan2017/new-ops/server/config"
+	"github.com/hequan2017/new-ops/server/global"
 	"gopkg.in/yaml.v3"
 )
 
@@ -53,7 +53,7 @@ func resolveConfigPath() (string, error) {
 		return filepath.Abs(explicit)
 	}
 
-	if envPath := strings.TrimSpace(os.Getenv("GVA_MCP_CONFIG")); envPath != "" {
+	if envPath := strings.TrimSpace(os.Getenv("NEW_OPS_MCP_CONFIG")); envPath != "" {
 		return filepath.Abs(envPath)
 	}
 
@@ -79,7 +79,7 @@ func resolveConfigPath() (string, error) {
 		}
 	}
 
-	return "", errors.New("未找到 MCP 独立配置文件，请在当前目录、cmd/mcp 目录或通过 -config / GVA_MCP_CONFIG 指定 config.yaml")
+	return "", errors.New("未找到 MCP 独立配置文件，请在当前目录、cmd/mcp 目录或通过 -config / NEW_OPS_MCP_CONFIG 指定 config.yaml")
 }
 
 func parseConfigFlag(args []string) (string, error) {
@@ -98,7 +98,7 @@ func parseConfigFlag(args []string) (string, error) {
 
 func applyStandaloneDefaults(configPath string, cfg *standaloneConfig) {
 	if cfg.MCP.Name == "" {
-		cfg.MCP.Name = "GVA_MCP"
+		cfg.MCP.Name = "NEW_OPS_MCP"
 	}
 	if cfg.MCP.Version == "" {
 		cfg.MCP.Version = "v1.0.0"

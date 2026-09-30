@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
-	mcpTool "github.com/flipped-aurora/gin-vue-admin/server/mcp"
+	"github.com/hequan2017/new-ops/server/global"
+	mcpTool "github.com/hequan2017/new-ops/server/mcp"
 	_ "go.uber.org/automaxprocs"
 	"go.uber.org/zap"
 )

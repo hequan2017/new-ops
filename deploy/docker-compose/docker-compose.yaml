@@ -18,7 +18,7 @@ services:
     build:
       context: ../../web
       dockerfile: ./Dockerfile
-    container_name: gva-web
+    container_name: new-ops-web
     restart: always
     ports:
       - '8080:8080'
@@ -33,7 +33,7 @@ services:
     build:
       context: ../../server
       dockerfile: ./Dockerfile
-    container_name: gva-server
+    container_name: new-ops-server
     restart: always
     ports:
       - '8888:8888'

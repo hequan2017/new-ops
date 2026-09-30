@@ -1,7 +1,7 @@
 <template>
   <div class="gva-table-box ai-workflow-page space-y-4">
     <warning-bar
-      href="https://plugin.gin-vue-admin.com/license"
+      href="https://plugin.new-ops.com/license"
       title="本功能由于算力不足限制，已调整为仅对授权用户开放。"
     />
     <el-card shadow="never">
@@ -2391,7 +2391,7 @@ const fillExample = () => {
   analysisForm.packageType = 'auto'
   analysisForm.businessScene = 'OA 内部后台'
   analysisForm.extraConstraints =
-    '需要附件字段；后续可能补充销假功能；优先生成适合 gin-vue-admin 自动代码的结构化方案。'
+    '需要附件字段；后续可能补充销假功能；优先生成适合 new-ops 自动代码的结构化方案。'
   analysisForm.hasClientPage = true
   analysisForm.clientPageDescription =
     '需要一个员工端 H5 页面，用于提交请假申请、查看审批进度、上传附件和发起销假。'

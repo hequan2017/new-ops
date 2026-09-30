@@ -5,7 +5,7 @@
         <template #default="{ row }">
           <a
             class="text-black dark:text-white decoration-black/20 dark:decoration-white/20 hover:text-active"
-            :href="`https://plugin.gin-vue-admin.com/details/${row.ID}`"
+            :href="`https://plugin.new-ops.com/details/${row.ID}`"
             target="_blank"
           >{{ row.name }}</a>
         </template>

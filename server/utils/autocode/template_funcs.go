@@ -2,7 +2,7 @@ package autocode
 
 import (
 	"fmt"
-	systemReq "github.com/flipped-aurora/gin-vue-admin/server/model/system/request"
+	systemReq "github.com/hequan2017/new-ops/server/model/system/request"
 	"slices"
 	"strings"
 	"text/template"

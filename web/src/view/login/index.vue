@@ -17,7 +17,7 @@
             </div>
             <div class="mb-9">
               <p class="text-center text-4xl font-bold">
-                {{ $GIN_VUE_ADMIN.appName }}
+                {{ $NEW_OPS.appName }}
               </p>
               <p class="text-center text-sm font-normal text-gray-500 mt-2.5">
                 A management platform using Golang and Vue
@@ -103,14 +103,14 @@
 
     <BottomInfo class="left-0 right-0 absolute bottom-3 mx-auto w-full z-20">
       <div class="links items-center justify-center gap-2 hidden md:flex">
-        <a href="https://www.gin-vue-admin.com/" target="_blank">
+        <a href="https://www.new-ops.com/" target="_blank">
           <img src="@/assets/docs.png" class="w-8 h-8" alt="文档" />
         </a>
         <a href="https://support.qq.com/product/371961" target="_blank">
           <img src="@/assets/kefu.png" class="w-8 h-8" alt="客服" />
         </a>
         <a
-          href="https://github.com/flipped-aurora/gin-vue-admin"
+          href="https://github.com/hequan2017/new-ops"
           target="_blank"
         >
           <img src="@/assets/github.png" class="w-8 h-8" alt="github" />
