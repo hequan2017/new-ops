@@ -1,25 +1,27 @@
 <template>
-  <div id="userLayout" class="w-full h-full relative">
-    <div
-      class="rounded-lg flex items-center justify-evenly w-full h-full md:w-screen md:h-screen md:bg-[#194bfb] bg-white"
-    >
-      <div class="md:w-3/5 w-10/12 h-full flex items-center justify-evenly">
-        <div
-          class="oblique h-[130%] w-3/5 bg-white dark:bg-slate-900 transform -rotate-12 absolute -ml-52"
-        />
-        <!-- 分割斜块 -->
-        <div
-          class="z-[999] pt-12 pb-10 md:w-96 w-full rounded-lg flex flex-col justify-between box-border"
-        >
+  <div id="userLayout" class="relative w-full h-full overflow-hidden">
+    <!-- 背景：品牌渐变 + 网格 + 光斑 -->
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-indigo-950 to-sky-900">
+      <div class="absolute inset-0 ops-login-grid" />
+      <div class="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-indigo-600/30 blur-3xl" />
+      <div class="absolute -bottom-40 -right-24 h-[26rem] w-[26rem] rounded-full bg-sky-500/25 blur-3xl" />
+      <div class="absolute top-1/4 right-1/3 h-64 w-64 rounded-full bg-cyan-400/10 blur-2xl" />
+    </div>
+
+    <!-- 居中登录卡片 -->
+    <div class="relative z-10 flex h-full w-full items-center justify-center p-4">
+      <div
+        class="w-full max-w-md rounded-2xl border border-white/10 bg-white/90 shadow-2xl backdrop-blur-xl px-8 py-10 dark:border-slate-700/60 dark:bg-slate-900/80"
+      >
           <div>
             <div class="flex items-center justify-center">
               <Logo :size="6" />
             </div>
             <div class="mb-9">
-              <p class="text-center text-4xl font-bold">
+              <p class="text-center text-4xl font-bold text-slate-900 dark:text-white">
                 {{ $NEW_OPS.appName }}
               </p>
-              <p class="text-center text-sm font-normal text-gray-500 mt-2.5">
+              <p class="text-center text-sm font-normal text-gray-500 dark:text-gray-400 mt-2.5">
                 统一运维开发平台 · Go + Vue
               </p>
             </div>
@@ -90,17 +92,8 @@
               </el-form-item>
             </el-form>
           </div>
-        </div>
-      </div>
-      <div class="hidden md:block w-1/2 h-full float-right bg-[#194bfb]">
-        <img
-          class="h-full"
-          src="@/assets/login_right_banner.jpg"
-          alt="banner"
-        />
       </div>
     </div>
-
   </div>
 </template>
 
@@ -229,3 +222,15 @@
     }
   }
 </script>
+
+<style scoped>
+/* 白泽登录背景：品牌渐变上的科技网格纹理 */
+.ops-login-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.09) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 25%, transparent 72%);
+  mask-image: radial-gradient(ellipse at center, #000 25%, transparent 72%);
+}
+</style>
