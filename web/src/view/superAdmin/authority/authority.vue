@@ -1,8 +1,8 @@
 <template>
   <div class="authority">
     <warning-bar title="注：右上角头像下拉可切换角色" />
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button type="primary" icon="plus" @click="addAuthority(0)"
           >新增角色</el-button
         >
@@ -159,7 +159,7 @@
         </div>
       </template>
       <warning-bar title="注：保存时将全量覆盖该角色的用户关联关系；若用户仅剩此一个角色，移除后其主角色保持不变" />
-      <div class="gva-search-box">
+      <div class="ops-search-box">
         <el-form :inline="true" :model="userSearchInfo">
           <el-form-item label="用户名">
             <el-input v-model="userSearchInfo.username" placeholder="请输入用户名" />

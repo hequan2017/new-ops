@@ -1,9 +1,9 @@
 <template>
-  <div class="grid grid-cols-2 gap-6 gva-theme-font px-6">
+  <div class="grid grid-cols-2 gap-6 ops-theme-font px-6">
     <div
       v-for="layout in layoutModes"
       :key="layout.value"
-      class="gva-theme-layout-card"
+      class="ops-theme-layout-card"
       :class="{
         'ring-2 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900 transform -translate-y-1 shadow-xl': modelValue === layout.value
       }"
@@ -43,7 +43,7 @@
       </div>
 
       <div class="text-center">
-        <span class="block text-base font-semibold gva-theme-text-main mb-2" :class="{ 'text-current': modelValue === layout.value }" :style="modelValue === layout.value ? { color: primaryColor } : {}">{{ layout.label }}</span>
+        <span class="block text-base font-semibold ops-theme-text-main mb-2" :class="{ 'text-current': modelValue === layout.value }" :style="modelValue === layout.value ? { color: primaryColor } : {}">{{ layout.label }}</span>
         <span class="block text-sm text-gray-500 dark:text-gray-400">{{ layout.description }}</span>
       </div>
     </div>

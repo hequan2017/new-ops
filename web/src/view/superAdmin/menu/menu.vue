@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button type="primary" icon="plus" @click="addMenu(0)">
           新增根菜单
         </el-button>
@@ -460,18 +460,6 @@
             <el-button type="primary" size="small" @click="addBtn(form)">
               新增可控按钮
             </el-button>
-            <el-tooltip
-              content="点击查看按钮权限配置文档"
-              placement="top"
-              effect="light"
-            >
-              <el-icon
-                class="cursor-pointer text-blue-500 hover:text-blue-700"
-                @click="toDoc('https://www.new-ops.com/guide/web/button-auth.html')"
-              >
-                <QuestionFilled />
-              </el-icon>
-            </el-tooltip>
           </div>
         </div>
              <el-table 
@@ -565,7 +553,6 @@
   import { reactive, ref, nextTick } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { QuestionFilled, InfoFilled, Delete } from '@element-plus/icons-vue'
-  import { toDoc } from '@/utils/doc'
   import { toLowerCase } from '@/utils/stringFun'
   import ComponentsCascader from '@/view/superAdmin/menu/components/components-cascader.vue'
 

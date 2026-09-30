@@ -10,9 +10,9 @@
       class="!absolute !inset-0 !pointer-events-none"
       :content="userStore.userInfo.nickName"
     />
-    <gva-header />
-    <div class="flex flex-row w-full gva-container pt-16 box-border !h-full">
-      <gva-aside
+    <ops-header />
+    <div class="flex flex-row w-full ops-container pt-16 box-border !h-full">
+      <ops-aside
         v-if="
           config.side_mode === 'normal' ||
           config.side_mode === 'sidebar' ||
@@ -20,20 +20,20 @@
           (device === 'mobile' && config.side_mode == 'combination')
         "
       />
-      <gva-aside
+      <ops-aside
         v-if="config.side_mode === 'combination' && device !== 'mobile'"
         mode="normal"
       />
       <div class="flex-1 w-0 h-full">
-        <gva-tabs v-if="config.showTabs" />
+        <ops-tabs v-if="config.showTabs" />
         <div
           class="overflow-auto px-2"
-          :class="config.showTabs ? 'gva-container2' : 'gva-container pt-1'"
+          :class="config.showTabs ? 'ops-container2' : 'ops-container pt-1'"
         >
           <router-view v-if="reloadFlag" v-slot="{ Component, route }">
             <div
-              id="gva-base-load-dom"
-              class="gva-body-h bg-gray-50 dark:bg-slate-800"
+              id="ops-base-load-dom"
+              class="ops-body-h bg-gray-50 dark:bg-slate-800"
             >
               <transition
                 mode="out-in"
@@ -53,10 +53,10 @@
 </template>
 
 <script setup>
-  import GvaAside from '@/view/layout/aside/index.vue'
-  import GvaHeader from '@/view/layout/header/index.vue'
+  import OpsAside from '@/view/layout/aside/index.vue'
+  import OpsHeader from '@/view/layout/header/index.vue'
   import useResponsive from '@/hooks/responsive'
-  import GvaTabs from './tabs/index.vue'
+  import OpsTabs from './tabs/index.vue'
   import BottomInfo from '@/components/bottomInfo/bottomInfo.vue'
   import { emitter } from '@/utils/bus.js'
   import { ref, onMounted, nextTick, reactive, watchEffect } from 'vue'
@@ -70,7 +70,7 @@
   const { config, isDark, device } = storeToRefs(appStore)
 
   defineOptions({
-    name: 'GvaLayout'
+    name: 'OpsLayout'
   })
 
   useResponsive(true)

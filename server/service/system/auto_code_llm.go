@@ -90,7 +90,7 @@ func (s *AutoCodeService) LLMAutoStream(ctx context.Context, llm common.JSONMap)
 
 func buildLLMAutoPath(llm common.JSONMap) (string, error) {
 	if global.GVA_CONFIG.AutoCode.AiPath == "" {
-		return "", errors.New("请先前往插件市场个人中心获取 AiPath 并填写到 config.yaml 中")
+		return "", errors.New("请先在 config.yaml 的 AutoCode.AiPath 中配置 AI 服务地址")
 	}
 
 	mode := strings.TrimSpace(fmt.Sprintf("%v", llm["mode"]))

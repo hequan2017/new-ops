@@ -1,5 +1,5 @@
 <template>
-  <div class="gva-table-box ai-workflow-page space-y-4">
+  <div class="ops-table-box ai-workflow-page space-y-4">
     <warning-bar
       href="https://plugin.new-ops.com/license"
       title="本功能由于算力不足限制，已调整为仅对授权用户开放。"
@@ -322,8 +322,8 @@
               </el-form-item>
               <el-form-item label="工作流目标">
                 <el-select v-model="workflowForm.flowType" class="w-full">
-                  <el-option label="GVA 代码生成" value="gva_codegen" />
-                  <el-option label="GVA 功能完善" value="gva_polish" />
+                  <el-option label="代码生成" value="gva_codegen" />
+                  <el-option label="功能完善" value="gva_polish" />
                   <el-option label="MCP 使用指导" value="mcp_assist" />
                 </el-select>
               </el-form-item>
@@ -1016,8 +1016,8 @@ const TAB_MODE_MAP = {
   workflow: 'workflowPromptChat'
 }
 const FLOW_TYPE_LABEL_MAP = {
-  gva_codegen: 'GVA 代码生成',
-  gva_polish: 'GVA 功能完善',
+  gva_codegen: '代码生成',
+  gva_polish: '功能完善',
   mcp_assist: 'MCP 使用指导'
 }
 const defaultSettings = { extraPayload: '' }
@@ -1169,7 +1169,7 @@ const currentUser = computed(() =>
     userStore.userInfo.ID ||
       userStore.userInfo.uuid ||
       userStore.userInfo.id ||
-      'gva-ai-workflow'
+      'ops-ai-workflow'
   )
 )
 const hasWorkflowResult = computed(() =>

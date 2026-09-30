@@ -1,41 +1,41 @@
 <template>
-  <div class="gva-theme-font">
+  <div class="ops-theme-font">
     <!-- Theme Mode Section -->
     <div class="mb-10">
-      <div class="gva-theme-section-header">
-        <div class="gva-theme-divider"></div>
-        <span class="gva-theme-section-title">主题模式</span>
-        <div class="gva-theme-divider"></div>
+      <div class="ops-theme-section-header">
+        <div class="ops-theme-divider"></div>
+        <span class="ops-theme-section-title">主题模式</span>
+        <div class="ops-theme-divider"></div>
       </div>
 
-      <div class="gva-theme-section-content">
+      <div class="ops-theme-section-content">
         <ThemeModeSelector v-model="config.darkMode" @update:modelValue="appStore.toggleDarkMode" />
       </div>
     </div>
 
     <!-- Theme Color Section -->
     <div class="mb-10">
-      <div class="gva-theme-section-header">
-        <div class="gva-theme-divider"></div>
-        <span class="gva-theme-section-title">主题颜色</span>
-        <div class="gva-theme-divider"></div>
+      <div class="ops-theme-section-header">
+        <div class="ops-theme-divider"></div>
+        <span class="ops-theme-section-title">主题颜色</span>
+        <div class="ops-theme-divider"></div>
       </div>
 
-      <div class="gva-theme-section-content">
+      <div class="ops-theme-section-content">
         <ThemeColorPicker v-model="config.primaryColor" @update:modelValue="appStore.togglePrimaryColor" />
       </div>
     </div>
 
     <!-- Global Size Section -->
     <div class="mb-10">
-      <div class="gva-theme-section-header">
-        <div class="gva-theme-divider"></div>
-        <span class="gva-theme-section-title">全局尺寸</span>
-        <div class="gva-theme-divider"></div>
+      <div class="ops-theme-section-header">
+        <div class="ops-theme-divider"></div>
+        <span class="ops-theme-section-title">全局尺寸</span>
+        <div class="ops-theme-divider"></div>
       </div>
 
-      <div class="gva-theme-section-content">
-        <div class="gva-theme-card-bg">
+      <div class="ops-theme-section-content">
+        <div class="ops-theme-card-bg">
           <SettingItem label="全局尺寸">
             <template #suffix>
               <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">设置全局组件尺寸</span>
@@ -54,14 +54,14 @@
 
     <!-- Visual Accessibility Section -->
     <div class="mb-10">
-      <div class="gva-theme-section-header">
-        <div class="gva-theme-divider"></div>
-        <span class="gva-theme-section-title">视觉辅助</span>
-        <div class="gva-theme-divider"></div>
+      <div class="ops-theme-section-header">
+        <div class="ops-theme-divider"></div>
+        <span class="ops-theme-section-title">视觉辅助</span>
+        <div class="ops-theme-divider"></div>
       </div>
 
-      <div class="gva-theme-section-content">
-        <div class="gva-theme-card-bg">
+      <div class="ops-theme-section-content">
+        <div class="ops-theme-card-bg">
           <SettingItem label="灰色模式">
             <template #suffix>
               <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">降低色彩饱和度</span>

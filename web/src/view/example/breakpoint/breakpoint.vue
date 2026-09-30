@@ -1,6 +1,6 @@
 <template>
   <div class="break-point">
-    <div class="gva-table-box">
+    <div class="ops-table-box">
       <el-divider content-position="left">大文件上传</el-divider>
       <form id="fromCont" method="post">
         <!-- 新增按钮容器，使用 Flexbox 对齐按钮 -->
@@ -235,7 +235,7 @@ a {
   display: inline-block;
 }
 
-.gva-table-box {
+.ops-table-box {
   display: block;
 }
 

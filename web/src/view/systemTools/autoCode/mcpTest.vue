@@ -325,7 +325,7 @@ const emptyStatus = () => ({
 
 const defaultServerConfig = {
   mcpServers: {
-    gva: {
+    'new-ops': {
       url: 'http://127.0.0.1:8889/mcp',
       headers: {
         'x-token': ''

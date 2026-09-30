@@ -1,6 +1,6 @@
 <template>
-  <div class="gva-theme-font">
-    <div class="gva-theme-card-bg p-4">
+  <div class="ops-theme-font">
+    <div class="ops-theme-card-bg p-4">
       <div class="mb-4">
         <p class="text-base font-semibold text-gray-700 dark:text-gray-300 mb-4">精选色彩</p>
         <div class="grid grid-cols-3 gap-4">
@@ -32,7 +32,7 @@
               </div>
             </div>
             <div class="min-w-0 flex-1">
-              <span class="block text-sm font-semibold gva-theme-text-main">{{ colorItem.name }}</span>
+              <span class="block text-sm font-semibold ops-theme-text-main">{{ colorItem.name }}</span>
             </div>
           </div>
         </div>
@@ -40,7 +40,7 @@
 
       <div class="flex items-center justify-between p-4 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl mb-6 shadow-sm">
         <div class="flex-1">
-          <h4 class="text-base font-semibold gva-theme-text-main">自定义颜色</h4>
+          <h4 class="text-base font-semibold ops-theme-text-main">自定义颜色</h4>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">选择任意颜色作为主题色</p>
         </div>
         <el-color-picker

@@ -4,7 +4,7 @@
       title="本功能提供同步的表格导出功能，大数据量的异步表格导出功能，可以选择点我定制"
       href="https://hequan2017.feishu.cn/docx/KwjxdnvatozgwIxGV0rcpkZSn4d"
     />
-    <div class="gva-search-box">
+    <div class="ops-search-box">
       <el-form
         ref="elSearchFormRef"
         :inline="true"
@@ -65,8 +65,8 @@
         </el-form-item>
       </el-form>
     </div>
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button type="primary" icon="plus" @click="openDialog"
           >新增</el-button
         >
@@ -159,7 +159,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="gva-pagination">
+      <div class="ops-pagination">
         <el-pagination
           layout="total, sizes, prev, pager, next, jumper"
           :current-page="page"
@@ -262,7 +262,7 @@
               class="absolute bottom-2 right-2"
               type="primary"
               @click="autoExport"
-              ><el-icon><ai-gva /></el-icon>帮写</el-button
+              ><el-icon><ai-ops /></el-icon>帮写</el-button
             >
           </div>
         </el-form-item>
@@ -286,7 +286,7 @@
               :disabled="!formData.tableName"
               type="primary"
               @click="getColumnFunc(true)"
-              ><el-icon><ai-gva /></el-icon>自动补全</el-button
+              ><el-icon><ai-ops /></el-icon>自动补全</el-button
             >
             <el-button
               :disabled="!formData.tableName"

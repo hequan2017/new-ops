@@ -7810,7 +7810,7 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
-                "gvaModel": {
+                "opsModel": {
                     "description": "是否使用gva默认Model",
                     "type": "boolean",
                     "example": false

@@ -32,15 +32,15 @@
     font-weight: 400 !important;
   }
 
-  .gva-body-h {
+  .ops-body-h {
     min-height: calc(100% - 3rem);
   }
 
-  .gva-container {
+  .ops-container {
     height: calc(100% - 2.5rem);
   }
 
-  .gva-container2 {
+  .ops-container2 {
     height: calc(100% - 4.5rem);
   }
 </style>

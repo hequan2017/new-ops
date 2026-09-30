@@ -58,11 +58,11 @@
           </el-scrollbar>
         </div>
         <div class="ml-4 w-[605px]">
-          <div class="gva-btn-list gap-2">
+          <div class="ops-btn-list gap-2">
             <el-input v-model.trim="search.keyword" class="w-96" placeholder="请输入文件名或备注" clearable />
             <el-button type="primary" icon="search" @click="onSubmit"></el-button>
           </div>
-          <div class="gva-btn-list gap-2">
+          <div class="ops-btn-list gap-2">
             <el-button @click="useSelectedImages" type="danger" :disabled="selectedImages.length === 0" :icon="ArrowLeftBold">选定</el-button>
             <upload-common :image-common="imageCommon" :classId="search.classId" @on-success="onSuccess" />
             <cropper-image :classId="search.classId" @on-success="onSuccess" />

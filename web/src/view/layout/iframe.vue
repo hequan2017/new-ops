@@ -4,8 +4,8 @@
   >
     <iframe
         v-if="reloadFlag"
-        id="gva-base-load-dom"
-        class="gva-body-h bg-gray-50 dark:bg-slate-800 w-full border-t border-gray-200 dark:border-slate-700"
+        id="ops-base-load-dom"
+        class="ops-body-h bg-gray-50 dark:bg-slate-800 w-full border-t border-gray-200 dark:border-slate-700"
         :src="url"
     ></iframe>
   </div>
@@ -24,7 +24,7 @@
 
 
   defineOptions({
-    name: 'GvaLayoutIframe'
+    name: 'OpsLayoutIframe'
   })
 
   useResponsive(true)

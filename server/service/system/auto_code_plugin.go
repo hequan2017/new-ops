@@ -32,7 +32,7 @@ type autoCodePlugin struct{}
 
 // Install 插件安装
 func (s *autoCodePlugin) Install(file *multipart.FileHeader) (web, server int, err error) {
-	const GVAPLUGPINATH = "./gva-plug-temp/"
+	const GVAPLUGPINATH = "./ops-plug-temp/"
 	defer os.RemoveAll(GVAPLUGPINATH)
 	_, err = os.Stat(GVAPLUGPINATH)
 	if os.IsNotExist(err) {

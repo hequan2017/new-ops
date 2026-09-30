@@ -63,7 +63,7 @@ getDataSourceFunc()
 {{- if not .OnlyTemplate }}
 <template>
   <div>
-    <div class="gva-form-box">
+    <div class="ops-form-box">
       <el-form :model="formData" ref="elFormRef" label-position="right" :rules="rule" label-width="80px">
         {{- if .IsTree }}
           <el-form-item label="父节点:" prop="parentID" >

@@ -444,7 +444,7 @@ func (s *SkillsService) DownloadOnlineSkill(_ context.Context, req request.Downl
 		return fmt.Errorf("下载压缩包失败, HTTP状态码: %d", zipResp.StatusCode)
 	}
 
-	tmpFile, err := os.CreateTemp("", "gva-skill-*.zip")
+	tmpFile, err := os.CreateTemp("", "ops-skill-*.zip")
 	if err != nil {
 		return fmt.Errorf("创建临时文件失败: %w", err)
 	}

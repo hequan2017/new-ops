@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div class="gva-table-box">
-      <div class="gva-btn-list justify-between flex items-center">
+    <div class="ops-table-box">
+      <div class="ops-btn-list justify-between flex items-center">
         <span class="text font-bold">字典详细内容</span>
         <div class="flex items-center gap-2">
           <el-input

@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button type="primary" icon="plus" @click="goAutoCode(null)">
           新增
         </el-button>
@@ -77,7 +77,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="gva-pagination">
+      <div class="ops-pagination">
         <el-pagination
           :current-page="page"
           :page-size="pageSize"
@@ -226,7 +226,7 @@
                   @click="aiAddFunc"
                   type="primary"
                   class="absolute right-2 bottom-2"
-                  ><ai-gva />帮写</el-button
+                  ><ai-ops />帮写</el-button
                 >
               </div>
             </el-form-item>
@@ -264,7 +264,7 @@
                 placeholder="请输入方法介绍"
               />
               <el-button type="primary" @click="autoComplete"
-                ><ai-gva />补全</el-button
+                ><ai-ops />补全</el-button
               >
             </div>
           </el-form-item>

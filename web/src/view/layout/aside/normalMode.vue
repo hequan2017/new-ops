@@ -50,7 +50,7 @@
   const { device, config } = storeToRefs(appStore)
 
   defineOptions({
-    name: 'GvaAside'
+    name: 'OpsAside'
   })
   const route = useRoute()
   const router = useRouter()
@@ -65,7 +65,7 @@
     }
   })
   watchEffect(() => {
-    if (route.name === 'gvaLayoutIframe') {
+    if (route.name === 'opsLayoutIframe') {
       active.value = decodeURIComponent(route.query.url)
       return
     }

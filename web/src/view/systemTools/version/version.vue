@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="gva-search-box">
+    <div class="ops-search-box">
       <el-form ref="elSearchFormRef" :inline="true" :model="searchInfo" class="demo-form-inline"
         @keyup.enter="onSubmit">
         <el-form-item label="创建日期" prop="createdAtRange">
@@ -42,8 +42,8 @@
         </el-form-item>
       </el-form>
     </div>
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button type="success" icon="download" @click="openExportDialog">创建发版</el-button>
         <el-button type="warning" icon="upload" @click="openImportDialog">导入版本</el-button>
         <el-button icon="delete" style="margin-left: 10px;" :disabled="!multipleSelection.length"
@@ -73,7 +73,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="gva-pagination">
+      <div class="ops-pagination">
         <el-pagination layout="total, sizes, prev, pager, next, jumper" :current-page="page" :page-size="pageSize"
           :page-sizes="[10, 30, 50, 100]" :total="total" @current-change="handleCurrentChange"
           @size-change="handleSizeChange" />

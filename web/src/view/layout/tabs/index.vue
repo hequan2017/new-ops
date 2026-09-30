@@ -1,5 +1,5 @@
 <template>
-  <div class="gva-tabs">
+  <div class="ops-tabs">
     <el-tabs
       v-model="activeValue"
       :closable="!(historys.length === 1 && $route.name === defaultRouter)"
@@ -384,7 +384,7 @@
 
   $base-tag-item-height: 4rem;
 
-  .gva-tabs {
+  .ops-tabs {
     ::v-deep(.el-tabs--card > .el-tabs__header) {
       border: none;
     }

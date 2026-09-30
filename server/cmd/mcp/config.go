@@ -83,7 +83,7 @@ func resolveConfigPath() (string, error) {
 }
 
 func parseConfigFlag(args []string) (string, error) {
-	fs := flag.NewFlagSet("gva-mcp", flag.ContinueOnError)
+	fs := flag.NewFlagSet("ops-mcp", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
 	var configPath string

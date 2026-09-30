@@ -19,7 +19,7 @@
         :label="item.key"
         :value="item.key"
       >
-        <span class="gva-icon" style="padding: 3px 0 0" :class="item.label">
+        <span class="ops-icon" style="padding: 3px 0 0" :class="item.label">
           <el-icon>
             <component v-if="item.label" :is="item.label" />
           </el-icon>
@@ -1165,7 +1165,7 @@
 </script>
 
 <style lang="scss">
-  .gva-icon {
+  .ops-icon {
     color: rgb(132, 146, 166);
     font-size: 14px;
     margin-right: 10px;

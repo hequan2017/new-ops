@@ -29,7 +29,8 @@ ssh "$HOST" "cd $REMOTE_DIR \
   && rm -rf web.old && mv web web.old && mv web.new web \
   && rm -f dist.tar.gz \
   && mv bin/new-ops-server.new bin/new-ops-server && chmod +x bin/new-ops-server \
-  && systemctl restart new-ops-server && sleep 3 && systemctl is-active new-ops-server"
+  && systemctl restart new-ops-server && sleep 3 && systemctl is-active new-ops-server \
+  && docker restart new-ops-web >/dev/null && sleep 1"
 
 echo "[5/5] 冒烟验证"
 sleep 2

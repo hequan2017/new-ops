@@ -58,7 +58,7 @@ const showLoading = (
     target: null
   }
 ) => {
-  const loadDom = document.getElementById('gva-base-load-dom')
+  const loadDom = document.getElementById('ops-base-load-dom')
   const loadingOption = {
     target: null,
     ...option

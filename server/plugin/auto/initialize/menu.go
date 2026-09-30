@@ -84,22 +84,6 @@ func Menu(ctx context.Context) {
 			Meta:      model.Meta{Title: "MCP 测试", Icon: "connection"},
 		},
 		{
-			Path:      "installPlugin",
-			Name:      "AutoInstallPlugin",
-			Hidden:    false,
-			Component: "plugin/auto/view/installPlugin/index.vue",
-			Sort:      6,
-			Meta:      model.Meta{Title: "插件安装", Icon: "upload-filled"},
-		},
-		{
-			Path:      "pubPlug",
-			Name:      "PubPlug",
-			Hidden:    false,
-			Component: "plugin/auto/view/pubPlug/pubPlug.vue",
-			Sort:      7,
-			Meta:      model.Meta{Title: "插件打包", Icon: "box"},
-		},
-		{
 			Path:      "skills",
 			Name:      "Skills",
 			Hidden:    false,

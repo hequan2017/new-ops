@@ -20,7 +20,7 @@ type AutoCode struct {
 	Description         string                 `json:"description" example:"Struct中文名称"`    // Struct中文名称
 	Abbreviation        string                 `json:"abbreviation" example:"Struct简称"`     // Struct简称
 	HumpPackageName     string                 `json:"humpPackageName" example:"go文件名称"`    // go文件名称
-	GvaModel            bool                   `json:"gvaModel" example:"false"`            // 是否使用gva默认Model
+	GvaModel            bool                   `json:"opsModel" example:"false"`            // 是否使用gva默认Model
 	AutoMigrate         bool                   `json:"autoMigrate" example:"false"`         // 是否自动迁移表结构
 	AutoCreateResource  bool                   `json:"autoCreateResource" example:"false"`  // 是否自动创建资源标识
 	AutoCreateApiToSql  bool                   `json:"autoCreateApiToSql" example:"false"`  // 是否自动创建api

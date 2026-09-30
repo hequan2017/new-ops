@@ -94,7 +94,7 @@ getDataSourceFunc()
 <template>
   <div>
   {{- if not .IsTree }}
-    <div class="gva-search-box">
+    <div class="ops-search-box">
       <el-form ref="elSearchFormRef" :inline="true" :model="searchInfo" class="demo-form-inline" @keyup.enter="onSubmit">
       {{- if .GvaModel }}
       <el-form-item label="创建日期" prop="createdAtRange">
@@ -135,8 +135,8 @@ getDataSourceFunc()
       </el-form>
     </div>
   {{- end }}
-    <div class="gva-table-box">
-        <div class="gva-btn-list">
+    <div class="ops-table-box">
+        <div class="ops-btn-list">
             <el-button {{ if $global.AutoCreateBtnAuth }}v-auth="btnAuth.add"{{ end }} type="primary" icon="plus" @click="openDialog()">新增</el-button>
             <el-button {{ if $global.AutoCreateBtnAuth }}v-auth="btnAuth.batchDelete"{{ end }} icon="delete" style="margin-left: 10px;" :disabled="!multipleSelection.length" @click="onDelete">删除</el-button>
             {{ if .HasExcel -}}
@@ -178,7 +178,7 @@ getDataSourceFunc()
             </template>
         </el-table-column>
         </el-table>
-        <div class="gva-pagination">
+        <div class="ops-pagination">
             <el-pagination
             layout="total, sizes, prev, pager, next, jumper"
             :current-page="page"

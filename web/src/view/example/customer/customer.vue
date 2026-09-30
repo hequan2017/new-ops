@@ -3,8 +3,8 @@
     <warning-bar
       title="在资源权限中将此角色的资源权限清空 或者不包含创建者的角色 即可屏蔽此客户资源的显示"
     />
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button type="primary" icon="plus" @click="openDrawer"
           >新增</el-button
         >
@@ -59,7 +59,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="gva-pagination">
+      <div class="ops-pagination">
         <el-pagination
           :current-page="page"
           :page-size="pageSize"

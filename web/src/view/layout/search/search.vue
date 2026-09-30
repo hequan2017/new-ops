@@ -1,12 +1,12 @@
 <template>
   <div class="search-component items-center">
     <div
-      class="gvaIcon gvaIcon-refresh"
+      class="opsIcon opsIcon-refresh"
       :class="[reload ? 'reloading' : '']"
       @click="handleReload"
     />
     <Screenfull class="search-icon" />
-    <div class="gvaIcon gvaIcon-customer-service" @click="toService" />
+    <div class="opsIcon opsIcon-customer-service" @click="toService" />
     <el-switch
       v-model="isDark"
       :active-action-icon="Moon"

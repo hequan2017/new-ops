@@ -37,8 +37,6 @@ func RunServer() {
 	欢迎使用 new-ops
 	当前版本:%s
 	项目地址:https://github.com/hequan2017/new-ops
-	授权版体验:https://vip.new-ops.com
-	插件市场:https://plugin.new-ops.com
 	默认自动化文档地址:http://127.0.0.1%s/swagger/index.html
 	MCP 独立服务请手动启动: go run ./cmd/mcp -config ./cmd/mcp/config.yaml
 	默认MCP StreamHTTP地址:%s

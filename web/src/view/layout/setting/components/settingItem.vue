@@ -1,7 +1,7 @@
 <template>
-  <div class="gva-theme-setting-item" :style="themeStyleVars">
+  <div class="ops-theme-setting-item" :style="themeStyleVars">
     <div class="flex items-center gap-2">
-      <span class="gva-theme-setting-label">{{ label }}</span>
+      <span class="ops-theme-setting-label">{{ label }}</span>
       <slot name="suffix"></slot>
     </div>
     <div class="flex items-center setting-controls">

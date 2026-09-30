@@ -900,7 +900,7 @@ definitions:
         description: 是否生成web
         example: true
         type: boolean
-      gvaModel:
+      opsModel:
         description: 是否使用gva默认Model
         example: false
         type: boolean

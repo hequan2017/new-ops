@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="gva-search-box">
+    <div class="ops-search-box">
       <el-form :inline="true" :model="searchInfo">
         <el-form-item label="用户名">
           <el-input v-model="searchInfo.username" placeholder="搜索用户名" />
@@ -17,8 +17,8 @@
         </el-form-item>
       </el-form>
     </div>
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button
           icon="delete"
           style="margin-left: 10px;"
@@ -69,7 +69,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="gva-pagination">
+      <div class="ops-pagination">
         <el-pagination
           :current-page="page"
           :page-size="pageSize"

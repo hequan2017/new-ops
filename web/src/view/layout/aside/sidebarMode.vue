@@ -200,7 +200,7 @@
 
 
   watchEffect(() => {
-    if (route.name === 'gvaLayoutIframe') {
+    if (route.name === 'opsLayoutIframe') {
       active.value = decodeURIComponent(route.query.url)
       return
     }

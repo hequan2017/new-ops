@@ -4,7 +4,7 @@
         href="https://plugin.new-ops.com/license"
         title="此功能只针对授权用户开放，点我【购买授权】"
     />
-<div class="gva-search-box">
+<div class="ops-search-box">
       <div class="text-xl mb-2 text-gray-600 dark:text-slate-300">
         AI前端工程师<a
           class="text-blue-600 text-sm ml-4 dark:text-blue-400"
@@ -137,7 +137,7 @@
                 @click="llmAutoFunc()"
             >
               <el-icon size="18">
-                <ai-gva/>
+                <ai-ops/>
               </el-icon>
               生成
             </el-button>

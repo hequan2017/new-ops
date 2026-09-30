@@ -229,22 +229,6 @@ export const getTemplatesApi = () => {
   })
 }
 
-export const installPlug = (data) => {
-  return service({
-    url: '/autoCode/installPlug',
-    method: 'post',
-    data
-  })
-}
-
-export const pubPlug = (params) => {
-  return service({
-    url: '/autoCode/pubPlug',
-    method: 'post',
-    params
-  })
-}
-
 export const llmAuto = (data, options = {}) => {
   return service({
     url: LLM_AUTO_URL,

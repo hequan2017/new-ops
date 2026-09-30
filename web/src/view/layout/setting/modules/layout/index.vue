@@ -1,13 +1,13 @@
 <template>
-  <div class="gva-theme-font">
+  <div class="ops-theme-font">
     <div class="mb-10">
-      <div class="gva-theme-section-header">
-        <div class="gva-theme-divider"></div>
-        <span class="gva-theme-section-title">布局模式</span>
-        <div class="gva-theme-divider"></div>
+      <div class="ops-theme-section-header">
+        <div class="ops-theme-divider"></div>
+        <span class="ops-theme-section-title">布局模式</span>
+        <div class="ops-theme-divider"></div>
       </div>
 
-      <div class="gva-theme-section-content">
+      <div class="ops-theme-section-content">
         <LayoutModeCard
           v-model="config.side_mode"
           @update:modelValue="appStore.toggleSideMode"
@@ -16,14 +16,14 @@
     </div>
 
     <div class="mb-10">
-      <div class="gva-theme-section-header">
-        <div class="gva-theme-divider"></div>
-        <span class="gva-theme-section-title">界面配置</span>
-        <div class="gva-theme-divider"></div>
+      <div class="ops-theme-section-header">
+        <div class="ops-theme-divider"></div>
+        <span class="ops-theme-section-title">界面配置</span>
+        <div class="ops-theme-divider"></div>
       </div>
 
-      <div class="gva-theme-section-content">
-        <div class="gva-theme-card-bg">
+      <div class="ops-theme-section-content">
+        <div class="ops-theme-card-bg">
           <SettingItem label="显示标签页">
             <template #suffix>
               <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">页面标签导航</span>
@@ -55,19 +55,19 @@
     </div>
 
     <div class="mb-10">
-      <div class="gva-theme-section-header">
-        <div class="gva-theme-divider"></div>
-        <span class="gva-theme-section-title">尺寸配置</span>
-        <div class="gva-theme-divider"></div>
+      <div class="ops-theme-section-header">
+        <div class="ops-theme-divider"></div>
+        <span class="ops-theme-section-title">尺寸配置</span>
+        <div class="ops-theme-divider"></div>
       </div>
 
-      <div class="gva-theme-section-content">
-        <div class="gva-theme-card-bg">
+      <div class="ops-theme-section-content">
+        <div class="ops-theme-card-bg">
           <div class="space-y-4">
-            <div class="gva-theme-card-white">
+            <div class="ops-theme-card-white">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="text-sm font-medium gva-theme-text-main">侧边栏展开宽度</h4>
+                  <h4 class="text-sm font-medium ops-theme-text-main">侧边栏展开宽度</h4>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">侧边栏完全展开时的宽度</p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -84,10 +84,10 @@
               </div>
             </div>
 
-            <div class="gva-theme-card-white">
+            <div class="ops-theme-card-white">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="text-sm font-medium gva-theme-text-main">侧边栏收缩宽度</h4>
+                  <h4 class="text-sm font-medium ops-theme-text-main">侧边栏收缩宽度</h4>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">侧边栏收缩时的最小宽度</p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -103,10 +103,10 @@
               </div>
             </div>
 
-            <div class="gva-theme-card-white">
+            <div class="ops-theme-card-white">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="text-sm font-medium gva-theme-text-main">菜单项高度</h4>
+                  <h4 class="text-sm font-medium ops-theme-text-main">菜单项高度</h4>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">侧边栏菜单项的行高</p>
                 </div>
                 <div class="flex items-center gap-2">

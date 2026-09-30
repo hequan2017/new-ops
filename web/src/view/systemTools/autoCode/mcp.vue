@@ -1,5 +1,5 @@
 <template>
-  <div class="gva-form-box">
+  <div class="ops-form-box">
     <el-form :model="form" ref="formRef" label-width="100px" :rules="rules">
       <el-form-item label="工具名称" prop="name">
         <el-input v-model="form.name" placeholder="例:CurrentTime" />

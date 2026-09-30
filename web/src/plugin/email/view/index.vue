@@ -3,7 +3,7 @@
     <warning-bar
       title="需要提前配置email配置文件，为防止不必要的垃圾邮件，在线体验功能不开放此功能体验。"
     />
-    <div class="gva-form-box">
+    <div class="ops-form-box">
       <el-form
         ref="emailForm"
         label-position="right"

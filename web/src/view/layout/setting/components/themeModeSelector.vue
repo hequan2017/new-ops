@@ -1,10 +1,10 @@
 <template>
   <div class="flex justify-center">
-    <div class="gva-theme-mode-selector">
+    <div class="ops-theme-mode-selector">
       <div
         v-for="mode in themeModes"
         :key="mode.value"
-        class="gva-theme-mode-item"
+        class="ops-theme-mode-item"
         :class="[
           modelValue === mode.value
             ? 'text-white shadow-sm transform -translate-y-0.5'

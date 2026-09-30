@@ -4,7 +4,7 @@
       href="https://www.bilibili.com/video/BV1kv4y1g7nT?p=3"
       title="此功能为开发环境使用，不建议发布到生产，具体使用效果请点我观看。"
     />
-    <div class="gva-search-box" v-if="!isAdd">
+    <div class="ops-search-box" v-if="!isAdd">
       <div class="text-lg mb-2 text-gray-600">
         使用AI创建<a
           class="text-blue-600 text-sm ml-4"
@@ -19,7 +19,7 @@
           type="textarea"
           :rows="5"
           :maxlength="2000"
-          :placeholder="`现已完全免费\n试试复制一张图片然后按下ctrl+v或者commend+v\n试试描述你的表，让AI帮你完成。\n此功能需要到插件市场个人中心获取自己的AI-Path，把AI-Path填入config.yaml下的autocode-->ai-path，重启项目即可使用。\n按下 Ctrl+Enter 或 Cmd+Enter 直接生成`"
+          :placeholder="`现已完全免费\n试试复制一张图片然后按下ctrl+v或者commend+v\n试试描述你的表，让AI帮你完成。\n此功能需要在 config.yaml 下配置 autocode-->ai-path 后重启项目使用。\n按下 Ctrl+Enter 或 Cmd+Enter 直接生成`"
           resize="none"
           @focus="handleFocus"
           @blur="handleBlur"
@@ -29,12 +29,7 @@
           <el-tooltip effect="light">
             <template #content>
               <div>
-                【完全免费】前往<a
-                  class="text-blue-600"
-                  href="https://plugin.new-ops.com/#/layout/userInfo/center"
-                  target="_blank"
-              >插件市场个人中心</a
-              >申请AIPath，填入config.yaml的ai-path属性即可使用。
+                在 config.yaml 的 ai-path 属性中配置 AI 服务地址后即可使用。
               </div>
             </template>
             <el-button
@@ -43,7 +38,7 @@
                 @click="eyeFunc()"
             >
               <el-icon size="18">
-                <ai-gva />
+                <ai-ops />
               </el-icon>
               识图
             </el-button>
@@ -54,12 +49,7 @@
           <el-tooltip effect="light">
             <template #content>
               <div>
-                【完全免费】前往<a
-                  class="text-blue-600"
-                  href="https://plugin.new-ops.com/#/layout/userInfo/center"
-                  target="_blank"
-                  >插件市场个人中心</a
-                >申请AIPath，填入config.yaml的ai-path属性即可使用。
+                在 config.yaml 的 ai-path 属性中配置 AI 服务地址后即可使用。
               </div>
             </template>
             <el-button
@@ -68,7 +58,7 @@
               @click="llmAutoFunc()"
             >
               <el-icon size="18">
-                <ai-gva />
+                <ai-ops />
               </el-icon>
               生成
             </el-button>
@@ -77,7 +67,7 @@
       </div>
     </div>
     <!-- 从数据库直接获取字段 -->
-    <div class="gva-search-box" v-if="!isAdd">
+    <div class="ops-search-box" v-if="!isAdd">
       <div class="text-lg mb-2 text-gray-600">从数据库创建</div>
       <el-form
         ref="getTableForm"
@@ -173,7 +163,7 @@
         </el-row>
       </el-form>
     </div>
-    <div class="gva-search-box">
+    <div class="ops-search-box">
       <!-- 初始版本自动化代码工具 -->
       <div class="text-lg mb-2 text-gray-600">自动化结构</div>
       <el-form
@@ -198,7 +188,7 @@
                   @click="llmAutoFunc(true)"
                 >
                   <el-icon size="18">
-                    <ai-gva />
+                    <ai-ops />
                   </el-icon>
                   生成
                 </el-button>
@@ -296,7 +286,7 @@
             <el-form-item label="业务库" prop="businessDB" class="w-full">
               <template #label>
                 <el-tooltip
-                  content="注：需要提前到db-list自行配置多数据库，此项为空则会使用gva本库创建自动化代码(global.GVA_DB),填写后则会创建指定库的代码(global.MustGetGlobalDBByDBName(dbname))"
+                  content="注：需要提前到db-list自行配置多数据库，此项为空则会使用默认库创建自动化代码(global.GVA_DB),填写后则会创建指定库的代码(global.MustGetGlobalDBByDBName(dbname))"
                   placement="bottom"
                   effect="light"
                 >
@@ -332,7 +322,7 @@
         </el-row>
       </el-form>
     </div>
-    <div class="gva-search-box">
+    <div class="ops-search-box">
       <el-collapse class="no-border-collapse">
         <el-collapse-item>
           <template #title>
@@ -356,8 +346,8 @@
                       placement="top"
                       effect="light"
                   >
-                    <el-form-item label="使用GVA结构">
-                      <el-checkbox v-model="form.gvaModel" @change="useGva" />
+                    <el-form-item label="使用内置结构">
+                      <el-checkbox v-model="form.opsModel" @change="useOps" />
                     </el-form-item>
                   </el-tooltip>
                 </el-col>
@@ -484,8 +474,8 @@
       </el-collapse>
     </div>
     <!-- 组件列表 -->
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button
           type="primary"
           @click="editAndAddField()"
@@ -734,7 +724,7 @@
         </el-table>
       </div>
       <!-- 组件列表 -->
-      <div class="gva-btn-list justify-end mt-4">
+      <div class="ops-btn-list justify-end mt-4">
         <el-button type="primary" :disabled="isAdd" @click="exportJson()">
           导出json
         </el-button>
@@ -1135,7 +1125,7 @@
     autoCreateMenuToSql: true,
     autoCreateBtnAuth: false,
     autoMigrate: true,
-    gvaModel: true,
+    opsModel: true,
     autoCreateResource: false,
     onlyTemplate: false,
     isTree: false,
@@ -1168,10 +1158,10 @@
   const dialogFlag = ref(false)
   const previewFlag = ref(false)
 
-  const useGva = (e) => {
+  const useOps = (e) => {
     if (e && form.value.fields.length) {
       ElMessageBox.confirm(
-        '如果您开启GVA默认结构，会自动添加ID,CreatedAt,UpdatedAt,DeletedAt字段，此行为将自动清除您目前在下方创建的重名字段，是否继续？',
+        '如果您开启内置默认结构，会自动添加ID,CreatedAt,UpdatedAt,DeletedAt字段，此行为将自动清除您目前在下方创建的重名字段，是否继续？',
         '注意',
         {
           confirmButtonText: '继续',
@@ -1186,7 +1176,7 @@
           )
         })
         .catch(() => {
-          form.value.gvaModel = false
+          form.value.opsModel = false
         })
     }
   }
@@ -1279,7 +1269,7 @@
       }
 
       if (
-        !form.value.gvaModel &&
+        !form.value.opsModel &&
         form.value.fields.every((item) => !item.primaryKey)
       ) {
         ElMessage({
@@ -1425,7 +1415,7 @@
         const dbraw = toRaw(dbtmp)
         dbtype = dbraw.dbtype
       }
-      form.value.gvaModel = false
+      form.value.opsModel = false
       const tbHump = toHump(dbform.value.tableName)
       form.value.structName = toUpperCase(tbHump)
       form.value.tableName = dbform.value.tableName
@@ -1482,7 +1472,7 @@
   const needAppend = (item) => {
     let isAppend = true
     if (
-      form.value.gvaModel &&
+      form.value.opsModel &&
       gormModelList.some((gormfd) => gormfd === item.columnName)
     ) {
       isAppend = false
@@ -1582,7 +1572,7 @@
       autoCreateMenuToSql: true,
       autoCreateBtnAuth: false,
       autoMigrate: true,
-      gvaModel: true,
+      opsModel: true,
       autoCreateResource: false,
       onlyTemplate: false,
       isTree: false,

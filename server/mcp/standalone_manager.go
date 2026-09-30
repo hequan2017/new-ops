@@ -463,9 +463,9 @@ func managedProcessMetaPath() string {
 
 func managedBinaryName() string {
 	if runtime.GOOS == "windows" {
-		return "gva-mcp-standalone.exe"
+		return "ops-mcp-standalone.exe"
 	}
-	return "gva-mcp-standalone"
+	return "ops-mcp-standalone"
 }
 
 func fileExists(path string) bool {

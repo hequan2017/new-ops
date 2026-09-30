@@ -3,7 +3,7 @@
     ref="subMenu"
     :index="routerInfo.name"
     :style="menuStyleVars"
-    class="gva-sub-menu dark:text-slate-300 relative"
+    class="ops-sub-menu dark:text-slate-300 relative"
   >
     <template #title>
       <div
@@ -58,14 +58,14 @@
   })
 
   const menuStyleVars = computed(() => ({
-    '--gva-side-height': sideHeight.value
+    '--ops-side-height': sideHeight.value
   }))
 </script>
 
 <style lang="scss">
-  .gva-sub-menu {
+  .ops-sub-menu {
     .el-sub-menu__title {
-      height: var(--gva-side-height) !important;
+      height: var(--ops-side-height) !important;
     }
   }
 </style>

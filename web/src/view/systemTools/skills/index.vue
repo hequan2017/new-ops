@@ -1308,24 +1308,13 @@
     return options
   })
 
-  const pluginMarketLoginURL = 'https://plugin.new-ops.com'
-
   const isPluginMarketAuthError = (message) => {
     const msg = (message || '').toString()
-    return msg.includes('插件市场登录') || msg.includes('401')
+    return msg.includes('技能源未登录') || msg.includes('401')
   }
 
   const promptPluginMarketLogin = async () => {
-    try {
-      await ElMessageBox.confirm('请先登录插件市场后再下载技能，是否现在前往登录？', '提示', {
-        confirmButtonText: '前往插件市场',
-        cancelButtonText: '取消',
-        type: 'warning'
-      })
-      window.open(pluginMarketLoginURL, '_blank')
-    } catch (e) {
-      // 用户取消时不需要额外提示
-    }
+    ElMessage.warning('技能源未登录或不可用，无法下载技能，请稍后重试或使用本地技能')
   }
 
   const openOnlineDrawer = () => {

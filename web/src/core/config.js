@@ -20,13 +20,8 @@ export const viteLogo = (env) => {
       )
     )
     console.log(greenText(`> 当前版本:v${packageInfo.version}`))
-    console.log(greenText(`> 加群方式:微信：shouzi_1994 QQ群：470239250`))
     console.log(
       greenText(`> 项目地址：https://github.com/hequan2017/new-ops`)
-    )
-    console.log(greenText(`> 插件市场:https://plugin.new-ops.com`))
-    console.log(
-      greenText(`> GVA讨论社区:https://support.qq.com/products/371961`)
     )
     console.log(
       greenText(

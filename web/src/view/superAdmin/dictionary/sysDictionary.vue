@@ -322,7 +322,7 @@
             </template>
             <el-button type="primary" @click="eyeFunc">
                 <el-icon size="18">
-                <ai-gva />
+                <ai-ops />
               </el-icon>
               识图
             </el-button>

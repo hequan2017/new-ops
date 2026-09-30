@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="gva-search-box">
+    <div class="ops-search-box">
       <el-form
         ref="elSearchFormRef"
         :inline="true"
@@ -66,8 +66,8 @@
         </el-form-item>
       </el-form>
     </div>
-    <div class="gva-table-box">
-      <div class="gva-btn-list">
+    <div class="ops-table-box">
+      <div class="ops-btn-list">
         <el-button
           icon="delete"
           style="margin-left: 10px"
@@ -167,7 +167,7 @@
               class="table-button"
               @click="getSolution(scope.row.ID)"
             >
-              <el-icon><ai-gva /></el-icon>方案
+              <el-icon><ai-ops /></el-icon>方案
             </el-button>
             <el-button
               type="primary"
@@ -187,7 +187,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="gva-pagination">
+      <div class="ops-pagination">
         <el-pagination
           layout="total, sizes, prev, pager, next, jumper"
           :current-page="page"
@@ -278,7 +278,7 @@
 
   const getSolution = async (id) => {
     const confirmed = await ElMessageBox.confirm(
-      '日志将通过 AI-PATH 传输至 GVA AI 用于错误分析，并在 GVA 官方平台短暂存储作为 AI 上下文。是否确认进行 AI 处理？（此功能仅向授权用户开放）',
+      '日志将通过 AI-PATH 传输至 AI 服务用于错误分析，并在服务平台短暂存储作为 AI 上下文。是否确认进行 AI 处理？（此功能仅向授权用户开放）',
       '提示(Beta)',
       {
         confirmButtonText: '确认',

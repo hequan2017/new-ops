@@ -117,7 +117,7 @@ func (g *GVAExecutor) New() mcp.Tool {
 							"description":         map[string]interface{}{"type": "string", "description": "中文描述"},
 							"abbreviation":        map[string]interface{}{"type": "string", "description": "简称"},
 							"humpPackageName":     map[string]interface{}{"type": "string", "description": "文件名称（小驼峰），一般是结构体名的小驼峰示例:userInfo"},
-							"gvaModel":            map[string]interface{}{"type": "boolean", "description": "是否使用GVA模型（固定为true），自动包含ID、CreatedAt、UpdatedAt、DeletedAt字段"},
+							"opsModel":            map[string]interface{}{"type": "boolean", "description": "是否使用GVA模型（固定为true），自动包含ID、CreatedAt、UpdatedAt、DeletedAt字段"},
 							"autoMigrate":         map[string]interface{}{"type": "boolean", "description": "是否自动迁移数据库"},
 							"autoCreateResource":  map[string]interface{}{"type": "boolean", "description": "是否创建资源（默认为false）"},
 							"autoCreateApiToSql":  map[string]interface{}{"type": "boolean", "description": "是否创建API（默认为true）"},
@@ -154,7 +154,7 @@ func (g *GVAExecutor) New() mcp.Tool {
 										"errorText":       map[string]interface{}{"type": "string", "description": "错误提示"},
 										"clearable":       map[string]interface{}{"type": "boolean", "description": "是否可清空"},
 										"sort":            map[string]interface{}{"type": "boolean", "description": "是否排序"},
-										"primaryKey":      map[string]interface{}{"type": "boolean", "description": "是否主键（gvaModel=false时必须有一个字段为true）"},
+										"primaryKey":      map[string]interface{}{"type": "boolean", "description": "是否主键（opsModel=false时必须有一个字段为true）"},
 										"dataSource": map[string]interface{}{
 											"type":        "object",
 											"description": "数据源配置，用于配置字段的关联表信息。获取表名提示：可在 server/model 和 plugin/xxx/model 目录下查看对应模块的 TableName() 接口实现获取实际表名（如 SysUser 的表名为 sys_users）。获取数据库名提示：主数据库通常使用 gva（默认数据库标识），多数据库可在 config.yaml 的 db-list 配置中查看可用数据库的 alias-name 字段，如果用户未提及关联多数据库信息则使用默认数据库，默认数据库的情况下 dbName填写为空",
@@ -420,15 +420,15 @@ func (g *GVAExecutor) validateExecutionPlan(plan *ExecutionPlan) error {
 					}
 				}
 				if primaryKeyCount == 0 {
-					return fmt.Errorf("模块 %d：当 gvaModel=false 时，必须有一个字段的 primaryKey=true", moduleIndex+1)
+					return fmt.Errorf("模块 %d：当 opsModel=false 时，必须有一个字段的 primaryKey=true", moduleIndex+1)
 				}
 				if primaryKeyCount > 1 {
-					return fmt.Errorf("模块 %d：当 gvaModel=false 时，只能有一个字段的 primaryKey=true", moduleIndex+1)
+					return fmt.Errorf("模块 %d：当 opsModel=false 时，只能有一个字段的 primaryKey=true", moduleIndex+1)
 				}
 			} else {
 				for i, field := range moduleInfo.Fields {
 					if field.PrimaryKey {
-						return fmt.Errorf("模块 %d：当 gvaModel=true 时，字段 %d 的 primaryKey 应该为 false", moduleIndex+1, i+1)
+						return fmt.Errorf("模块 %d：当 opsModel=true 时，字段 %d 的 primaryKey 应该为 false", moduleIndex+1, i+1)
 					}
 				}
 			}

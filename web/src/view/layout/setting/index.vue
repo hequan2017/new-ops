@@ -5,11 +5,11 @@
     direction="rtl"
     :size="width"
     :show-close="false"
-    class="gva-theme-drawer"
+    class="ops-theme-drawer"
   >
     <template #header>
       <div class="flex items-center justify-between w-full px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <h2 class="text-xl font-semibold gva-theme-text-main gva-theme-font">系统配置</h2>
+        <h2 class="text-xl font-semibold ops-theme-text-main ops-theme-font">系统配置</h2>
         <el-button
           type="primary"
           size="small"
@@ -66,7 +66,7 @@
   import GeneralSettings from './modules/general/index.vue'
 
   defineOptions({
-    name: 'GvaSetting'
+    name: 'OpsSetting'
   })
 
   const appStore = useAppStore()
@@ -107,7 +107,7 @@
 </script>
 
 <style lang="scss">
-.gva-theme-drawer {
+.ops-theme-drawer {
   .el-drawer {
     @apply bg-white dark:bg-gray-900;
   }
@@ -121,59 +121,59 @@
   }
 }
 
-.gva-theme-font {
+.ops-theme-font {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.gva-theme-card-bg {
+.ops-theme-card-bg {
   @apply bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm;
 }
 
-.gva-theme-card-white {
+.ops-theme-card-white {
   @apply bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-5 hover:shadow-md transition-all duration-150 ease-in-out hover:-translate-y-0.5;
 }
 
-.gva-theme-section-header {
+.ops-theme-section-header {
   @apply flex items-center justify-center mb-6;
 }
 
-.gva-theme-section-title {
+.ops-theme-section-title {
   @apply px-6 text-lg font-semibold text-gray-700 dark:text-gray-300;
 }
 
-.gva-theme-divider {
+.ops-theme-divider {
   @apply h-px bg-gray-200 dark:bg-gray-700 flex-1;
 }
 
-.gva-theme-text-main {
+.ops-theme-text-main {
   @apply text-gray-900 dark:text-white;
 }
 
-.gva-theme-text-sub {
+.ops-theme-text-sub {
   @apply text-gray-600 dark:text-gray-400;
 }
 
-.gva-theme-section-content {
+.ops-theme-section-content {
   animation: fadeInUp 0.3s ease;
 }
 
-.gva-theme-setting-item {
-  @apply flex items-center justify-between py-4 gva-theme-font border-b border-gray-100 dark:border-gray-700 last:border-b-0;
+.ops-theme-setting-item {
+  @apply flex items-center justify-between py-4 ops-theme-font border-b border-gray-100 dark:border-gray-700 last:border-b-0;
 }
 
-.gva-theme-setting-label {
-  @apply text-sm font-medium gva-theme-text-main;
+.ops-theme-setting-label {
+  @apply text-sm font-medium ops-theme-text-main;
 }
 
-.gva-theme-mode-selector {
+.ops-theme-mode-selector {
   @apply inline-flex bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 gap-1;
 }
 
-.gva-theme-mode-item {
+.ops-theme-mode-item {
   @apply flex flex-col items-center justify-center px-3 py-2 rounded-md cursor-pointer transition-all duration-150 ease-in-out min-w-[64px];
 }
 
-.gva-theme-layout-card {
+.ops-theme-layout-card {
   @apply bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl p-3 cursor-pointer transition-all duration-150 ease-in-out hover:-translate-y-1 hover:shadow-xl;
 }
 
@@ -190,16 +190,16 @@
 }
 
 /* Custom scrollbar for webkit browsers */
-.gva-theme-drawer ::-webkit-scrollbar {
+.ops-theme-drawer ::-webkit-scrollbar {
   width: 6px;
 }
 
-.gva-theme-drawer ::-webkit-scrollbar-track {
+.ops-theme-drawer ::-webkit-scrollbar-track {
   background: #f3f4f6;
   border-radius: 3px;
 }
 
-.gva-theme-drawer ::-webkit-scrollbar-thumb {
+.ops-theme-drawer ::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 3px;
 
@@ -208,11 +208,11 @@
   }
 }
 
-.dark .gva-theme-drawer ::-webkit-scrollbar-track {
+.dark .ops-theme-drawer ::-webkit-scrollbar-track {
   background: #1f2937;
 }
 
-.dark .gva-theme-drawer ::-webkit-scrollbar-thumb {
+.dark .ops-theme-drawer ::-webkit-scrollbar-thumb {
   background: #4b5563;
 
   &:hover {
