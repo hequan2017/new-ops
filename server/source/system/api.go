@@ -141,11 +141,6 @@ func (i *initApi) InitializeData(ctx context.Context) (context.Context, error) {
 		{ApiGroup: "skills", Method: "POST", Path: "/skills/saveGlobalConstraint", Description: "保存全局约束"},
 		{ApiGroup: "skills", Method: "POST", Path: "/skills/packageSkill", Description: "打包技能"},
 
-		{ApiGroup: "客户", Method: "PUT", Path: "/customer/customer", Description: "更新客户"},
-		{ApiGroup: "客户", Method: "POST", Path: "/customer/customer", Description: "创建客户"},
-		{ApiGroup: "客户", Method: "DELETE", Path: "/customer/customer", Description: "删除客户"},
-		{ApiGroup: "客户", Method: "GET", Path: "/customer/customer", Description: "获取单一客户"},
-		{ApiGroup: "客户", Method: "GET", Path: "/customer/customerList", Description: "获取客户列表"},
 
 		{ApiGroup: "代码生成器", Method: "GET", Path: "/autoCode/getDB", Description: "获取所有数据库"},
 		{ApiGroup: "代码生成器", Method: "GET", Path: "/autoCode/getTables", Description: "获取数据库表"},

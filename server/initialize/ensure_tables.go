@@ -61,7 +61,6 @@ func (e *ensureTables) MigrateTable(ctx context.Context) (context.Context, error
 		adapter.CasbinRule{},
 
 		example.ExaFile{},
-		example.ExaCustomer{},
 		example.ExaFileChunk{},
 		example.ExaFileUploadAndDownload{},
 		example.ExaAttachmentCategory{},
@@ -103,7 +102,6 @@ func (e *ensureTables) TableCreated(ctx context.Context) bool {
 		adapter.CasbinRule{},
 
 		example.ExaFile{},
-		example.ExaCustomer{},
 		example.ExaFileChunk{},
 		example.ExaFileUploadAndDownload{},
 		example.ExaAttachmentCategory{},
