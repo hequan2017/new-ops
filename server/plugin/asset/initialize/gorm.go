@@ -17,6 +17,7 @@ func Gorm(ctx context.Context) {
 		new(model.AssetRoom),
 		new(model.AssetRack),
 		new(model.AssetProductLine),
+		new(model.AssetHostHistory),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "asset 注册表失败!")

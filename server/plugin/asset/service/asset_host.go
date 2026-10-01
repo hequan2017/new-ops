@@ -13,8 +13,8 @@ import (
 // AssetHostService 主机资产服务
 type AssetHostService struct{}
 
-// CreateAssetHost 创建主机资产（校验 + IP 唯一性 + 产品线关联）
-func (s *AssetHostService) CreateAssetHost(h *model.AssetHost) error {
+// CreateAssetHost 创建主机资产（校验 + IP 唯一性 + 产品线关联 + 变更历史）
+func (s *AssetHostService) CreateAssetHost(h *model.AssetHost, operator string) error {
 	if err := validateHost(h); err != nil {
 		return err
 	}
@@ -27,12 +27,16 @@ func (s *AssetHostService) CreateAssetHost(h *model.AssetHost) error {
 		if err := tx.Create(h).Error; err != nil {
 			return err
 		}
-		return s.replaceProductLines(tx, h)
+		if err := s.replaceProductLines(tx, h); err != nil {
+			return err
+		}
+		recordHostHistory(tx, h.ID, model.HostHistoryCreate, h, operator)
+		return nil
 	})
 }
 
-// DeleteAssetHost 删除主机资产（软删除，联动清理产品线关联）
-func (s *AssetHostService) DeleteAssetHost(id uint) error {
+// DeleteAssetHost 删除主机资产（软删除，联动清理产品线关联 + 变更历史）
+func (s *AssetHostService) DeleteAssetHost(id uint, operator string) error {
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		var host model.AssetHost
 		if err := tx.First(&host, id).Error; err != nil {
@@ -44,12 +48,16 @@ func (s *AssetHostService) DeleteAssetHost(id uint) error {
 		if err := tx.Model(&host).Association("ProductLines").Clear(); err != nil {
 			return err
 		}
-		return tx.Delete(&host).Error
+		if err := tx.Delete(&host).Error; err != nil {
+			return err
+		}
+		recordHostHistory(tx, host.ID, model.HostHistoryDelete, host, operator)
+		return nil
 	})
 }
 
 // DeleteAssetHostByIds 批量删除主机资产
-func (s *AssetHostService) DeleteAssetHostByIds(ids []uint) error {
+func (s *AssetHostService) DeleteAssetHostByIds(ids []uint, operator string) error {
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		for _, id := range ids {
 			var host model.AssetHost
@@ -62,13 +70,17 @@ func (s *AssetHostService) DeleteAssetHostByIds(ids []uint) error {
 			if err := tx.Model(&host).Association("ProductLines").Clear(); err != nil {
 				return err
 			}
+			if err := tx.Delete(&host).Error; err != nil {
+				return err
+			}
+			recordHostHistory(tx, host.ID, model.HostHistoryDelete, host, operator)
 		}
-		return tx.Delete(&model.AssetHost{}, ids).Error
+		return nil
 	})
 }
 
-// UpdateAssetHost 更新主机资产（校验 + IP 占用检查 + 关联重写）
-func (s *AssetHostService) UpdateAssetHost(h *model.AssetHost) error {
+// UpdateAssetHost 更新主机资产（校验 + IP 占用检查 + 关联重写 + 变更历史）
+func (s *AssetHostService) UpdateAssetHost(h *model.AssetHost, operator string) error {
 	if err := validateHost(h); err != nil {
 		return err
 	}
@@ -81,7 +93,11 @@ func (s *AssetHostService) UpdateAssetHost(h *model.AssetHost) error {
 		if err := tx.Model(&model.AssetHost{}).Where("id = ?", h.ID).Omit("ProductLines").Updates(h).Error; err != nil {
 			return err
 		}
-		return s.replaceProductLines(tx, h)
+		if err := s.replaceProductLines(tx, h); err != nil {
+			return err
+		}
+		recordHostHistory(tx, h.ID, model.HostHistoryUpdate, h, operator)
+		return nil
 	})
 }
 

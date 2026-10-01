@@ -18,6 +18,9 @@ func (r *AssetHostRouter) InitAssetHostRouter(Router *gin.RouterGroup) {
 		hostRouter.DELETE("deleteByIds", assetApi.Api.AssetHost.DeleteAssetHostByIds)
 		hostRouter.PUT("update", assetApi.Api.AssetHost.UpdateAssetHost)
 		hostRouter.GET("find", assetApi.Api.AssetHost.FindAssetHost)
+		hostRouter.GET("history", assetApi.Api.AssetHost.GetAssetHostHistory)
+		hostRouter.GET("export", assetApi.Api.AssetHost.ExportAssetHost)
+		hostRouter.POST("import", assetApi.Api.AssetHost.ImportAssetHost)
 		hostRouter.POST("list", assetApi.Api.AssetHost.GetAssetHostList)
 	}
 }

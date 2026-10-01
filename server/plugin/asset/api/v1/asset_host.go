@@ -2,11 +2,14 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/model/common/request"
 	"github.com/hequan2017/new-ops/server/model/common/response"
 	"github.com/hequan2017/new-ops/server/plugin/asset/model"
 	assetReq "github.com/hequan2017/new-ops/server/plugin/asset/model/request"
+	"github.com/hequan2017/new-ops/server/utils"
 )
 
 type assetHost struct{}
@@ -26,7 +29,7 @@ func (a *assetHost) CreateAssetHost(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	if err := assetHostService.CreateAssetHost(&h); err != nil {
+	if err := assetHostService.CreateAssetHost(&h, utils.GetUserName(c)); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -48,7 +51,7 @@ func (a *assetHost) DeleteAssetHost(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	if err := assetHostService.DeleteAssetHost(uint(req.ID)); err != nil {
+	if err := assetHostService.DeleteAssetHost(uint(req.ID), utils.GetUserName(c)); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -74,7 +77,7 @@ func (a *assetHost) DeleteAssetHostByIds(c *gin.Context) {
 	for _, id := range req.Ids {
 		ids = append(ids, uint(id))
 	}
-	if err := assetHostService.DeleteAssetHostByIds(ids); err != nil {
+	if err := assetHostService.DeleteAssetHostByIds(ids, utils.GetUserName(c)); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -96,7 +99,7 @@ func (a *assetHost) UpdateAssetHost(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	if err := assetHostService.UpdateAssetHost(&h); err != nil {
+	if err := assetHostService.UpdateAssetHost(&h, utils.GetUserName(c)); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -152,4 +155,89 @@ func (a *assetHost) GetAssetHostList(c *gin.Context) {
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}, "获取成功", c)
+}
+
+// GetAssetHostHistory 分页查询主机资产变更历史
+// @Tags AssetHost
+// @Summary 分页查询主机资产变更历史
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "主机ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页大小"
+// @Success 200 {object} response.Response{data=response.PageResult,msg=string} "获取成功"
+// @Router /asset/host/history [get]
+func (a *assetHost) GetAssetHostHistory(c *gin.Context) {
+	var req request.GetById
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	var info request.PageInfo
+	if err := c.ShouldBindQuery(&info); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	list, total, err := assetHostService.GetAssetHostHistoryList(uint(req.ID), info)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(response.PageResult{
+		List:     list,
+		Total:    total,
+		Page:     info.Page,
+		PageSize: info.PageSize,
+	}, "获取成功", c)
+}
+
+// ExportAssetHost 导出主机资产 Excel
+// @Tags AssetHost
+// @Summary 导出主机资产 Excel
+// @Security ApiKeyAuth
+// @Produce application/octet-stream
+// @Success 200 {file} file "Excel 文件流"
+// @Router /asset/host/export [get]
+func (a *assetHost) ExportAssetHost(c *gin.Context) {
+	f, err := assetHostService.ExportAssetHosts()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	buf, err := f.WriteToBuffer()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	c.Header("Content-Disposition", "attachment; filename=asset_hosts.xlsx")
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+}
+
+// ImportAssetHost 导入主机资产 Excel（按内网IP upsert）
+// @Tags AssetHost
+// @Summary 导入主机资产 Excel
+// @Security ApiKeyAuth
+// @Accept multipart/form-data
+// @Produce application/json
+// @Param file formData file true "Excel 文件"
+// @Success 200 {object} response.Response{data=service.ImportResult} "导入完成"
+// @Router /asset/host/import [post]
+func (a *assetHost) ImportAssetHost(c *gin.Context) {
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		response.FailWithMessage("请上传文件", c)
+		return
+	}
+	f, err := fileHeader.Open()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	defer f.Close()
+	res, err := assetHostService.ImportAssetHosts(f, utils.GetUserName(c))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(res, "导入完成", c)
 }
