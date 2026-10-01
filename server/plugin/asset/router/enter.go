@@ -10,6 +10,7 @@ type RouterGroup struct {
 	AssetRoomRouter
 	AssetRackRouter
 	AssetProductLineRouter
+	AssetGroupRouter
 }
 
 var RouterGroupApp = new(RouterGroup)
@@ -21,4 +22,5 @@ func (rg *RouterGroup) Init(public, private *gin.RouterGroup) {
 	rg.AssetRoomRouter.InitAssetRoomRouter(private)
 	rg.AssetRackRouter.InitAssetRackRouter(private)
 	rg.AssetProductLineRouter.InitAssetProductLineRouter(private)
+	rg.AssetGroupRouter.InitAssetGroupRouter(private)
 }

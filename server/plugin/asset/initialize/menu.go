@@ -43,6 +43,14 @@ func Menu(ctx context.Context) {
 			Sort:      3,
 			Meta:      model.Meta{Title: "产品线", Icon: "collection"},
 		},
+		{
+			Path:      "assetGroup",
+			Name:      "assetGroup",
+			Hidden:    false,
+			Component: "plugin/asset/view/group/index.vue",
+			Sort:      4,
+			Meta:      model.Meta{Title: "资产组与权限", Icon: "key"},
+		},
 	}
 	utils.RegisterMenus(entities...)
 }

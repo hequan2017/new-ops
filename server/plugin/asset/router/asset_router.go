@@ -43,3 +43,16 @@ func (r *AssetProductLineRouter) InitAssetProductLineRouter(Router *gin.RouterGr
 		plRouter.GET("list", assetApi.Api.AssetProductLine.GetAssetProductLineList)
 	}
 }
+
+type AssetGroupRouter struct{}
+
+// InitAssetGroupRouter 资产组路由（仅超管管理；普通用户只读 list 由 casbin 控制）
+func (r *AssetGroupRouter) InitAssetGroupRouter(Router *gin.RouterGroup) {
+	groupRouter := Router.Group("asset/group")
+	{
+		groupRouter.POST("create", assetApi.Api.AssetGroup.CreateAssetGroup)
+		groupRouter.DELETE("delete", assetApi.Api.AssetGroup.DeleteAssetGroup)
+		groupRouter.PUT("update", assetApi.Api.AssetGroup.UpdateAssetGroup)
+		groupRouter.GET("list", assetApi.Api.AssetGroup.GetAssetGroupList)
+	}
+}

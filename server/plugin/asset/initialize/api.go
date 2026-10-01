@@ -32,6 +32,10 @@ func Api(ctx context.Context) {
 		{Path: "/asset/productLine/delete", Description: "删除产品线", ApiGroup: "资产管理", Method: "DELETE"},
 		{Path: "/asset/productLine/update", Description: "更新产品线", ApiGroup: "资产管理", Method: "PUT"},
 		{Path: "/asset/productLine/list", Description: "产品线全量列表", ApiGroup: "资产管理", Method: "GET"},
+		{Path: "/asset/group/create", Description: "创建资产组", ApiGroup: "资产管理", Method: "POST"},
+		{Path: "/asset/group/delete", Description: "删除资产组", ApiGroup: "资产管理", Method: "DELETE"},
+		{Path: "/asset/group/update", Description: "更新资产组", ApiGroup: "资产管理", Method: "PUT"},
+		{Path: "/asset/group/list", Description: "资产组全量列表", ApiGroup: "资产管理", Method: "GET"},
 	}
 	utils.RegisterApis(entities...)
 }

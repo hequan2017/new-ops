@@ -1,5 +1,5 @@
 // Package initialize asset 插件授权种子（幂等）
-// 为超级管理员角色（888）补齐 API casbin 策略与菜单-角色绑定
+// 888（超管）全部接口；9528（普通用户）资产只读 + 数据按资产组过滤
 package initialize
 
 import (
@@ -13,8 +13,9 @@ import (
 )
 
 const superAdminAuthorityId = "888"
+const normalAuthorityId = "9528"
 
-// assetApis 与 api.go 保持一致（路径+方法）
+// assetApis 与 api.go 保持一致（路径+方法）：888 全量
 var assetApis = []struct {
 	Path   string
 	Method string
@@ -40,20 +41,52 @@ var assetApis = []struct {
 	{"/asset/productLine/delete", "DELETE"},
 	{"/asset/productLine/update", "PUT"},
 	{"/asset/productLine/list", "GET"},
+	{"/asset/group/create", "POST"},
+	{"/asset/group/delete", "DELETE"},
+	{"/asset/group/update", "PUT"},
+	{"/asset/group/list", "GET"},
 }
 
-// assetMenus 与 menu.go 保持一致（菜单 name）
-var assetMenus = []string{"asset", "assetHost", "assetRoom", "assetProductLine"}
+// assetReadOnlyApis 普通用户（9528）只读策略
+var assetReadOnlyApis = []struct {
+	Path   string
+	Method string
+}{
+	{"/asset/host/list", "POST"},
+	{"/asset/host/find", "GET"},
+	{"/asset/host/history", "GET"},
+	{"/asset/host/export", "GET"},
+	{"/asset/room/list", "GET"},
+	{"/asset/rack/list", "GET"},
+	{"/asset/productLine/list", "GET"},
+	{"/asset/group/list", "GET"},
+}
 
-// Casbin 为超管角色补齐策略与菜单绑定（幂等）
+// assetMenus 与 menu.go 保持一致（菜单 name）：888/9528 双角色绑定
+var assetMenus = []string{"asset", "assetHost", "assetRoom", "assetProductLine", "assetGroup"}
+
+// Casbin 注册角色策略与菜单绑定（幂等）
 func Casbin(ctx context.Context) {
 	e := utils.GetCasbin()
 	if e == nil {
 		zap.L().Warn("asset 插件：casbin 未初始化，跳过策略注册")
 		return
 	}
-	for _, api := range assetApis {
-		has, err := e.HasPolicy(superAdminAuthorityId, api.Path, api.Method)
+	ensurePolicies(e, superAdminAuthorityId, assetApis)
+	ensurePolicies(e, normalAuthorityId, assetReadOnlyApis)
+	bindMenusToAuthorities(ctx)
+}
+
+// ensurePolicies 幂等补齐角色-接口策略
+func ensurePolicies(e interface {
+	HasPolicy(...interface{}) (bool, error)
+	AddPolicy(...interface{}) (bool, error)
+}, authorityId string, apis []struct {
+	Path   string
+	Method string
+}) {
+	for _, api := range apis {
+		has, err := e.HasPolicy(authorityId, api.Path, api.Method)
 		if err != nil {
 			zap.L().Error("asset 插件：查询 casbin 策略失败", zap.Error(err), zap.String("path", api.Path))
 			continue
@@ -61,36 +94,36 @@ func Casbin(ctx context.Context) {
 		if has {
 			continue
 		}
-		if _, err := e.AddPolicy(superAdminAuthorityId, api.Path, api.Method); err != nil {
-			zap.L().Error("asset 插件：添加 casbin 策略失败", zap.Error(err), zap.String("path", api.Path))
+		if _, err := e.AddPolicy(authorityId, api.Path, api.Method); err != nil {
+			zap.L().Error("asset 插件：添加 casbin 策略失败", zap.Error(err), zap.String("path", api.Path), zap.String("role", authorityId))
 		}
 	}
-
-	// 菜单绑定到 888
-	bindMenusToSuperAdmin(ctx)
 }
 
-// bindMenusToSuperAdmin 将资产中心菜单绑定到超管角色（幂等）
-func bindMenusToSuperAdmin(ctx context.Context) {
+// bindMenusToAuthorities 将资产中心菜单绑定到 888 与 9528（幂等）
+func bindMenusToAuthorities(ctx context.Context) {
+	authorityIds := []string{superAdminAuthorityId, normalAuthorityId}
 	for _, name := range assetMenus {
 		var menu model.SysBaseMenu
 		if err := global.GVA_DB.WithContext(ctx).Where("name = ?", name).First(&menu).Error; err != nil {
 			zap.L().Warn(fmt.Sprintf("asset 插件：菜单 %s 未找到，跳过角色绑定", name))
 			continue
 		}
-		var count int64
-		global.GVA_DB.Model(&model.SysAuthorityMenu{}).
-			Where("sys_base_menu_id = ? AND sys_authority_authority_id = ?", menu.ID, superAdminAuthorityId).
-			Count(&count)
-		if count > 0 {
-			continue
-		}
-		binding := model.SysAuthorityMenu{
-			MenuId:      fmt.Sprint(menu.ID),
-			AuthorityId: superAdminAuthorityId,
-		}
-		if err := global.GVA_DB.Create(&binding).Error; err != nil {
-			zap.L().Error("asset 插件：菜单绑定角色失败", zap.Error(err), zap.String("menu", name))
+		for _, authorityId := range authorityIds {
+			var count int64
+			global.GVA_DB.Model(&model.SysAuthorityMenu{}).
+				Where("sys_base_menu_id = ? AND sys_authority_authority_id = ?", menu.ID, authorityId).
+				Count(&count)
+			if count > 0 {
+				continue
+			}
+			binding := model.SysAuthorityMenu{
+				MenuId:      fmt.Sprint(menu.ID),
+				AuthorityId: authorityId,
+			}
+			if err := global.GVA_DB.Create(&binding).Error; err != nil {
+				zap.L().Error("asset 插件：菜单绑定角色失败", zap.Error(err), zap.String("menu", name))
+			}
 		}
 	}
 }
