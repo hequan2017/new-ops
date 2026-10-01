@@ -254,7 +254,7 @@
       cancelButtonText: '取消',
       type: 'warning'
     }).then(async () => {
-      const res = await deleteAssetHost({ ID: row.ID })
+      const res = await deleteAssetHost({ id: row.ID })
       if (res.code === 0) {
         ElMessage.success('删除成功')
         getTableData()
@@ -317,7 +317,7 @@
   const openDialog = async (row) => {
     Object.assign(form, emptyForm())
     if (row && row.ID) {
-      const res = await findAssetHost({ ID: row.ID })
+      const res = await findAssetHost({ id: row.ID })
       if (res.code === 0) {
         Object.assign(form, res.data)
       }
