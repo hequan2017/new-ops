@@ -67,6 +67,7 @@
   "/src/view/systemTools/version/version.vue": "SysVersion",
   "/src/plugin/announcement/form/info.vue": "InfoForm",
   "/src/plugin/announcement/view/info.vue": "Info",
+  "/src/plugin/asset/view/host/index.vue": "AssetHost",
   "/src/plugin/auto/view/aiWorkflow/index.vue": "Index",
   "/src/plugin/auto/view/autoCode/index.vue": "Index",
   "/src/plugin/auto/view/autoCode/mcp.vue": "Mcp",
