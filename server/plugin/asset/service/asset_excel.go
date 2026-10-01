@@ -15,8 +15,8 @@ import (
 // hostExportHeaders 导出/导入共用的列定义（顺序即 Excel 列顺序）
 var hostExportHeaders = []string{"主机名", "内网IP", "公网IP", "操作系统", "系统版本", "CPU核数", "内存GB", "磁盘GB", "SN", "厂商", "负责人", "状态", "备注"}
 
-// ExportAssetHosts 生成主机资产 Excel（全量）
-func (s *AssetHostService) ExportAssetHosts() (*excelize.File, error) {
+// ExportAssetHostsForUser 按数据权限生成主机资产 Excel
+func (s *AssetHostService) ExportAssetHostsForUser(scope *HostUserScope) (*excelize.File, error) {
 	f := excelize.NewFile()
 	sheet := "主机资产"
 	f.SetSheetName("Sheet1", sheet)
@@ -24,7 +24,7 @@ func (s *AssetHostService) ExportAssetHosts() (*excelize.File, error) {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
 		f.SetCellValue(sheet, cell, h)
 	}
-	list, _, err := s.GetAssetHostList(request.PageInfo{Page: 1, PageSize: 100000}, "", nil, nil)
+	list, _, err := s.GetAssetHostList(request.PageInfo{Page: 1, PageSize: 100000}, "", nil, nil, scope)
 	if err != nil {
 		return nil, err
 	}

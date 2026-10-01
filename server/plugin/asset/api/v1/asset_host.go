@@ -9,6 +9,7 @@ import (
 	"github.com/hequan2017/new-ops/server/model/common/response"
 	"github.com/hequan2017/new-ops/server/plugin/asset/model"
 	assetReq "github.com/hequan2017/new-ops/server/plugin/asset/model/request"
+	"github.com/hequan2017/new-ops/server/plugin/asset/service"
 	"github.com/hequan2017/new-ops/server/utils"
 )
 
@@ -144,7 +145,11 @@ func (a *assetHost) GetAssetHostList(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	list, total, err := assetHostService.GetAssetHostList(req.PageInfo, req.Status, req.RoomID, req.ProductLineID)
+	scope := &service.HostUserScope{
+		IsSuperAdmin: utils.GetUserAuthorityId(c) == 888,
+		UserID:       utils.GetUserID(c),
+	}
+	list, total, err := assetHostService.GetAssetHostList(req.PageInfo, req.Status, req.RoomID, req.ProductLineID, scope)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -199,7 +204,10 @@ func (a *assetHost) GetAssetHostHistory(c *gin.Context) {
 // @Success 200 {file} file "Excel 文件流"
 // @Router /asset/host/export [get]
 func (a *assetHost) ExportAssetHost(c *gin.Context) {
-	f, err := assetHostService.ExportAssetHosts()
+	f, err := assetHostService.ExportAssetHostsForUser(&service.HostUserScope{
+		IsSuperAdmin: utils.GetUserAuthorityId(c) == 888,
+		UserID:       utils.GetUserID(c),
+	})
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

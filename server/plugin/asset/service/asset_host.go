@@ -112,10 +112,26 @@ func (s *AssetHostService) GetAssetHost(id uint) (h *model.AssetHost, err error)
 	return h, err
 }
 
+// HostUserScope 主机数据权限范围：888 全量；其他用户仅见其资产组内主机
+type HostUserScope struct {
+	IsSuperAdmin bool
+	UserID       uint
+}
+
 // GetAssetHostList 分页查询主机资产
-// 过滤：keyword（主机名/IP/SN/负责人模糊）、status、roomId、productLineId
-func (s *AssetHostService) GetAssetHostList(info request.PageInfo, status string, roomID, productLineID *uint) (list []*model.AssetHost, total int64, err error) {
+// 过滤：keyword（主机名/IP/SN/负责人模糊）、status、roomId、productLineId、数据权限 scope
+func (s *AssetHostService) GetAssetHostList(info request.PageInfo, status string, roomID, productLineID *uint, scope *HostUserScope) (list []*model.AssetHost, total int64, err error) {
 	db := global.GVA_DB.Model(&model.AssetHost{})
+	if scope != nil && !scope.IsSuperAdmin {
+		ids, err := new(AssetGroupService).GetUserAuthorizedHostIDs(scope.UserID)
+		if err != nil {
+			return nil, 0, err
+		}
+		if len(ids) == 0 {
+			return []*model.AssetHost{}, 0, nil
+		}
+		db = db.Where("id IN ?", ids)
+	}
 	if info.Keyword != "" {
 		kw := "%" + info.Keyword + "%"
 		db = db.Where("hostname LIKE ? OR ip LIKE ? OR sn LIKE ? OR owner LIKE ?", kw, kw, kw, kw)
