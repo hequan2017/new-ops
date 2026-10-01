@@ -18,6 +18,10 @@ func (s *AssetHostService) CreateAssetHost(h *model.AssetHost, operator string) 
 	if err := validateHost(h); err != nil {
 		return err
 	}
+	// 同 IP 存在软删除行时先物理清理，避免唯一索引冲突（该 IP 视为已释放）
+	global.GVA_DB.Unscoped().
+		Where("ip = ? AND deleted_at IS NOT NULL", h.IP).
+		Delete(&model.AssetHost{})
 	var count int64
 	global.GVA_DB.Model(&model.AssetHost{}).Where("ip = ?", h.IP).Count(&count)
 	if count > 0 {
