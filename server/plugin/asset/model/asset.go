@@ -65,8 +65,9 @@ type AssetRack struct {
 // AssetProductLine 产品线
 type AssetProductLine struct {
 	global.GVA_MODEL
-	Name  string `json:"name" gorm:"comment:产品线名称;unique" binding:"required"`
-	Owner string `json:"owner" gorm:"comment:负责人"`
-	Level string `json:"level" gorm:"comment:等级"`
-	Notes string `json:"notes" gorm:"type:text;comment:备注"`
+	Name  string      `json:"name" gorm:"comment:产品线名称;unique" binding:"required"`
+	Owner string      `json:"owner" gorm:"comment:负责人"`
+	Level string      `json:"level" gorm:"comment:等级"`
+	Notes string      `json:"notes" gorm:"type:text;comment:备注"`
+	Hosts []AssetHost `json:"hosts" gorm:"many2many:asset_host_product_lines;"`
 }
