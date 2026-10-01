@@ -95,3 +95,34 @@ export const getAssetHostList = (data) => {
     data
   })
 }
+
+// @Tags AssetHost
+// @Summary 分页查询主机资产变更历史
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "主机ID"
+// @Router /asset/host/history [get]
+export const getAssetHostHistory = (params) => {
+  return service({
+    url: '/asset/host/history',
+    method: 'get',
+    params
+  })
+}
+
+// @Tags AssetHost
+// @Summary 导入主机资产 Excel（按内网IP upsert）
+// @Security ApiKeyAuth
+// @accept multipart/form-data
+// @Produce application/json
+// @Router /asset/host/import [post]
+export const importAssetHost = (file) => {
+  const data = new FormData()
+  data.append('file', file)
+  return service({
+    url: '/asset/host/import',
+    method: 'post',
+    data,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}

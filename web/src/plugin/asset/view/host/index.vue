@@ -34,6 +34,14 @@
     <div class="ops-table-box">
       <div class="ops-btn-list">
         <el-button type="primary" icon="plus" @click="openDialog">新增主机</el-button>
+        <el-upload
+          :show-file-list="false"
+          accept=".xlsx"
+          :http-request="onImport"
+        >
+          <el-button type="success" icon="upload">导入 Excel</el-button>
+        </el-upload>
+        <el-button icon="download" @click="onExport">导出 Excel</el-button>
         <el-button
           type="danger"
           icon="delete"
@@ -78,6 +86,7 @@
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" icon="edit" @click="openDialog(row)">编辑</el-button>
+            <el-button link type="warning" icon="clock" @click="openHistory(row)">历史</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -172,6 +181,24 @@
         <el-button type="primary" @click="submitForm">确 定</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer v-model="historyVisible" :title="`变更历史 · ${historyHost}`" size="480px">
+      <el-timeline>
+        <el-timeline-item
+          v-for="h in historyList"
+          :key="h.ID"
+          :timestamp="`${h.CreatedAt} · ${h.operator || '-'}`"
+          :type="h.action === '删除' ? 'danger' : h.action === '更新' ? 'warning' : 'success'"
+        >
+          <b>{{ h.action }}</b>
+          <details style="margin-top: 4px">
+            <summary style="cursor: pointer; font-size: 12px; color: var(--el-color-info)">快照</summary>
+            <pre style="white-space: pre-wrap; font-size: 12px">{{ pretty(h.snapshot) }}</pre>
+          </details>
+        </el-timeline-item>
+      </el-timeline>
+      <el-empty v-if="!historyList.length" description="暂无历史" />
+    </el-drawer>
   </div>
 </template>
 
@@ -182,10 +209,13 @@
     deleteAssetHostByIds,
     updateAssetHost,
     findAssetHost,
-    getAssetHostList
+    getAssetHostList,
+    getAssetHostHistory,
+    importAssetHost
   } from '@/plugin/asset/api/assetHost'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { reactive, ref } from 'vue'
+  import { useUserStore } from '@/pinia/modules/user'
 
   defineOptions({ name: 'AssetHost' })
 
@@ -344,6 +374,57 @@
         getTableData()
       }
     })
+  }
+
+  // 变更历史抽屉
+  const historyVisible = ref(false)
+  const historyList = ref([])
+  const historyHost = ref('')
+
+  const pretty = (snapshot) => {
+    try {
+      return JSON.stringify(JSON.parse(snapshot), null, 2)
+    } catch (e) {
+      return snapshot
+    }
+  }
+
+  const openHistory = async (row) => {
+    historyHost.value = `${row.hostname}（${row.ip}）`
+    const res = await getAssetHostHistory({ id: row.ID, page: 1, pageSize: 50 })
+    if (res.code === 0) {
+      historyList.value = res.data.list || []
+      historyVisible.value = true
+    }
+  }
+
+  // Excel 导入
+  const onImport = async (opt) => {
+    const res = await importAssetHost(opt.file)
+    if (res.code === 0) {
+      const d = res.data
+      ElMessage.success(`导入完成：新建 ${d.created}，更新 ${d.updated}，失败 ${(d.failed || []).length}`)
+      getTableData()
+    }
+  }
+
+  // Excel 导出（fetch 直取，绕过 JSON 拦截器，手动带 token）
+  const onExport = async () => {
+    const userStore = useUserStore()
+    const res = await fetch(import.meta.env.VITE_BASE_API + '/asset/host/export', {
+      headers: { 'x-token': userStore.token }
+    })
+    if (!res.ok) {
+      ElMessage.error('导出失败')
+      return
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'asset_hosts.xlsx'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   getTableData()
