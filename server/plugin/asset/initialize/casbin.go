@@ -25,10 +25,22 @@ var assetApis = []struct {
 	{"/asset/host/update", "PUT"},
 	{"/asset/host/find", "GET"},
 	{"/asset/host/list", "POST"},
+	{"/asset/room/create", "POST"},
+	{"/asset/room/delete", "DELETE"},
+	{"/asset/room/update", "PUT"},
+	{"/asset/room/list", "GET"},
+	{"/asset/rack/create", "POST"},
+	{"/asset/rack/delete", "DELETE"},
+	{"/asset/rack/update", "PUT"},
+	{"/asset/rack/list", "GET"},
+	{"/asset/productLine/create", "POST"},
+	{"/asset/productLine/delete", "DELETE"},
+	{"/asset/productLine/update", "PUT"},
+	{"/asset/productLine/list", "GET"},
 }
 
 // assetMenus 与 menu.go 保持一致（菜单 name）
-var assetMenus = []string{"asset", "assetHost"}
+var assetMenus = []string{"asset", "assetHost", "assetRoom", "assetProductLine"}
 
 // Casbin 为超管角色补齐策略与菜单绑定（幂等）
 func Casbin(ctx context.Context) {

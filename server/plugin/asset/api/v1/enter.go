@@ -6,7 +6,15 @@ import "github.com/hequan2017/new-ops/server/plugin/asset/service"
 var Api = new(api)
 
 type api struct {
-	AssetHost assetHost
+	AssetHost      assetHost
+	AssetRoom      assetRoom
+	AssetRack      assetRack
+	AssetProductLine assetProductLine
 }
 
-var assetHostService = service.Service.AssetHostService
+var (
+	assetHostService      = service.Service.AssetHostService
+	assetRoomService      = service.Service.AssetRoomService
+	assetRackService      = service.Service.AssetRackService
+	assetProductLineService = service.Service.AssetProductLineService
+)

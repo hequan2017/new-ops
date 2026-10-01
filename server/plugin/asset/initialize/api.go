@@ -17,6 +17,18 @@ func Api(ctx context.Context) {
 		{Path: "/asset/host/update", Description: "更新主机资产", ApiGroup: "资产管理", Method: "PUT"},
 		{Path: "/asset/host/find", Description: "根据ID获取主机资产", ApiGroup: "资产管理", Method: "GET"},
 		{Path: "/asset/host/list", Description: "分页获取主机资产列表", ApiGroup: "资产管理", Method: "POST"},
+		{Path: "/asset/room/create", Description: "创建机房", ApiGroup: "资产管理", Method: "POST"},
+		{Path: "/asset/room/delete", Description: "删除机房", ApiGroup: "资产管理", Method: "DELETE"},
+		{Path: "/asset/room/update", Description: "更新机房", ApiGroup: "资产管理", Method: "PUT"},
+		{Path: "/asset/room/list", Description: "机房全量列表", ApiGroup: "资产管理", Method: "GET"},
+		{Path: "/asset/rack/create", Description: "创建机柜", ApiGroup: "资产管理", Method: "POST"},
+		{Path: "/asset/rack/delete", Description: "删除机柜", ApiGroup: "资产管理", Method: "DELETE"},
+		{Path: "/asset/rack/update", Description: "更新机柜", ApiGroup: "资产管理", Method: "PUT"},
+		{Path: "/asset/rack/list", Description: "机柜列表", ApiGroup: "资产管理", Method: "GET"},
+		{Path: "/asset/productLine/create", Description: "创建产品线", ApiGroup: "资产管理", Method: "POST"},
+		{Path: "/asset/productLine/delete", Description: "删除产品线", ApiGroup: "资产管理", Method: "DELETE"},
+		{Path: "/asset/productLine/update", Description: "更新产品线", ApiGroup: "资产管理", Method: "PUT"},
+		{Path: "/asset/productLine/list", Description: "产品线全量列表", ApiGroup: "资产管理", Method: "GET"},
 	}
 	utils.RegisterApis(entities...)
 }
