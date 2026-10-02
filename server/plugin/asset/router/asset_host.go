@@ -21,6 +21,7 @@ func (r *AssetHostRouter) InitAssetHostRouter(Router *gin.RouterGroup) {
 		hostRouter.GET("history", assetApi.Api.AssetHost.GetAssetHostHistory)
 		hostRouter.GET("export", assetApi.Api.AssetHost.ExportAssetHost)
 		hostRouter.POST("import", assetApi.Api.AssetHost.ImportAssetHost)
+		hostRouter.POST("collect", assetApi.Api.AssetHost.CollectAssetHost)
 		hostRouter.POST("list", assetApi.Api.AssetHost.GetAssetHostList)
 	}
 }

@@ -29,6 +29,7 @@ var assetApis = []struct {
 	{"/asset/host/history", "GET"},
 	{"/asset/host/export", "GET"},
 	{"/asset/host/import", "POST"},
+	{"/asset/host/collect", "POST"},
 	{"/asset/room/create", "POST"},
 	{"/asset/room/delete", "DELETE"},
 	{"/asset/room/update", "PUT"},

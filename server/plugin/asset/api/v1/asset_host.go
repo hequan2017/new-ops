@@ -249,3 +249,29 @@ func (a *assetHost) ImportAssetHost(c *gin.Context) {
 	}
 	response.OkWithDetailed(res, "导入完成", c)
 }
+
+// CollectAssetHost 用绑定的 SSH 凭据现场采集主机信息并回填
+// @Tags AssetHost
+// @Summary SSH 现场采集主机信息
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body object true "ID(主机ID)/credentialId(SSH凭据ID)"
+// @Success 200 {object} response.Response{data=service.CollectedInfo,msg=string} "采集成功"
+// @Router /asset/host/collect [post]
+func (a *assetHost) CollectAssetHost(c *gin.Context) {
+	var req struct {
+		ID          uint `json:"ID" binding:"required"`
+		CredentialID uint `json:"credentialId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	info, err := assetHostService.CollectHostFromCredential(req.ID, req.CredentialID, utils.GetUserName(c))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(info, "采集成功", c)
+}

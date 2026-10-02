@@ -20,6 +20,7 @@ func Api(ctx context.Context) {
 		{Path: "/asset/host/history", Description: "主机资产变更历史", ApiGroup: "资产管理", Method: "GET"},
 		{Path: "/asset/host/export", Description: "导出主机资产", ApiGroup: "资产管理", Method: "GET"},
 		{Path: "/asset/host/import", Description: "导入主机资产", ApiGroup: "资产管理", Method: "POST"},
+		{Path: "/asset/host/collect", Description: "SSH现场采集主机信息", ApiGroup: "资产管理", Method: "POST"},
 		{Path: "/asset/room/create", Description: "创建机房", ApiGroup: "资产管理", Method: "POST"},
 		{Path: "/asset/room/delete", Description: "删除机房", ApiGroup: "资产管理", Method: "DELETE"},
 		{Path: "/asset/room/update", Description: "更新机房", ApiGroup: "资产管理", Method: "PUT"},
