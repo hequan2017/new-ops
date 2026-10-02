@@ -275,3 +275,29 @@ func (a *assetHost) CollectAssetHost(c *gin.Context) {
 	}
 	response.OkWithDetailed(info, "采集成功", c)
 }
+
+// SyncAliyunECS 从阿里云 ECS 同步实例到资产台账
+// @Tags AssetHost
+// @Summary 阿里云 ECS 实例同步
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body object true "credentialId(cloud_ak凭据)/region(如 cn-beijing)"
+// @Success 200 {object} response.Response{data=service.ECSSyncResult,msg=string} "同步完成"
+// @Router /asset/sync/aliyun-ecs [post]
+func (a *assetHost) SyncAliyunECS(c *gin.Context) {
+	var req struct {
+		CredentialID uint   `json:"credentialId" binding:"required"`
+		Region       string `json:"region" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	res, err := assetHostService.SyncFromAliyunECS(req.CredentialID, req.Region, utils.GetUserName(c))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(res, "同步完成", c)
+}

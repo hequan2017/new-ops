@@ -22,6 +22,7 @@ func (r *AssetHostRouter) InitAssetHostRouter(Router *gin.RouterGroup) {
 		hostRouter.GET("export", assetApi.Api.AssetHost.ExportAssetHost)
 		hostRouter.POST("import", assetApi.Api.AssetHost.ImportAssetHost)
 		hostRouter.POST("collect", assetApi.Api.AssetHost.CollectAssetHost)
+		hostRouter.POST("sync/aliyun-ecs", assetApi.Api.AssetHost.SyncAliyunECS)
 		hostRouter.POST("list", assetApi.Api.AssetHost.GetAssetHostList)
 	}
 }
