@@ -21,26 +21,28 @@ const (
 // AssetHost 主机资产（物理机/云主机/虚拟机统一台账）
 type AssetHost struct {
 	global.GVA_MODEL
-	Hostname     string             `json:"hostname" gorm:"comment:主机名" binding:"required"`
-	IP           string             `json:"ip" gorm:"comment:内网IP;unique" binding:"required"`
-	OS           string             `json:"os" gorm:"comment:操作系统"`
-	OSVersion    string             `json:"osVersion" gorm:"comment:系统版本"`
-	CPUCores     int                `json:"cpuCores" gorm:"comment:CPU核数"`
-	MemGB        int                `json:"memGb" gorm:"comment:内存GB"`
-	DiskGB       int                `json:"diskGb" gorm:"comment:磁盘GB"`
-	SN           string             `json:"sn" gorm:"comment:序列号"`
-	Vendor       string             `json:"vendor" gorm:"comment:厂商/云平台"`
-	PublicIP     string             `json:"publicIp" gorm:"comment:公网IP"`
-	RoomID       *uint              `json:"roomId" gorm:"comment:机房ID"`
-	RackID       *uint              `json:"rackId" gorm:"comment:机柜ID"`
-	UPos         string             `json:"uPos" gorm:"comment:机柜U位"`
-	Status       AssetStatus        `json:"status" gorm:"comment:状态;default:运行中"`
-	Owner        string             `json:"owner" gorm:"comment:负责人"`
-	ExpireDate   *time.Time         `json:"expireDate" gorm:"comment:到期时间"`
-	Notes        string             `json:"notes" gorm:"type:text;comment:备注"`
-	ProductLines []AssetProductLine `json:"productLines" gorm:"many2many:asset_host_product_lines;"`
-	Room         *AssetRoom         `json:"room" gorm:"foreignKey:RoomID"`
-	Rack         *AssetRack         `json:"rack" gorm:"foreignKey:RackID"`
+	Hostname      string             `json:"hostname" gorm:"comment:主机名" binding:"required"`
+	IP            string             `json:"ip" gorm:"comment:内网IP;unique" binding:"required"`
+	OS            string             `json:"os" gorm:"comment:操作系统"`
+	OSVersion     string             `json:"osVersion" gorm:"comment:系统版本"`
+	CPUCores      int                `json:"cpuCores" gorm:"comment:CPU核数"`
+	MemGB         int                `json:"memGb" gorm:"comment:内存GB"`
+	DiskGB        int                `json:"diskGb" gorm:"comment:磁盘GB"`
+	SN            string             `json:"sn" gorm:"comment:序列号"`
+	Vendor        string             `json:"vendor" gorm:"comment:厂商/云平台"`
+	PublicIP      string             `json:"publicIp" gorm:"comment:公网IP"`
+	RoomID        *uint              `json:"roomId" gorm:"comment:机房ID"`
+	RackID        *uint              `json:"rackId" gorm:"comment:机柜ID"`
+	UPos          string             `json:"uPos" gorm:"comment:机柜U位"`
+	Status        AssetStatus        `json:"status" gorm:"comment:状态;default:运行中"`
+	Owner         string             `json:"owner" gorm:"comment:负责人"`
+	ExpireDate    *time.Time         `json:"expireDate" gorm:"comment:到期时间"`
+	Notes         string             `json:"notes" gorm:"type:text;comment:备注"`
+	CredentialID  *uint              `json:"credentialId" gorm:"comment:采集用凭据ID"`
+	LastCollectAt *time.Time         `json:"lastCollectAt" gorm:"comment:最近采集时间"`
+	ProductLines  []AssetProductLine `json:"productLines" gorm:"many2many:asset_host_product_lines;"`
+	Room          *AssetRoom         `json:"room" gorm:"foreignKey:RoomID"`
+	Rack          *AssetRack         `json:"rack" gorm:"foreignKey:RackID"`
 }
 
 // AssetRoom 机房
