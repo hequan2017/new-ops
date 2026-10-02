@@ -33,6 +33,7 @@ type SSHAuth struct {
 
 // parseOSRelease 解析 /etc/os-release
 func parseOSRelease(out string) (id, pretty string) {
+	var name string
 	for _, line := range strings.Split(out, "\n") {
 		kv := strings.SplitN(line, "=", 2)
 		if len(kv) != 2 {
@@ -44,11 +45,13 @@ func parseOSRelease(out string) (id, pretty string) {
 			id = v
 		case "PRETTY_NAME":
 			pretty = v
+		case "NAME":
+			name = v
 		}
 	}
-	if id == "" && pretty != "" {
-		// 兜底：取 PRETTY_NAME 首词小写
-		id = strings.ToLower(strings.Fields(pretty)[0])
+	if id == "" && name != "" {
+		// 兜底：取 NAME 首词小写（如 NAME="CentOS Linux" → centos）
+		id = strings.ToLower(strings.Fields(name)[0])
 	}
 	return id, pretty
 }
