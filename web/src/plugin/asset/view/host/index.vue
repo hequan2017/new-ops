@@ -78,6 +78,11 @@
         <el-table-column prop="owner" label="负责人" min-width="90">
           <template #default="{ row }">{{ row.owner || '-' }}</template>
         </el-table-column>
+        <el-table-column label="最近采集" width="150">
+          <template #default="{ row }">
+            {{ row.lastCollectAt ? row.lastCollectAt.replace('T', ' ').slice(0, 19) : '未采集' }}
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)">{{ row.status || '-' }}</el-tag>
@@ -86,6 +91,7 @@
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" icon="edit" @click="openDialog(row)">编辑</el-button>
+            <el-button link type="success" icon="aim" @click="openCollect(row)">采集</el-button>
             <el-button link type="warning" icon="clock" @click="openHistory(row)">历史</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
@@ -182,6 +188,28 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="collectVisible" title="SSH 现场采集" width="480px">
+      <el-form label-width="90px">
+        <el-form-item label="目标主机">
+          <el-input :model-value="collectTarget" disabled />
+        </el-form-item>
+        <el-form-item label="SSH 凭据">
+          <el-select v-model="collectCredId" placeholder="选择凭据保险库中的 SSH 凭据" style="width: 100%">
+            <el-option
+              v-for="c in credList"
+              :key="c.ID"
+              :label="`${c.name}（${typeLabel(c.type)}${c.username ? ' / ' + c.username : ''}）`"
+              :value="c.ID"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="collectVisible = false">取 消</el-button>
+        <el-button type="primary" :loading="collecting" @click="submitCollect">开始采集</el-button>
+      </template>
+    </el-dialog>
+
     <el-drawer v-model="historyVisible" :title="`变更历史 · ${historyHost}`" size="480px">
       <el-timeline>
         <el-timeline-item
@@ -211,8 +239,10 @@
     findAssetHost,
     getAssetHostList,
     getAssetHostHistory,
-    importAssetHost
+    importAssetHost,
+    collectAssetHost
   } from '@/plugin/asset/api/assetHost'
+  import { getCredentialList } from '@/plugin/asset/api/credential'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { reactive, ref } from 'vue'
   import { useUserStore } from '@/pinia/modules/user'
@@ -374,6 +404,53 @@
         getTableData()
       }
     })
+  }
+
+  // SSH 现场采集
+  const collectVisible = ref(false)
+  const collecting = ref(false)
+  const collectTarget = ref('')
+  const collectHostId = ref(0)
+  const collectCredId = ref(undefined)
+  const credList = ref([])
+  const typeLabel = (v) => ({
+    ssh_password: 'SSH 密码', ssh_key: 'SSH 私钥', cloud_ak: '云平台 AccessKey',
+    docker_tls: 'Docker TLS', kubeconfig: 'kubeconfig'
+  }[v] || v)
+
+  const openCollect = async (row) => {
+    collectHostId.value = row.ID
+    collectTarget.value = `${row.hostname}（${row.ip}）`
+    const res = await getCredentialList()
+    if (res.code === 0) {
+      credList.value = (res.data || []).filter(
+        (c) => c.type === 'ssh_password' || c.type === 'ssh_key'
+      )
+    }
+    collectVisible.value = true
+  }
+
+  const submitCollect = async () => {
+    if (!collectCredId.value) {
+      ElMessage.warning('请选择 SSH 凭据')
+      return
+    }
+    collecting.value = true
+    try {
+      const res = await collectAssetHost({
+        ID: collectHostId.value,
+        credentialId: collectCredId.value
+      })
+      if (res.code === 0) {
+        ElMessage.success(
+          `采集成功：${res.data.os || '?'} ${res.data.osVersion || ''} / ${res.data.cpuCores || '?'}C / ${res.data.memGb || '?'}G / ${res.data.diskGb || '?'}G`
+        )
+        collectVisible.value = false
+        getTableData()
+      }
+    } finally {
+      collecting.value = false
+    }
   }
 
   // 变更历史抽屉
