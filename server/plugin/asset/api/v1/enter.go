@@ -11,6 +11,7 @@ type api struct {
 	AssetRack        assetRack
 	AssetProductLine assetProductLine
 	AssetGroup       assetGroup
+	CredCredential   credCredential
 }
 
 var (
@@ -19,4 +20,5 @@ var (
 	assetRackService        = service.Service.AssetRackService
 	assetProductLineService = service.Service.AssetProductLineService
 	assetGroupService       = service.Service.AssetGroupService
+	credCredentialService   = service.Service.CredCredentialService
 )

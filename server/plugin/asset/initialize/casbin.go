@@ -45,6 +45,10 @@ var assetApis = []struct {
 	{"/asset/group/delete", "DELETE"},
 	{"/asset/group/update", "PUT"},
 	{"/asset/group/list", "GET"},
+	{"/asset/credential/create", "POST"},
+	{"/asset/credential/delete", "DELETE"},
+	{"/asset/credential/update", "PUT"},
+	{"/asset/credential/list", "GET"},
 }
 
 // assetReadOnlyApis 普通用户（9528）只读策略
@@ -60,10 +64,14 @@ var assetReadOnlyApis = []struct {
 	{"/asset/rack/list", "GET"},
 	{"/asset/productLine/list", "GET"},
 	{"/asset/group/list", "GET"},
+	{"/asset/credential/create", "POST"},
+	{"/asset/credential/delete", "DELETE"},
+	{"/asset/credential/update", "PUT"},
+	{"/asset/credential/list", "GET"},
 }
 
 // assetMenus 与 menu.go 保持一致（菜单 name）：888/9528 双角色绑定
-var assetMenus = []string{"asset", "assetHost", "assetRoom", "assetProductLine", "assetGroup"}
+var assetMenus = []string{"asset", "assetHost", "assetRoom", "assetProductLine", "assetGroup", "assetCredential"}
 
 // Casbin 注册角色策略与菜单绑定（幂等）
 func Casbin(ctx context.Context) {
@@ -102,8 +110,11 @@ func ensurePolicies(e interface {
 
 // bindMenusToAuthorities 将资产中心菜单绑定到 888 与 9528（幂等）
 func bindMenusToAuthorities(ctx context.Context) {
-	authorityIds := []string{superAdminAuthorityId, normalAuthorityId}
 	for _, name := range assetMenus {
+		authorityIds := []string{superAdminAuthorityId, normalAuthorityId}
+		if name == "assetCredential" {
+			authorityIds = []string{superAdminAuthorityId} // 凭据菜单仅超管可见
+		}
 		var menu model.SysBaseMenu
 		if err := global.GVA_DB.WithContext(ctx).Where("name = ?", name).First(&menu).Error; err != nil {
 			zap.L().Warn(fmt.Sprintf("asset 插件：菜单 %s 未找到，跳过角色绑定", name))

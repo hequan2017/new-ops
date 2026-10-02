@@ -51,6 +51,14 @@ func Menu(ctx context.Context) {
 			Sort:      4,
 			Meta:      model.Meta{Title: "资产组与权限", Icon: "key"},
 		},
+		{
+			Path:      "assetCredential",
+			Name:      "assetCredential",
+			Hidden:    false,
+			Component: "plugin/asset/view/credential/index.vue",
+			Sort:      5,
+			Meta:      model.Meta{Title: "凭据保险库", Icon: "lock"},
+		},
 	}
 	utils.RegisterMenus(entities...)
 }

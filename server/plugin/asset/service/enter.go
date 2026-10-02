@@ -7,6 +7,7 @@ type ServiceGroup struct {
 	AssetRackService
 	AssetProductLineService
 	AssetGroupService
+	CredCredentialService
 }
 
 var Service = new(ServiceGroup)

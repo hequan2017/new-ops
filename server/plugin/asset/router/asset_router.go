@@ -56,3 +56,16 @@ func (r *AssetGroupRouter) InitAssetGroupRouter(Router *gin.RouterGroup) {
 		groupRouter.GET("list", assetApi.Api.AssetGroup.GetAssetGroupList)
 	}
 }
+
+type CredCredentialRouter struct{}
+
+// InitCredCredentialRouter 凭据保险库路由（仅超管；数据敏感性高于一般资产）
+func (r *CredCredentialRouter) InitCredCredentialRouter(Router *gin.RouterGroup) {
+	credRouter := Router.Group("asset/credential")
+	{
+		credRouter.POST("create", assetApi.Api.CredCredential.CreateCredential)
+		credRouter.DELETE("delete", assetApi.Api.CredCredential.DeleteCredential)
+		credRouter.PUT("update", assetApi.Api.CredCredential.UpdateCredential)
+		credRouter.GET("list", assetApi.Api.CredCredential.GetCredentialList)
+	}
+}

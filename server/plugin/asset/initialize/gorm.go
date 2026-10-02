@@ -21,6 +21,7 @@ func Gorm(ctx context.Context) {
 		new(model.AssetGroup),
 		new(model.AssetGroupHost),
 		new(model.AssetGroupUser),
+		new(model.CredCredential),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "asset 注册表失败!")

@@ -11,6 +11,7 @@ type RouterGroup struct {
 	AssetRackRouter
 	AssetProductLineRouter
 	AssetGroupRouter
+	CredCredentialRouter
 }
 
 var RouterGroupApp = new(RouterGroup)
@@ -23,4 +24,5 @@ func (rg *RouterGroup) Init(public, private *gin.RouterGroup) {
 	rg.AssetRackRouter.InitAssetRackRouter(private)
 	rg.AssetProductLineRouter.InitAssetProductLineRouter(private)
 	rg.AssetGroupRouter.InitAssetGroupRouter(private)
+	rg.CredCredentialRouter.InitCredCredentialRouter(private)
 }
