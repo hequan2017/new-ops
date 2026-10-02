@@ -199,7 +199,7 @@
 | Docker | Docker SDK（moby/client） | 支持 TLS 连接远程节点 | GPU 系列 |
 | Kubernetes | `k8s.io/client-go` | kubeconfig 动态加载 + 连接池 | seal / docker-gpu-manage |
 | 凭据加密 | `crypto/aes` + GCM（信封加密） | 标准库优先，主密钥环境变量注入 | go-webssh |
-| 云同步 | 阿里云 ECS SDK | 仅 ECS，AccessKey 走凭据保险库 | raptor |
+| 云同步 | 阿里云 OpenAPI RPC V1 签名（自实现，纯标准库） | 仅 DescribeInstances 单接口，不引入官方 SDK（传递依赖过重）；AccessKey 走凭据保险库；HMAC-SHA1 为协议固定要求 | raptor |
 | SQL 审核 | goInception + soar 外部二进制 | 进程调用 + 结果解析 | seal |
 | 流水线日志 | SSE（net/http flusher） | `/sse/pipeline/*` | new-jenkins |
 | 定时任务 | GVA 内置 timer/cron | 注册制，不另引 cron 库 | GVA |
@@ -279,7 +279,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 - [x] asset 插件脚手架——主机管理全链路（模型/服务/API/路由/种子/前端页面均已落地并远端验证）；机房与产品线页面下一场
 - [x] Go SSH 采集器（x/crypto/ssh 密码+私钥双认证、5s 命令超时；解析纯函数单测；凭据走保险库 GetPlaintext；主机名不覆盖人工命名；真实 sshd 验证回填 ubuntu/88C/125G/229G）
 - [ ] 凭据保险库（AES-256-GCM、密钥来自配置+环境变量、写操作审计）
-- [ ] 阿里云 ECS 同步任务（密钥管理+定时+手动触发）
+- [ ] 阿里云 ECS 同步任务（进行中：手动触发全链路已交付并验证——签名/分页/upsert/错误回传；定时触发待底座提供插件级 timer 注册接口）
 - [x] Excel 导入导出、变更历史（excelize 导出/按IP upsert 导入；历史随 CRUD 事务记录+时间线抽屉；发现项：IP 唯一索引与软删除冲突，下场改复合唯一索引）
 - [x] 数据权限：资产组（组-主机-用户三表）+ 888全量/普通用户仅组内过滤 + 9528 只读策略（双角色远端验证通过）
 - [ ] 单元测试 + Swagger 注释 + 插件开发规范文档（规范文档 M0 已交付；本项剩余：服务层 DB 相关单测补 mock 覆盖）
@@ -535,3 +535,4 @@ web/src/plugin/asset/
 | 2026-10-01 | 14 | M1 场5：主机变更历史（表/事务记录/分页接口/时间线抽屉）+ Excel 导入导出（excelize 导出 xlsx、按内网IP upsert 导入、逐行校验失败明细）；远端验证：历史 3 条动作序列正确（创建→更新→更新）、操作人 admin、导出 xlsx 有效、导入 upsert 2 条成功 | 下一场：数据权限（资产组+casbin）、IP 复合唯一索引修复 | 
 | 2026-10-01 | 15 | M1 场6：数据权限全链路——资产组三表模型/服务（组-主机-用户关联重写）/四接口/前端管理页（成员+主机多选）；主机 list/export 按 888 全量、普通用户仅组内过滤；9528 只读 casbin 策略；IP 软删除唯一索引冲突修复；双角色远端验证通过（未分组0台→分组后仅perm-a→9528写拦截） | 下一场：Go SSH 采集器（资产现场回填）、凭据保险库 | 
 | 2026-10-02 | 17 | M1 场7：Go SSH 采集器全链路——解析纯函数单测、SSH 双认证拨号（密码/私钥）、命令级超时、凭据保险库 GetPlaintext 取用、真实 sshd 采集回填（ubuntu/88C/125G/229G）+ last_collect_at + 历史记录；前端「采集」按钮（凭据下拉）+ 最近采集列；df 解析 MOTD 噪音修复 | 下一场：阿里云 ECS 同步；M1 收尾后进 M2 终端 |
+| 2026-10-02 | 18 | M1 场9：阿里云 ECS 同步全链路——OpenAPI RPC V1 签名自实现（零新增依赖）、DescribeInstances 分页拉取、按 SN(InstanceId) upsert（状态映射/空IP兜底公网/历史记录）、前端导入弹窗（AK凭据+Region+结果明细）；链路验证：假AK真实外呼回传 InvalidAccessKeyId、空地域与凭据类型校验；修复种子路径不一致（/asset/sync→/asset/host/sync 导致 888 被拦） | 下一场：M1 收官自查（软删除唯一索引类问题巡检）→ M2 终端与作业开工 |
