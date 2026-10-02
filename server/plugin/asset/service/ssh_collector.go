@@ -70,16 +70,24 @@ func parseMemKB(out string) int {
 	return 0
 }
 
-// parseDFGB 解析 `df -BG /` 根分区总容量（GB）
+// parseDFGB 解析 `df -BG / --output=size` 尾行（纯 "NNNG"）；兼容表格格式取 size 列
 func parseDFGB(out string) int {
-	for i, line := range strings.Split(out, "\n") {
-		if i == 0 || !strings.Contains(line, "/") {
-			continue // 跳过表头与挂载点不含 / 的行
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "Filesystem") || strings.HasPrefix(line, "1G-blocks") {
+			continue
 		}
 		fields := strings.Fields(line)
+		// 单列输出（--output=size）取最后一个字段；表格输出取 size 列（fields[1]）
+		candidates := []string{}
 		if len(fields) >= 2 {
-			gb, _ := strconv.Atoi(strings.TrimSuffix(fields[1], "G"))
-			return gb
+			candidates = append(candidates, fields[1])
+		}
+		candidates = append(candidates, fields[len(fields)-1])
+		for _, f := range candidates {
+			if g, err := strconv.Atoi(strings.TrimSuffix(f, "G")); err == nil && g > 0 {
+				return g
+			}
 		}
 	}
 	return 0
@@ -173,7 +181,7 @@ func collectViaSSH(ip string, auth SSHAuth) (*CollectedInfo, error) {
 	if out, err := run("cat /proc/meminfo 2>/dev/null | head -1", 5*time.Second); err == nil {
 		info.MemGB = parseMemKB(out) / 1024 / 1024
 	}
-	if out, err := run("df -BG / 2>/dev/null | tail -1", 5*time.Second); err == nil {
+	if out, err := run("df -BG / --output=size 2>/dev/null | tail -1", 5*time.Second); err == nil {
 		info.DiskGB = parseDFGB(out)
 	}
 	return info, nil
