@@ -42,6 +42,7 @@
           <el-button type="success" icon="upload">导入 Excel</el-button>
         </el-upload>
         <el-button icon="download" @click="onExport">导出 Excel</el-button>
+        <el-button icon="connection" @click="openSync">阿里云导入</el-button>
         <el-button
           type="danger"
           icon="delete"
@@ -188,6 +189,38 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="syncVisible" title="阿里云 ECS 实例同步" width="480px">
+      <el-form label-width="100px">
+        <el-form-item label="AK 凭据">
+          <el-select v-model="syncCredId" placeholder="选择 cloud_ak 类型凭据" style="width: 100%">
+            <el-option
+              v-for="c in credList.filter((x) => x.type === 'cloud_ak')"
+              :key="c.ID"
+              :label="`${c.name}（${c.username || 'AK'}）`"
+              :value="c.ID"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="地域">
+          <el-input v-model="syncRegion" placeholder="RegionId，如 cn-beijing" />
+        </el-form-item>
+        <el-alert
+          v-if="syncResult"
+          :type="syncResult.failed?.length ? 'warning' : 'success'"
+          :closable="false"
+          show-icon
+          :title="`同步完成：云端 ${syncResult.total} 台，新建 ${syncResult.created}，更新 ${syncResult.updated}${syncResult.failed?.length ? '，失败 ' + syncResult.failed.length : ''}`"
+        />
+        <div v-if="syncResult?.failed?.length" class="mt-2 text-xs text-red-500">
+          <div v-for="f in syncResult.failed" :key="f">{{ f }}</div>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="syncVisible = false">关 闭</el-button>
+        <el-button type="primary" :loading="syncing" @click="submitSync">开始同步</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="collectVisible" title="SSH 现场采集" width="480px">
       <el-form label-width="90px">
         <el-form-item label="目标主机">
@@ -240,7 +273,8 @@
     getAssetHostList,
     getAssetHostHistory,
     importAssetHost,
-    collectAssetHost
+    collectAssetHost,
+    syncAliyunECS
   } from '@/plugin/asset/api/assetHost'
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import { ElMessage, ElMessageBox } from 'element-plus'
@@ -404,6 +438,43 @@
         getTableData()
       }
     })
+  }
+
+  // 阿里云 ECS 同步
+  const syncVisible = ref(false)
+  const syncing = ref(false)
+  const syncCredId = ref(undefined)
+  const syncRegion = ref('cn-beijing')
+  const syncResult = ref(null)
+
+  const openSync = async () => {
+    const res = await getCredentialList()
+    if (res.code === 0) {
+      credList.value = res.data || []
+    }
+    syncResult.value = null
+    syncVisible.value = true
+  }
+
+  const submitSync = async () => {
+    if (!syncCredId.value || !syncRegion.value) {
+      ElMessage.warning('请选择 AK 凭据并填写地域')
+      return
+    }
+    syncing.value = true
+    try {
+      const res = await syncAliyunECS({
+        credentialId: syncCredId.value,
+        region: syncRegion.value
+      })
+      if (res.code === 0) {
+        syncResult.value = res.data
+        ElMessage.success(`同步完成：新建 ${res.data.created}，更新 ${res.data.updated}`)
+        getTableData()
+      }
+    } finally {
+      syncing.value = false
+    }
   }
 
   // SSH 现场采集

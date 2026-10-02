@@ -144,3 +144,18 @@ export const collectAssetHost = (data) => {
     timeout: 30000
   })
 }
+
+// @Tags AssetHost
+// @Summary 阿里云 ECS 实例同步
+// @Security ApiKeyAuth
+// @accept application/json
+// @Produce application/json
+// @Router /asset/sync/aliyun-ecs [post]
+export const syncAliyunECS = (data) => {
+  return service({
+    url: '/asset/sync/aliyun-ecs',
+    method: 'post',
+    data,
+    timeout: 60000
+  })
+}
