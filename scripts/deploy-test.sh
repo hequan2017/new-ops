@@ -73,7 +73,8 @@ else
   rm -f config.yaml.new
 fi
 
-# systemd 服务
+# systemd 服务（继承已配置的凭据主密钥环境变量，避免重写 unit 时丢失）
+CRED_ENV_LINE=$(grep -h "^Environment=NEW_OPS_CREDENTIAL_MASTER_KEY=" /etc/systemd/system/$UNIT.service 2>/dev/null || true)
 cat > /etc/systemd/system/$UNIT.service <<EOF
 [Unit]
 Description=BaiZe new-ops server (gin-vue-admin based)
@@ -86,6 +87,7 @@ ExecStart=$DEPLOY_DIR/bin/new-ops-server
 Restart=always
 RestartSec=3
 LimitNOFILE=65536
+${CRED_ENV_LINE}
 
 [Install]
 WantedBy=multi-user.target

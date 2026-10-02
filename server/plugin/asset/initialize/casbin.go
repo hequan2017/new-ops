@@ -51,7 +51,7 @@ var assetApis = []struct {
 	{"/asset/credential/list", "GET"},
 }
 
-// assetReadOnlyApis 普通用户（9528）只读策略
+// assetReadOnlyApis 普通用户（9528）只读策略（不含凭据：凭据仅超管）
 var assetReadOnlyApis = []struct {
 	Path   string
 	Method string
@@ -64,10 +64,6 @@ var assetReadOnlyApis = []struct {
 	{"/asset/rack/list", "GET"},
 	{"/asset/productLine/list", "GET"},
 	{"/asset/group/list", "GET"},
-	{"/asset/credential/create", "POST"},
-	{"/asset/credential/delete", "DELETE"},
-	{"/asset/credential/update", "PUT"},
-	{"/asset/credential/list", "GET"},
 }
 
 // assetMenus 与 menu.go 保持一致（菜单 name）：888/9528 双角色绑定
