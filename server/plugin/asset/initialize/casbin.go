@@ -46,7 +46,7 @@ var assetApis = []struct {
 	{"/asset/group/delete", "DELETE"},
 	{"/asset/group/update", "PUT"},
 	{"/asset/group/list", "GET"},
-	{"/asset/sync/aliyun-ecs", "POST"},
+	{"/asset/host/sync/aliyun-ecs", "POST"},
 	{"/asset/credential/create", "POST"},
 	{"/asset/credential/delete", "DELETE"},
 	{"/asset/credential/update", "PUT"},

@@ -284,7 +284,7 @@ func (a *assetHost) CollectAssetHost(c *gin.Context) {
 // @Produce application/json
 // @Param data body object true "credentialId(cloud_ak凭据)/region(如 cn-beijing)"
 // @Success 200 {object} response.Response{data=service.ECSSyncResult,msg=string} "同步完成"
-// @Router /asset/sync/aliyun-ecs [post]
+// @Router /asset/host/sync/aliyun-ecs [post]
 func (a *assetHost) SyncAliyunECS(c *gin.Context) {
 	var req struct {
 		CredentialID uint   `json:"credentialId" binding:"required"`
