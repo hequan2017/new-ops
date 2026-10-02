@@ -92,6 +92,7 @@ export const getAssetHostList = (data) => {
   return service({
     url: '/asset/host/list',
     method: 'post',
+
     data
   })
 }
@@ -124,5 +125,22 @@ export const importAssetHost = (file) => {
     method: 'post',
     data,
     headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+// @Tags AssetHost
+// @Summary SSH 现场采集主机信息
+// @Security ApiKeyAuth
+// @accept application/json
+// @Produce application/json
+// @Param data body object true "ID(主机ID)/credentialId(SSH凭据ID)"
+// @Success 200 {string} string "{"success":true,"data":{},"msg":"采集成功"}"
+// @Router /asset/host/collect [post]
+export const collectAssetHost = (data) => {
+  return service({
+    url: '/asset/host/collect',
+    method: 'post',
+    data,
+    timeout: 30000
   })
 }
