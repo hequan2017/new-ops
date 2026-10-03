@@ -287,8 +287,8 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 ### M2 任务清单
 
 - [x] WebSocket 网关与鉴权中间件；xterm.js 组件（term 插件 /term/ws：query token 握手自验、二进制数据流+JSON 控制帧、30s 心跳、resize 自适应；数据权限过滤已接入主机选择）
-- [ ] WebSSH 连接管理（进行中：密码/私钥/keyboard-interactive 单机直连已交付并真机验证；ProxyJump 级联与主机指纹校验下一场；会话审计随场20）
-- [ ] 会话审计：命令抽取落库 + 全量录像文件 + 审计回放页
+- [x] WebSSH 连接管理（密码/私钥/keyboard-interactive 直连真机验证；ProxyJump 级联：JumpHostID 自引用链 ≤5 跳/禁环/逐跳独立认证与指纹校验+TOFU 回填，buildJumpChain 6 组单测；主机表单跳板机选择+指纹只读回显；CRUD 层 ssh_fp 防篡改与 jump_host_id 取消写入修复）
+- [x] 会话审计：命令抽取落库 + 流镜像（TermSessionStream 按 seq）+ 审计回放页（xterm 重演，上行标注）
 - [ ] SFTP 文件浏览器（列表/上传/下载/删除）
 - [ ] 批量执行：并发池（上限/超时/取消）、脚本库 CRUD+版本、变量组关联资产
 - [ ] 远程日志 tail、CIDR 网段发现一键导入资产
@@ -537,4 +537,4 @@ web/src/plugin/asset/
 | 2026-10-02 | 17 | M1 场7：Go SSH 采集器全链路——解析纯函数单测、SSH 双认证拨号（密码/私钥）、命令级超时、凭据保险库 GetPlaintext 取用、真实 sshd 采集回填（ubuntu/88C/125G/229G）+ last_collect_at + 历史记录；前端「采集」按钮（凭据下拉）+ 最近采集列；df 解析 MOTD 噪音修复 | 下一场：阿里云 ECS 同步；M1 收尾后进 M2 终端 |
 | 2026-10-02 | 18 | M1 场9：阿里云 ECS 同步全链路——OpenAPI RPC V1 签名自实现（零新增依赖）、DescribeInstances 分页拉取、按 SN(InstanceId) upsert（状态映射/空IP兜底公网/历史记录）、前端导入弹窗（AK凭据+Region+结果明细）；链路验证：假AK真实外呼回传 InvalidAccessKeyId、空地域与凭据类型校验；修复种子路径不一致（/asset/sync→/asset/host/sync 导致 888 被拦） | 下一场：M1 收官自查（软删除唯一索引类问题巡检）→ M2 终端与作业开工 |
 | 2026-10-03 | 19 | M2 开工（场11提前）：term 插件 WS⇄SSH PTY 桥接全链路——/term/ws 握手 token 自验（复用底座 JWT）、二进制数据流+JSON 控制帧（resize/ping）、xterm 组件（重连提示/自适应/心跳）、主机页「终端」抽屉；gorilla/websocket+xterm 6.0 依赖登记 3.5；真实 sshd 验证：连接/命令回显/resize 全通过 | 下一场：ProxyJump 级联+指纹校验、会话审计落库+回放 |
-| 2026-10-03 | 20 | M2 场20：会话审计全链路（三表/桥接集成/查询接口/回放页）——端到端验证通过（WS 会话流镜像含回显、命令抽取、会话结束态）；协作合并并行会话的指纹 TOFU 校验与 ProxyJump jump.go。⚠️ 检测到并行会话同时开发本仓库，git 提交交错，建议收敛为单会话 | 下一场：ProxyJump 接线验证、SFTP 文件浏览器 |
+| 2026-10-03 | 20 | M2 场20：会话审计全链路（三表/桥接集成/查询接口/回放页）——端到端验证通过（WS 会话流镜像含回显、命令抽取、会话结束态）；协作合并并行会话的指纹 TOFU 校验与 ProxyJump jump.go；另补：webssh 级联接线（dialChain 返回目标指纹入会话快照）、buildJumpChain 6 组单测、主机表单跳板机选择/指纹回显、CRUD 层 ssh_fp 防篡改与 jump_host_id 取消写入修复。⚠️ 检测到并行会话同时开发本仓库，git 提交交错，建议收敛为单会话 | 下一场：级联双机真机验证、SFTP 文件浏览器 |
