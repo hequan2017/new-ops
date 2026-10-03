@@ -40,6 +40,8 @@ type AssetHost struct {
 	Notes         string             `json:"notes" gorm:"type:text;comment:备注"`
 	CredentialID  *uint              `json:"credentialId" gorm:"comment:采集用凭据ID"`
 	LastCollectAt *time.Time         `json:"lastCollectAt" gorm:"comment:最近采集时间"`
+	SSHFP         string             `json:"sshFingerprint" gorm:"size:96;comment:SSH主机公钥指纹(SHA256,TOFU首录)"`
+	JumpHostID    *uint              `json:"jumpHostId" gorm:"comment:跳板机ID(留空直连)"`
 	ProductLines  []AssetProductLine `json:"productLines" gorm:"many2many:asset_host_product_lines;"`
 	Room          *AssetRoom         `json:"room" gorm:"foreignKey:RoomID"`
 	Rack          *AssetRack         `json:"rack" gorm:"foreignKey:RackID"`

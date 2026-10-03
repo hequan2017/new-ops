@@ -154,6 +154,25 @@ func (s *AssetHostService) GetAssetHostList(info request.PageInfo, status string
 	return list, total, err
 }
 
+// RecordHostFingerprint TOFU 录入主机 SSH 公钥指纹（仅当前值为空时写入，已有值不覆盖；
+// 供 term 跳板级联等跨插件链路在首连成功后回填，采集通道在 CollectHostFromCredential 内回填）
+func (s *AssetHostService) RecordHostFingerprint(hostID uint, fingerprint, operator string) error {
+	if fingerprint == "" {
+		return nil
+	}
+	res := global.GVA_DB.Model(&model.AssetHost{}).
+		Where("id = ? AND (ssh_fp IS NULL OR ssh_fp = '')", hostID).
+		Update("ssh_fp", fingerprint)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected > 0 {
+		recordHostHistory(global.GVA_DB, hostID, model.HostHistoryUpdate,
+			map[string]any{"action": "TOFU录入SSH指纹", "ssh_fp": fingerprint}, operator)
+	}
+	return nil
+}
+
 // replaceProductLines 重写主机-产品线关联（按传入 ProductLines 的 ID）
 func (s *AssetHostService) replaceProductLines(tx *gorm.DB, h *model.AssetHost) error {
 	if len(h.ProductLines) == 0 {

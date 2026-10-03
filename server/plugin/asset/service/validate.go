@@ -14,6 +14,7 @@ const (
 	ErrCodeIPInvalid        = 1002
 	ErrCodeIPDuplicate      = 1003
 	ErrCodeStatusInvalid    = 1004
+	ErrCodeHostFPMismatch   = 1010 // SSH 主机公钥指纹不匹配（安全拒绝）
 )
 
 // ServiceError 带业务错误码的错误（前端可按码分支处理）

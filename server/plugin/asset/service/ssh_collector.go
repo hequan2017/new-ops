@@ -4,6 +4,7 @@ package service
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -25,10 +26,11 @@ type CollectedInfo struct {
 
 // SSHAuth SSH 认证参数（凭据保险库解密后传入，用后即弃）
 type SSHAuth struct {
-	Username string
-	Password string // CredTypeSSHPassword 时使用
-	PrivateKey string // CredTypeSSHKey 时使用
-	Port     int
+	Username           string
+	Password           string // CredTypeSSHPassword 时使用
+	PrivateKey         string // CredTypeSSHKey 时使用
+	Port               int
+	ExpectedFingerprint string // 主机公钥指纹期望值（空=TOFU 首次信任）
 }
 
 // parseOSRelease 解析 /etc/os-release
@@ -99,17 +101,16 @@ func parseNproc(out string) int {
 	return n
 }
 
-// DialSSH 建立 SSH 连接（导出供 term 插件 WebSSH 复用）
-// 技术债登记：HostKeyCallback 暂 insecure，M2 统一主机指纹校验时替换
-func DialSSH(ip string, auth SSHAuth) (*cssh.Client, error) {
-	if auth.Port <= 0 {
-		auth.Port = 22
-	}
+// DialSSH 建立带主机指纹校验的 SSH 连接（导出供 term 插件 WebSSH/跳板级联复用），
+// 返回实际见到的主机公钥指纹（SHA256:xxx）。
+// 指纹策略 TOFU：auth.ExpectedFingerprint 为空时信任首次指纹（调用方负责落库），
+// 非空时强校验，不匹配拒绝握手（错误码 ErrCodeHostFPMismatch）。
+func DialSSH(ip string, auth SSHAuth) (*cssh.Client, string, error) {
 	var authMethods []cssh.AuthMethod
 	if auth.PrivateKey != "" {
 		signer, err := cssh.ParsePrivateKey([]byte(auth.PrivateKey))
 		if err != nil {
-			return nil, fmt.Errorf("私钥解析失败: %w", err)
+			return nil, "", fmt.Errorf("私钥解析失败: %w", err)
 		}
 		authMethods = append(authMethods, cssh.PublicKeys(signer))
 	}
@@ -124,22 +125,51 @@ func DialSSH(ip string, auth SSHAuth) (*cssh.Client, error) {
 		}))
 	}
 	if len(authMethods) == 0 {
-		return nil, fmt.Errorf("无可用的 SSH 认证方式")
+		return nil, "", fmt.Errorf("无可用的 SSH 认证方式")
 	}
+	var actualFP string
 	cfg := &cssh.ClientConfig{
 		User:            auth.Username,
 		Auth:            authMethods,
 		Timeout:         10 * time.Second,
-		HostKeyCallback: cssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: func(hostname string, remote net.Addr, key cssh.PublicKey) error {
+			actualFP = cssh.FingerprintSHA256(key)
+			if auth.ExpectedFingerprint == "" {
+				return nil // TOFU：首次信任，由调用方回填资产
+			}
+			if actualFP != auth.ExpectedFingerprint {
+				return newServiceErr(ErrCodeHostFPMismatch, fmt.Sprintf(
+					"主机指纹不匹配：期望 %s 实际 %s（主机可能被重装或存在中间人风险，确认安全后可清空指纹重新录入）",
+					auth.ExpectedFingerprint, actualFP))
+			}
+			return nil
+		},
 	}
-	return cssh.Dial("tcp", fmt.Sprintf("%s:%d", ip, auth.Port), cfg)
+	client, err := cssh.Dial("tcp", SSHDialTarget(ip, auth.Port), cfg)
+	return client, actualFP, err
 }
 
-// collectViaSSH 拨号并采集（整体超时 20s）
-func collectViaSSH(ip string, auth SSHAuth) (*CollectedInfo, error) {
-	client, err := DialSSH(ip, auth)
+// SSHDialTarget 计算拨号地址：纯 IP + 可选端口 → host:port；入参已带端口时直接归一化使用
+// （跳板级联在隧道内拨下一跳时复用）
+func SSHDialTarget(ip string, port int) string {
+	host, sport, err := net.SplitHostPort(ip)
+	if err == nil {
+		if port <= 0 {
+			return net.JoinHostPort(host, sport)
+		}
+		return net.JoinHostPort(host, strconv.Itoa(port)) // 显式端口优先
+	}
+	if port <= 0 {
+		port = 22
+	}
+	return net.JoinHostPort(ip, strconv.Itoa(port))
+}
+
+// collectViaSSH 拨号并采集（整体超时 20s）；auth.ExpectedFingerprint 由调用方带入实现强校验
+func collectViaSSH(ip string, auth SSHAuth) (*CollectedInfo, string, error) {
+	client, actualFP, err := DialSSH(ip, auth)
 	if err != nil {
-		return nil, err
+		return nil, actualFP, err
 	}
 	defer client.Close()
 
@@ -187,7 +217,7 @@ func collectViaSSH(ip string, auth SSHAuth) (*CollectedInfo, error) {
 	if out, err := run("df -BG / --output=size 2>/dev/null | tail -1", 5*time.Second); err == nil {
 		info.DiskGB = parseDFGB(out)
 	}
-	return info, nil
+	return info, actualFP, nil
 }
 
 // CollectHostFromCredential 用绑定的凭据采集并回填主机资产
@@ -207,8 +237,8 @@ func (s *AssetHostService) CollectHostFromCredential(hostID, credentialID uint, 
 	if credType != model.CredTypeSSHPassword && credType != model.CredTypeSSHKey {
 		return nil, newServiceErr(ErrCodeCredTypeInvalid, "采集仅支持 SSH 密码/私钥凭据")
 	}
-	auth := SSHAuth{Username: username, Password: secret, PrivateKey: secret}
-	info, err := collectViaSSH(host.IP, auth)
+	auth := SSHAuth{Username: username, Password: secret, PrivateKey: secret, ExpectedFingerprint: host.SSHFP}
+	info, actualFP, err := collectViaSSH(host.IP, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -234,11 +264,14 @@ func (s *AssetHostService) CollectHostFromCredential(hostID, credentialID uint, 
 	if credentialID > 0 {
 		updates["credential_id"] = credentialID
 	}
+	if host.SSHFP == "" && actualFP != "" {
+		updates["ssh_fp"] = actualFP // TOFU 首次录入指纹；已有指纹时 DialSSH 已强校验
+	}
 	err = global.GVA_DB.Model(&model.AssetHost{}).Where("id = ?", hostID).Updates(updates).Error
 	if err != nil {
 		return nil, err
 	}
 	recordHostHistory(global.GVA_DB, hostID, model.HostHistoryUpdate,
-		map[string]any{"action": "SSH采集", "collected": info}, operator)
+		map[string]any{"action": "SSH采集", "collected": info, "fingerprint": actualFP}, operator)
 	return info, nil
 }

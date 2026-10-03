@@ -14,6 +14,8 @@ import (
 
 	assetModel "github.com/hequan2017/new-ops/server/plugin/asset/model"
 	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
+	"github.com/hequan2017/new-ops/server/plugin/term/model"
+	"go.uber.org/zap"
 )
 
 // TermService 终端服务
@@ -28,6 +30,8 @@ type TermStartParams struct {
 	Cols         int
 	Rows         int
 	Operator     string
+	UserID       uint
+	ClientIP     string
 }
 
 // StartWebSSH 建立 WS ⇄ SSH 桥接（阻塞直到任一端断开）
@@ -49,7 +53,7 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 		return fmt.Errorf("WebSSH 仅支持 SSH 密码/私钥凭据")
 	}
 
-	client, err := assetSvc.DialSSH(host.IP, assetSvc.SSHAuth{
+	client, hostFP, err := assetSvc.DialSSH(host.IP, assetSvc.SSHAuth{
 		Username:   username,
 		Password:   secret,
 		PrivateKey: secret,
@@ -58,6 +62,7 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 		return err
 	}
 	defer client.Close()
+	_ = hostFP // 指纹落会话审计（下方创建会话时带入）
 
 	session, err := client.NewSession()
 	if err != nil {
@@ -98,6 +103,36 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 	}
 	defer closeAll()
 
+	// 会话审计：元数据落库 + 流镜像 + 命令抽取（审计不可用不阻断终端）
+	auditSvc := new(TermAuditService)
+	sess := &model.TermSession{
+		HostID: p.HostID, Hostname: host.Hostname, IP: host.IP,
+		UserID: p.UserID, Username: p.Operator, CredentialID: p.CredentialID,
+		ClientIP: p.ClientIP, Cols: cols, Rows: rows,
+		Status: model.TermSessionActive, StartedAt: time.Now(),
+		Fingerprint: hostFP,
+	}
+	var sessionID uint
+	if auditErr := auditSvc.StartSession(sess); auditErr != nil {
+		zap.L().Warn("term 会话审计创建失败: " + auditErr.Error())
+	} else {
+		sessionID = sess.ID
+	}
+	defer func() {
+		if sessionID > 0 {
+			auditSvc.EndSession(sessionID)
+		}
+	}()
+	streamSeq := int64(0)
+	cmdAcc := newInputAccumulator()
+	recordStream := func(direction uint8, payload string) {
+		if sessionID == 0 {
+			return
+		}
+		streamSeq++
+		_ = auditSvc.AppendStream(sessionID, streamSeq, direction, payload)
+	}
+
 	// SSH 输出 → WS（二进制帧）
 	go func() {
 		buf := make([]byte, 8192)
@@ -109,6 +144,9 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 					break
 				}
 				_ = ws.SetWriteDeadline(deadline)
+				if sessionID > 0 {
+					recordStream(model.StreamDirDown, string(buf[:n]))
+				}
 			}
 			if readErr != nil {
 				if readErr != io.EOF {
@@ -145,7 +183,14 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 				}
 				continue
 			}
-			_, _ = stdin.Write(data) // 非控制 JSON 的文本按终端输入处理
+			input := string(data)
+			if sessionID > 0 {
+				recordStream(model.StreamDirUp, input)
+				for _, cmd := range cmdAcc.feed(input) {
+					_ = auditSvc.AppendCommand(sessionID, streamSeq, cmd)
+				}
+			}
+			_, _ = stdin.Write([]byte(input)) // 非控制 JSON 的文本按终端输入处理
 		case websocket.BinaryMessage:
 			_, _ = stdin.Write(data)
 		}
