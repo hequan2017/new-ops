@@ -130,3 +130,20 @@ func stripControl(s string) string {
 	}
 	return b.String()
 }
+
+// ---------- API 层查询入口（挂在 TermService 统一出口） ----------
+
+// GetSessionList 会话分页列表（username/status 过滤）
+func (t *termService) GetSessionList(info request.PageInfo, username, status string) ([]*model.TermSession, int64, error) {
+	return TermAudit.GetSessionList(info, username, status)
+}
+
+// GetSessionStreams 会话流镜像（审计回放数据）
+func (t *termService) GetSessionStreams(sessionID uint) ([]*model.TermSessionStream, error) {
+	return TermAudit.GetSessionStreams(sessionID)
+}
+
+// GetSessionCommands 会话命令列表
+func (t *termService) GetSessionCommands(sessionID uint) ([]*model.TermSessionCommand, error) {
+	return TermAudit.GetSessionCommands(sessionID)
+}

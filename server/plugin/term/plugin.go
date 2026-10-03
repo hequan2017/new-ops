@@ -21,9 +21,10 @@ func init() {
 	interfaces.Register(Plugin)
 }
 
-// Register 插件加载时调用：API/菜单种子 → 授权种子 → 路由
+// Register 插件加载时调用：表迁移 → API/菜单种子 → 授权种子 → 路由
 func (p *plugin) Register(group *gin.Engine) {
 	ctx := context.Background()
+	initialize.Gorm(ctx)
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
 	initialize.Casbin(ctx)
