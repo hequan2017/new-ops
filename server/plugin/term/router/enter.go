@@ -8,6 +8,7 @@ import (
 type RouterGroup struct {
 	TerminalRouter
 	TermSessionRouter
+	SftpRouter
 }
 
 var RouterGroupApp = new(RouterGroup)
@@ -16,4 +17,5 @@ var RouterGroupApp = new(RouterGroup)
 func (rg *RouterGroup) Init(public, private *gin.RouterGroup) {
 	rg.TerminalRouter.InitTerminalRouter(public)
 	rg.TermSessionRouter.InitTermSessionRouter(private)
+	rg.SftpRouter.InitSftpRouter(private)
 }
