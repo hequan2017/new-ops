@@ -99,8 +99,9 @@ func parseNproc(out string) int {
 	return n
 }
 
-// collectViaSSH 拨号并采集（整体超时 20s）
-func collectViaSSH(ip string, auth SSHAuth) (*CollectedInfo, error) {
+// DialSSH 建立 SSH 连接（导出供 term 插件 WebSSH 复用）
+// 技术债登记：HostKeyCallback 暂 insecure，M2 统一主机指纹校验时替换
+func DialSSH(ip string, auth SSHAuth) (*cssh.Client, error) {
 	if auth.Port <= 0 {
 		auth.Port = 22
 	}
@@ -125,18 +126,20 @@ func collectViaSSH(ip string, auth SSHAuth) (*CollectedInfo, error) {
 	if len(authMethods) == 0 {
 		return nil, fmt.Errorf("无可用的 SSH 认证方式")
 	}
-
-	// TODO(M2 term): 替换为统一主机指纹校验（accept-new），当前 M1 采集器为既有技术债
 	cfg := &cssh.ClientConfig{
 		User:            auth.Username,
 		Auth:            authMethods,
 		Timeout:         10 * time.Second,
 		HostKeyCallback: cssh.InsecureIgnoreHostKey(),
 	}
+	return cssh.Dial("tcp", fmt.Sprintf("%s:%d", ip, auth.Port), cfg)
+}
 
-	client, err := cssh.Dial("tcp", fmt.Sprintf("%s:%d", ip, auth.Port), cfg)
+// collectViaSSH 拨号并采集（整体超时 20s）
+func collectViaSSH(ip string, auth SSHAuth) (*CollectedInfo, error) {
+	client, err := DialSSH(ip, auth)
 	if err != nil {
-		return nil, fmt.Errorf("SSH 连接失败: %w", err)
+		return nil, err
 	}
 	defer client.Close()
 

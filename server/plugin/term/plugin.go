@@ -1,10 +1,13 @@
-// Package term 白泽业务插件：终端与文件（WebSSH/SFTP/会话审计）
+// Package term 白泽业务插件：终端作业（WebSSH/会话审计/SFTP）
 // 开发规范见 docs/DEV_PLAN.md 与 docs/plugin-dev-guide.md
 package term
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 
+	"github.com/hequan2017/new-ops/server/plugin/term/initialize"
 	interfaces "github.com/hequan2017/new-ops/server/utils/plugin/v2"
 )
 
@@ -18,6 +21,11 @@ func init() {
 	interfaces.Register(Plugin)
 }
 
-// Register 插件加载时调用；M1 起实现路由/菜单/API/字典初始化。
+// Register 插件加载时调用：API/菜单种子 → 授权种子 → 路由
 func (p *plugin) Register(group *gin.Engine) {
+	ctx := context.Background()
+	initialize.Api(ctx)
+	initialize.Menu(ctx)
+	initialize.Casbin(ctx)
+	initialize.Router(group)
 }

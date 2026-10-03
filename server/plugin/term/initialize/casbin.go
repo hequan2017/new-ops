@@ -1,0 +1,27 @@
+// Package initialize 白泽终端插件授权种子
+package initialize
+
+import (
+	"context"
+
+	"github.com/hequan2017/new-ops/server/utils"
+	"go.uber.org/zap"
+)
+
+// Casbin 注册 WS 端点策略（幂等；实际鉴权在握手时通过 query token 完成）
+func Casbin(ctx context.Context) {
+	e := utils.GetCasbin()
+	if e == nil {
+		zap.L().Warn("term 插件：casbin 未初始化，跳过策略注册")
+		return
+	}
+	for _, role := range []string{"888", "9528"} {
+		has, err := e.HasPolicy(role, "/term/ws", "GET")
+		if err != nil || has {
+			continue
+		}
+		if _, err := e.AddPolicy(role, "/term/ws", "GET"); err != nil {
+			zap.L().Error("term 插件：添加 casbin 策略失败", zap.Error(err))
+		}
+	}
+}
