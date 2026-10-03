@@ -80,6 +80,7 @@
   "/src/plugin/auto/view/autoPkg/autoPkg.vue": "AutoPkg",
   "/src/plugin/auto/view/skills/index.vue": "Index",
   "/src/plugin/email/view/index.vue": "Email",
+  "/src/plugin/job/view/batchExec/index.vue": "jobBatchExec",
   "/src/plugin/term/components/XtermShell.vue": "XtermShell",
   "/src/plugin/term/view/audit/index.vue": "TermAudit",
   "/src/plugin/term/view/sftp/index.vue": "TermSftp"

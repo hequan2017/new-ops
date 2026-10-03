@@ -289,8 +289,8 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 - [x] WebSocket 网关与鉴权中间件；xterm.js 组件（term 插件 /term/ws：query token 握手自验、二进制数据流+JSON 控制帧、30s 心跳、resize 自适应；数据权限过滤已接入主机选择）
 - [x] WebSSH 连接管理（密码/私钥/keyboard-interactive 直连真机验证；ProxyJump 级联：JumpHostID 自引用链 ≤5 跳/禁环/逐跳独立认证与指纹校验+TOFU 回填，buildJumpChain 6 组单测；主机表单跳板机选择+指纹只读回显；CRUD 层 ssh_fp 防篡改与 jump_host_id 取消写入修复）
 - [x] 会话审计：命令抽取落库 + 流镜像（TermSessionStream 按 seq）+ 审计回放页（xterm 重演，上行标注）
-- [ ] SFTP 文件浏览器（列表/上传/下载/删除）
-- [ ] 批量执行：并发池（上限/超时/取消）、脚本库 CRUD+版本、变量组关联资产
+- [x] SFTP 文件浏览器（列表/上传/下载/删除；场21 交付，场22 回归通过：嵌套 mkdir/upload/list/递归删除全验证）
+- [ ] 批量执行（进行中：批量命令执行全链已交付并真机验证——job 两表模型、信号量并发池（限流/单任务超时/批次取消 registry，4 组单测）、数据权限校验（非 888 仅授权组内）、逐主机凭据解析与指纹 TOFU、四接口+菜单/API/casbin 种子、前端执行页（主机多选/批次轮询/取消/结果抽屉）；真机：批次 269ms 成功、sleep60 取消生效；剩余：脚本库 CRUD+版本、变量组关联资产）
 - [ ] 远程日志 tail、CIDR 网段发现一键导入资产
 
 ### M3 任务清单
@@ -539,3 +539,4 @@ web/src/plugin/asset/
 | 2026-10-03 | 19 | M2 开工（场11提前）：term 插件 WS⇄SSH PTY 桥接全链路——/term/ws 握手 token 自验（复用底座 JWT）、二进制数据流+JSON 控制帧（resize/ping）、xterm 组件（重连提示/自适应/心跳）、主机页「终端」抽屉；gorilla/websocket+xterm 6.0 依赖登记 3.5；真实 sshd 验证：连接/命令回显/resize 全通过 | 下一场：ProxyJump 级联+指纹校验、会话审计落库+回放 |
 | 2026-10-03 | 20 | M2 场20：会话审计全链路（三表/桥接集成/查询接口/回放页）——端到端验证通过（WS 会话流镜像含回显、命令抽取、会话结束态）；协作合并并行会话的指纹 TOFU 校验与 ProxyJump jump.go；另补：webssh 级联接线（dialChain 返回目标指纹入会话快照）、buildJumpChain 6 组单测、主机表单跳板机选择/指纹回显、CRUD 层 ssh_fp 防篡改与 jump_host_id 取消写入修复。⚠️ 检测到并行会话同时开发本仓库，git 提交交错，建议收敛为单会话 | 下一场：级联双机真机验证、SFTP 文件浏览器 |
 | 2026-10-03 | 21 | 排期收官场：SFTP 文件浏览器全链路交付（六接口+前端浏览器页+真实 sftp 验证 list/upload/download/rename 通过；递归删除验证因并行部署窗口未完成，下一场回归）；README/plugin-dev-guide 定稿；tag v0.1.0 发布 | 下一周期（10-04 起）：M2 收尾（批量执行/日志tail/网段发现）→ M3 流水线；⚠️ 并行会话冲突待用户收敛 |
+| 2026-10-03 | 22 | M2 场22（job 插件开工）：批量命令执行全链——两表模型、信号量并发池（限流/单任务超时/批次取消，4 组单测）、数据权限+逐主机凭据解析+指纹 TOFU、cancelRegistry、四接口+种子、前端执行页（轮询/取消/结果抽屉）；真机验证全过：批次 269ms 成功、sleep60 取消生效、SFTP 递归删除与 upload 回归通过（此前 upload 报错系本地 GitBash curl 路径转换污染 path 字段，非服务端缺陷）、ProxyJump 级联双机验证通过（目标机 Last login from 127.0.0.1 证实经跳板隧道）；核实 tag v0.1.0 远端在（本地未 fetch） | 下一场：脚本库 CRUD+版本、变量组关联资产；远程日志 tail、CIDR 网段发现 |
