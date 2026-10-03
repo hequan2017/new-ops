@@ -195,7 +195,7 @@
 | 关注点 | 选型 | 说明 | 已验证来源 |
 |---|---|---|---|
 | SSH / SFTP | `golang.org/x/crypto/ssh` + `github.com/pkg/sftp` | 纯 Go 实现，支持 keyboard-interactive | go-webssh |
-| 终端通道 | `gorilla/websocket` + xterm.js(+fit addon) | 统一走底座 `/ws/*` 网关 | new-jenkins / tianqi |
+| 终端通道 | `gorilla/websocket` + `@xterm/xterm`(6.0)+`@xterm/addon-fit` | 统一走插件内 `/term/ws` 网关（query token 握手鉴权） | new-jenkins / tianqi |
 | Docker | Docker SDK（moby/client） | 支持 TLS 连接远程节点 | GPU 系列 |
 | Kubernetes | `k8s.io/client-go` | kubeconfig 动态加载 + 连接池 | seal / docker-gpu-manage |
 | 凭据加密 | `crypto/aes` + GCM（信封加密） | 标准库优先，主密钥环境变量注入 | go-webssh |
