@@ -33,13 +33,32 @@
               </el-select>
             </el-form-item>
           </el-col>
+          <el-col :span="8">
+            <el-form-item label="脚本库">
+              <el-select v-model="form.scriptId" clearable filterable placeholder="选脚本填充命令（优先于手输）" style="width: 100%" @change="onScriptPick">
+                <el-option
+                  v-for="s in scriptOptions"
+                  :key="s.ID"
+                  :label="`${s.name}（${s.language} v${s.version}）`"
+                  :value="s.ID"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="变量组">
+              <el-select v-model="form.variableGroupId" clearable placeholder="渲染 {{key}} 占位" style="width: 100%">
+                <el-option v-for="v in varGroupOptions" :key="v.ID" :label="v.name" :value="v.ID" />
+              </el-select>
+            </el-form-item>
+          </el-col>
           <el-col :span="24">
             <el-form-item label="命令">
               <el-input
                 v-model="form.command"
                 type="textarea"
                 :rows="3"
-                placeholder="如：df -h || uptime"
+                :placeholder="form.scriptId ? '已选脚本，将以脚本内容执行（可再选变量组渲染）' : '如：df -h || uptime'"
               />
             </el-form-item>
           </el-col>
@@ -157,6 +176,7 @@
   import { ref, reactive, onMounted, onUnmounted } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { createBatchExec, cancelBatchExec, getBatchList, getBatchDetail } from '@/plugin/job/api/batchExec'
+  import { getScriptList, getVarGroupList } from '@/plugin/job/api/jobScript'
   import { getAssetHostList } from '@/plugin/asset/api/assetHost'
   import { getCredentialList } from '@/plugin/asset/api/credential'
 
@@ -166,18 +186,24 @@
   const form = reactive({
     hostIds: [],
     command: '',
+    scriptId: null,
+    variableGroupId: null,
     concurrency: 10,
     timeoutSec: 30,
     credentialId: null
   })
   const hostOptions = ref([])
   const credOptions = ref([])
+  const scriptOptions = ref([])
+  const varGroupOptions = ref([])
   const submitting = ref(false)
 
   const loadOptions = async () => {
-    const [h, c] = await Promise.all([
+    const [h, c, s, v] = await Promise.all([
       getAssetHostList({ page: 1, pageSize: 500 }),
-      getCredentialList({ page: 1, pageSize: 200 })
+      getCredentialList({ page: 1, pageSize: 200 }),
+      getScriptList({}),
+      getVarGroupList({})
     ])
     if (h.code === 0) hostOptions.value = h.data.list || []
     if (c.code === 0) {
@@ -185,11 +211,19 @@
         (x) => x.type === 'ssh_password' || x.type === 'ssh_key'
       )
     }
+    if (s.code === 0) scriptOptions.value = s.data || []
+    if (v.code === 0) varGroupOptions.value = v.data || []
+  }
+
+  // 选中脚本时把内容回填到命令框（可预览修改，实际执行以脚本内容为准）
+  const onScriptPick = (id) => {
+    const sc = scriptOptions.value.find((x) => x.ID === id)
+    if (sc) form.command = sc.content
   }
 
   const onSubmitExec = async () => {
-    if (!form.hostIds.length || !form.command.trim()) {
-      ElMessage.warning('请选择主机并输入命令')
+    if (!form.hostIds.length || (!form.command.trim() && !form.scriptId)) {
+      ElMessage.warning('请选择主机并输入命令（或从脚本库选择）')
       return
     }
     await ElMessageBox.confirm(
@@ -202,6 +236,8 @@
       const res = await createBatchExec({
         hostIds: form.hostIds,
         command: form.command,
+        scriptId: form.scriptId || undefined,
+        variableGroupId: form.variableGroupId || undefined,
         concurrency: form.concurrency,
         timeoutSec: form.timeoutSec,
         credentialId: form.credentialId || undefined
