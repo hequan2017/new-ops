@@ -15,6 +15,9 @@ import (
 // TermAuditService 会话审计服务
 type TermAuditService struct{}
 
+// TermAudit 审计服务实例（桥接与 API 查询共用）
+var TermAudit = new(TermAuditService)
+
 // StartSession 创建会话记录
 func (s *TermAuditService) StartSession(sess *model.TermSession) error {
 	return global.GVA_DB.Create(sess).Error

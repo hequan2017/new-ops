@@ -27,6 +27,14 @@ func Menu(ctx context.Context) {
 			Sort:      1,
 			Meta:      model.Meta{Title: "Web 终端", Icon: "platform"},
 		},
+		{
+			Path:      "termAudit",
+			Name:      "termAudit",
+			Hidden:    false,
+			Component: "plugin/term/view/audit/index.vue",
+			Sort:      2,
+			Meta:      model.Meta{Title: "会话审计", Icon: "document-checked"},
+		},
 	}
 	utils.RegisterMenus(entities...)
 }

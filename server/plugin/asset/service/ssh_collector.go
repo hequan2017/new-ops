@@ -106,11 +106,24 @@ func parseNproc(out string) int {
 // 指纹策略 TOFU：auth.ExpectedFingerprint 为空时信任首次指纹（调用方负责落库），
 // 非空时强校验，不匹配拒绝握手（错误码 ErrCodeHostFPMismatch）。
 func DialSSH(ip string, auth SSHAuth) (*cssh.Client, string, error) {
+	var actualFP string
+	cfg, err := BuildSSHClientConfig(auth, &actualFP)
+	if err != nil {
+		return nil, "", err
+	}
+	client, err := cssh.Dial("tcp", SSHDialTarget(ip, auth.Port), cfg)
+	return client, actualFP, err
+}
+
+// BuildSSHClientConfig 按认证参数构造 SSH ClientConfig（含 TOFU/强校验指纹回调），
+// 供跳板级联在既有隧道内 NewClientConn 时复用与 DialSSH 完全一致的认证与校验语义；
+// fpOut 非 nil 时在主机密钥校验阶段写回实际指纹（含校验被拒场景，便于运维核对）。
+func BuildSSHClientConfig(auth SSHAuth, fpOut *string) (*cssh.ClientConfig, error) {
 	var authMethods []cssh.AuthMethod
 	if auth.PrivateKey != "" {
 		signer, err := cssh.ParsePrivateKey([]byte(auth.PrivateKey))
 		if err != nil {
-			return nil, "", fmt.Errorf("私钥解析失败: %w", err)
+			return nil, fmt.Errorf("私钥解析失败: %w", err)
 		}
 		authMethods = append(authMethods, cssh.PublicKeys(signer))
 	}
@@ -125,15 +138,17 @@ func DialSSH(ip string, auth SSHAuth) (*cssh.Client, string, error) {
 		}))
 	}
 	if len(authMethods) == 0 {
-		return nil, "", fmt.Errorf("无可用的 SSH 认证方式")
+		return nil, fmt.Errorf("无可用的 SSH 认证方式")
 	}
-	var actualFP string
-	cfg := &cssh.ClientConfig{
-		User:            auth.Username,
-		Auth:            authMethods,
-		Timeout:         10 * time.Second,
+	return &cssh.ClientConfig{
+		User:    auth.Username,
+		Auth:    authMethods,
+		Timeout: 10 * time.Second,
 		HostKeyCallback: func(hostname string, remote net.Addr, key cssh.PublicKey) error {
-			actualFP = cssh.FingerprintSHA256(key)
+			actualFP := cssh.FingerprintSHA256(key)
+			if fpOut != nil {
+				*fpOut = actualFP
+			}
 			if auth.ExpectedFingerprint == "" {
 				return nil // TOFU：首次信任，由调用方回填资产
 			}
@@ -144,9 +159,7 @@ func DialSSH(ip string, auth SSHAuth) (*cssh.Client, string, error) {
 			}
 			return nil
 		},
-	}
-	client, err := cssh.Dial("tcp", SSHDialTarget(ip, auth.Port), cfg)
-	return client, actualFP, err
+	}, nil
 }
 
 // SSHDialTarget 计算拨号地址：纯 IP + 可选端口 → host:port；入参已带端口时直接归一化使用

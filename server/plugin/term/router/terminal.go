@@ -13,3 +13,15 @@ type TerminalRouter struct{}
 func (r *TerminalRouter) InitTerminalRouter(Router *gin.RouterGroup) {
 	Router.GET("term/ws", v1.Api.Terminal.WebSSH)
 }
+
+type TermSessionRouter struct{}
+
+// InitTermSessionRouter 会话审计查询路由（private + casbin 888）
+func (r *TermSessionRouter) InitTermSessionRouter(Router *gin.RouterGroup) {
+	sessRouter := Router.Group("term/session")
+	{
+		sessRouter.POST("list", v1.Api.TermSession.GetTermSessionList)
+		sessRouter.GET("streams", v1.Api.TermSession.GetTermSessionStreams)
+		sessRouter.GET("commands", v1.Api.TermSession.GetTermSessionCommands)
+	}
+}

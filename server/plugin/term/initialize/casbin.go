@@ -24,4 +24,21 @@ func Casbin(ctx context.Context) {
 			zap.L().Error("term 插件：添加 casbin 策略失败", zap.Error(err))
 		}
 	}
+	// 审计查询仅 888
+	for _, p := range []struct {
+		Path   string
+		Method string
+	}{
+		{"/term/session/list", "POST"},
+		{"/term/session/streams", "GET"},
+		{"/term/session/commands", "GET"},
+	} {
+		has, err := e.HasPolicy("888", p.Path, p.Method)
+		if err != nil || has {
+			continue
+		}
+		if _, err := e.AddPolicy("888", p.Path, p.Method); err != nil {
+			zap.L().Error("term 插件：添加审计策略失败", zap.Error(err))
+		}
+	}
 }
