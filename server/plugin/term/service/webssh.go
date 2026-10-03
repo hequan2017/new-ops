@@ -1,5 +1,6 @@
 // Package service 白泽终端插件：WebSSH 桥接服务
 // 桥接设计：WS 二进制帧 ⇄ SSH PTY 流；文本帧为控制消息（resize/ping/closed）。
+// 链路：目标主机沿 JumpHostID 级联（≤5 跳、禁环，见 jump.go），逐跳指纹校验/TOFU 录入。
 package service
 
 import (
@@ -12,7 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 	cssh "golang.org/x/crypto/ssh"
 
-	assetModel "github.com/hequan2017/new-ops/server/plugin/asset/model"
 	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
 	"github.com/hequan2017/new-ops/server/plugin/term/model"
 	"go.uber.org/zap"
@@ -44,25 +44,23 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 	if host.IP == "" {
 		return fmt.Errorf("主机缺少内网IP")
 	}
-	credSvc := assetSvc.Service.CredCredentialService
-	secret, credType, username, err := credSvc.GetPlaintext(p.CredentialID)
-	if err != nil {
-		return fmt.Errorf("凭据读取失败: %w", err)
-	}
-	if credType != assetModel.CredTypeSSHPassword && credType != assetModel.CredTypeSSHKey {
-		return fmt.Errorf("WebSSH 仅支持 SSH 密码/私钥凭据")
-	}
 
-	client, hostFP, err := assetSvc.DialSSH(host.IP, assetSvc.SSHAuth{
-		Username:   username,
-		Password:   secret,
-		PrivateKey: secret,
-	})
+	// 级联拨号：目标主机沿 JumpHostID 收集跳板链（≤5 跳、禁环），
+	// 最外层直连、内层逐跳建隧道；逐跳独立认证与指纹校验（TOFU 回填）
+	chain, err := buildJumpChain(host, assetHostSvc.GetAssetHost)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
-	_ = hostFP // 指纹落会话审计（下方创建会话时带入）
+	clients, hostFP, err := t.dialChain(chain, p.CredentialID, p.Operator)
+	if err != nil {
+		return err
+	}
+	client := clients[len(clients)-1] // 最内层即目标主机
+	defer func() {
+		for _, c := range clients {
+			_ = c.Close() // 中间跳板是内层通道载体，一并关闭
+		}
+	}()
 
 	session, err := client.NewSession()
 	if err != nil {
@@ -97,7 +95,9 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 	closeAll := func() {
 		once.Do(func() {
 			_ = session.Close()
-			_ = client.Close()
+			for _, c := range clients {
+				_ = c.Close()
+			}
 			_ = ws.Close()
 		})
 	}
