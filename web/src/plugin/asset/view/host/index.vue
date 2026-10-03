@@ -171,10 +171,37 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="跳板机">
+              <el-select
+                v-model="form.jumpHostId"
+                clearable
+                filterable
+                placeholder="留空则直连"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="h in jumpHostOptions"
+                  :key="h.ID"
+                  :label="`${h.hostname}（${h.ip}）`"
+                  :value="h.ID"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="状态">
               <el-select v-model="form.status" style="width: 100%">
                 <el-option v-for="s in statusOptions" :key="s" :label="s" :value="s" />
               </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="SSH指纹">
+              <el-input
+                v-model="form.sshFingerprint"
+                readonly
+                :placeholder="form.sshFingerprint ? '' : '未录入：首次终端连接或采集时自动录入（TOFU）'"
+              />
             </el-form-item>
           </el-col>
           <el-col :span="24">
@@ -405,7 +432,9 @@
     vendor: '',
     owner: '',
     status: '运行中',
-    notes: ''
+    notes: '',
+    jumpHostId: null,
+    sshFingerprint: ''
   })
   const form = reactive(emptyForm())
 
@@ -421,8 +450,18 @@
     ]
   }
 
+  // 跳板机选项（编辑时排除自身，避免自环）
+  const jumpHostOptions = ref([])
+  const loadJumpOptions = async (selfID) => {
+    const res = await getAssetHostList({ page: 1, pageSize: 500 })
+    if (res.code === 0) {
+      jumpHostOptions.value = (res.data.list || []).filter((h) => h.ID !== selfID)
+    }
+  }
+
   const openDialog = async (row) => {
     Object.assign(form, emptyForm())
+    loadJumpOptions(row && row.ID ? row.ID : 0)
     if (row && row.ID) {
       const res = await findAssetHost({ id: row.ID })
       if (res.code === 0) {

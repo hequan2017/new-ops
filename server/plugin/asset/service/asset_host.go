@@ -18,6 +18,10 @@ func (s *AssetHostService) CreateAssetHost(h *model.AssetHost, operator string) 
 	if err := validateHost(h); err != nil {
 		return err
 	}
+	if err := s.validateJumpTarget(h.JumpHostID); err != nil {
+		return err
+	}
+	h.SSHFP = "" // 指纹仅经 SSH 链路 TOFU 录入，不接受创建请求预置
 	// 同 IP 存在软删除行时先物理清理，避免唯一索引冲突（该 IP 视为已释放）
 	global.GVA_DB.Unscoped().
 		Where("ip = ? AND deleted_at IS NOT NULL", h.IP).
@@ -88,13 +92,23 @@ func (s *AssetHostService) UpdateAssetHost(h *model.AssetHost, operator string) 
 	if err := validateHost(h); err != nil {
 		return err
 	}
+	if err := s.validateJumpTarget(h.JumpHostID); err != nil {
+		return err
+	}
 	var count int64
 	global.GVA_DB.Model(&model.AssetHost{}).Where("ip = ? AND id <> ?", h.IP, h.ID).Count(&count)
 	if count > 0 {
 		return newServiceErr(ErrCodeIPDuplicate, fmt.Sprintf("内网IP已被其他资产占用: %s", h.IP))
 	}
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.AssetHost{}).Where("id = ?", h.ID).Omit("ProductLines").Updates(h).Error; err != nil {
+		// ssh_fp 不经通用 CRUD 修改（仅 SSH 链路 TOFU 录入，防请求伪造绕过校验）
+		if err := tx.Model(&model.AssetHost{}).Where("id = ?", h.ID).
+			Omit("ProductLines", "ssh_fp").Updates(h).Error; err != nil {
+			return err
+		}
+		// 指针零值 GORM Updates 会跳过，显式写入保证「取消跳板机」生效
+		if err := tx.Model(&model.AssetHost{}).Where("id = ?", h.ID).
+			Update("jump_host_id", h.JumpHostID).Error; err != nil {
 			return err
 		}
 		if err := s.replaceProductLines(tx, h); err != nil {
@@ -103,6 +117,19 @@ func (s *AssetHostService) UpdateAssetHost(h *model.AssetHost, operator string) 
 		recordHostHistory(tx, h.ID, model.HostHistoryUpdate, h, operator)
 		return nil
 	})
+}
+
+// validateJumpTarget 跳板机存在性校验（软删除后的主机不可再用作跳板）
+func (s *AssetHostService) validateJumpTarget(jumpHostID *uint) error {
+	if jumpHostID == nil || *jumpHostID == 0 {
+		return nil
+	}
+	var count int64
+	global.GVA_DB.Model(&model.AssetHost{}).Where("id = ?", *jumpHostID).Count(&count)
+	if count == 0 {
+		return newServiceErr(ErrCodeJumpHostInvalid, fmt.Sprintf("跳板机不存在(id=%d)", *jumpHostID))
+	}
+	return nil
 }
 
 // GetAssetHost 根据 ID 获取主机资产（含机房/机柜/产品线）

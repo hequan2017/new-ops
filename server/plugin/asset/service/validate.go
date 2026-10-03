@@ -14,6 +14,7 @@ const (
 	ErrCodeIPInvalid        = 1002
 	ErrCodeIPDuplicate      = 1003
 	ErrCodeStatusInvalid    = 1004
+	ErrCodeJumpHostInvalid  = 1005
 	ErrCodeHostFPMismatch   = 1010 // SSH 主机公钥指纹不匹配（安全拒绝）
 )
 
@@ -50,6 +51,10 @@ func validateHost(h *model.AssetHost) error {
 		model.AssetStatusMaintain, model.AssetStatusRetired:
 	default:
 		return newServiceErr(ErrCodeStatusInvalid, fmt.Sprintf("非法的资产状态: %s", h.Status))
+	}
+	// 跳板机自引用在源头拦截（级联侧 buildJumpChain 亦有环检测兜底）
+	if h.JumpHostID != nil && *h.JumpHostID != 0 && *h.JumpHostID == h.ID {
+		return newServiceErr(ErrCodeJumpHostInvalid, "跳板机不能指向自身")
 	}
 	return nil
 }
