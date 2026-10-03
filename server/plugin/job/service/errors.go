@@ -1,12 +1,13 @@
 // Package service job 插件业务逻辑与错误码
+// 错误码分段：1201-1207 脚本库/变量组（job_script.go）、1211-1214 批量执行
 package service
 
-// job 插件错误码段：1200-1299（DEV_PLAN 3.6）
+// 批量执行错误码
 const (
-	ErrCodeParamInvalid     = 1203
-	ErrCodeHostNotAuthorized = 1201
-	ErrCodeNoCredential     = 1202
-	ErrCodeBatchNotRunning  = 1204
+	ErrCodeParamInvalid      = 1211
+	ErrCodeHostNotAuthorized = 1212
+	ErrCodeNoCredential      = 1213
+	ErrCodeBatchNotRunning   = 1214
 )
 
 // JobError 带业务错误码的作业错误

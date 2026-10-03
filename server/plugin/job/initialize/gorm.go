@@ -15,6 +15,9 @@ func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.JobExecRecord),
 		new(model.JobExecResult),
+		new(model.JobScript),
+		new(model.JobScriptVersion),
+		new(model.JobVariableGroup),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "job 注册表失败!")

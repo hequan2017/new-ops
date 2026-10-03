@@ -27,6 +27,22 @@ func Menu(ctx context.Context) {
 			Sort:      1,
 			Meta:      model.Meta{Title: "批量执行", Icon: "video-play"},
 		},
+		{
+			Path:      "jobScript",
+			Name:      "jobScript",
+			Hidden:    false,
+			Component: "plugin/job/view/script/index.vue",
+			Sort:      2,
+			Meta:      model.Meta{Title: "脚本库", Icon: "document"},
+		},
+		{
+			Path:      "jobVarGroup",
+			Name:      "jobVarGroup",
+			Hidden:    false,
+			Component: "plugin/job/view/varGroup/index.vue",
+			Sort:      3,
+			Meta:      model.Meta{Title: "变量组", Icon: "key"},
+		},
 	}
 	utils.RegisterMenus(entities...)
 }

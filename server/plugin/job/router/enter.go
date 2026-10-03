@@ -20,4 +20,19 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		exec.POST("list", v1.Api.BatchExec.GetBatchList)
 		exec.GET("detail", v1.Api.BatchExec.GetBatchDetail)
 	}
+	script := Router.Group("job/script")
+	{
+		script.POST("", v1.Api.JobScript.CreateScript)
+		script.PUT("", v1.Api.JobScript.UpdateScript)
+		script.DELETE("", v1.Api.JobScript.DeleteScript)
+		script.GET("list", v1.Api.JobScript.GetScriptList)
+		script.GET("versions", v1.Api.JobScript.GetScriptVersions)
+	}
+	vargroup := Router.Group("job/vargroup")
+	{
+		vargroup.POST("", v1.Api.JobScript.CreateVariableGroup)
+		vargroup.PUT("", v1.Api.JobScript.UpdateVariableGroup)
+		vargroup.DELETE("", v1.Api.JobScript.DeleteVariableGroup)
+		vargroup.GET("list", v1.Api.JobScript.GetVariableGroupList)
+	}
 }

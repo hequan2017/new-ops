@@ -37,8 +37,28 @@ const (
 
 // CreateBatchExec 发起批量执行：校验 + 建批次 + 后台异步执行，立即返回批次
 func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, isSuperAdmin bool, operator string) (*model.JobExecRecord, error) {
-	if req.Command == "" || len(req.HostIDs) == 0 {
-		return nil, newJobErr(ErrCodeParamInvalid, "命令与目标主机不能为空")
+	// 命令解析：脚本优先，其次直接命令；变量组渲染 {{key}} 后作为批次快照
+	command := req.Command
+	if req.ScriptID != nil && *req.ScriptID != 0 {
+		var sc model.JobScript
+		if err := global.GVA_DB.First(&sc, *req.ScriptID).Error; err != nil {
+			return nil, newJobErr(ErrCodeParamInvalid, fmt.Sprintf("脚本不存在(id=%d)", *req.ScriptID))
+		}
+		command = sc.Content
+	}
+	if command == "" || len(req.HostIDs) == 0 {
+		return nil, newJobErr(ErrCodeParamInvalid, "命令（或脚本）与目标主机不能为空")
+	}
+	if req.VariableGroupID != nil && *req.VariableGroupID != 0 {
+		var vg model.JobVariableGroup
+		if err := global.GVA_DB.First(&vg, *req.VariableGroupID).Error; err != nil {
+			return nil, newJobErr(ErrCodeParamInvalid, fmt.Sprintf("变量组不存在(id=%d)", *req.VariableGroupID))
+		}
+		rendered, rerr := RenderTemplate(command, vg.Variables)
+		if rerr != nil {
+			return nil, rerr
+		}
+		command = rendered
 	}
 	// 主机去重
 	seen := make(map[uint]struct{}, len(req.HostIDs))
@@ -93,7 +113,7 @@ func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, i
 	}
 
 	record := &model.JobExecRecord{
-		Command:      req.Command,
+		Command:      command, // 渲染后的快照
 		Concurrency:  req.Concurrency,
 		TimeoutSec:   req.TimeoutSec,
 		CredentialID: req.CredentialID,

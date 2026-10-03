@@ -5,4 +5,5 @@ var Api = new(api)
 
 type api struct {
 	BatchExec batchExec
+	JobScript jobScript
 }

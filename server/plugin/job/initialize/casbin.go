@@ -23,11 +23,22 @@ func Casbin(ctx context.Context) {
 		{"/job/exec/cancel", "POST"},
 		{"/job/exec/list", "POST"},
 		{"/job/exec/detail", "GET"},
+		{"/job/script", "POST"},
+		{"/job/script", "PUT"},
+		{"/job/script", "DELETE"},
+		{"/job/script/list", "GET"},
+		{"/job/script/versions", "GET"},
+		{"/job/vargroup", "POST"},
+		{"/job/vargroup", "PUT"},
+		{"/job/vargroup", "DELETE"},
+		{"/job/vargroup/list", "GET"},
 	}
 	for _, p := range policies {
 		roles := []string{"888"}
-		if p.Path == "/job/exec/list" || p.Path == "/job/exec/detail" {
-			roles = append(roles, "9528") // 只读角色可看批次与结果，不可发起/取消
+		// 只读角色：批次查看 + 脚本/变量组列表与版本查看，不可写
+		if (p.Method == "GET") ||
+			(p.Path == "/job/exec/list" && p.Method == "POST") {
+			roles = append(roles, "9528")
 		}
 		for _, role := range roles {
 			has, err := e.HasPolicy(role, p.Path, p.Method)
