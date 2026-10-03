@@ -28,6 +28,14 @@ func Menu(ctx context.Context) {
 			Meta:      model.Meta{Title: "Web 终端", Icon: "platform"},
 		},
 		{
+			Path:      "termSftp",
+			Name:      "termSftp",
+			Hidden:    false,
+			Component: "plugin/term/view/sftp/index.vue",
+			Sort:      3,
+			Meta:      model.Meta{Title: "文件浏览器", Icon: "folder-opened"},
+		},
+		{
 			Path:      "termAudit",
 			Name:      "termAudit",
 			Hidden:    false,

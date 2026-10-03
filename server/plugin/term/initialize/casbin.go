@@ -24,6 +24,32 @@ func Casbin(ctx context.Context) {
 			zap.L().Error("term 插件：添加 casbin 策略失败", zap.Error(err))
 		}
 	}
+	// SFTP：888 全部；9528 只读（list/download）
+	for _, sp := range []struct {
+		Path   string
+		Method string
+	}{
+		{"/term/sftp/list", "GET"},
+		{"/term/sftp/mkdir", "POST"},
+		{"/term/sftp/delete", "POST"},
+		{"/term/sftp/rename", "POST"},
+		{"/term/sftp/upload", "POST"},
+		{"/term/sftp/download", "GET"},
+	} {
+		roles := []string{"888"}
+		if sp.Method == "GET" {
+			roles = append(roles, "9528")
+		}
+		for _, role := range roles {
+			has, err := e.HasPolicy(role, sp.Path, sp.Method)
+			if err != nil || has {
+				continue
+			}
+			if _, err := e.AddPolicy(role, sp.Path, sp.Method); err != nil {
+				zap.L().Error("term 插件：添加 SFTP 策略失败", zap.Error(err))
+			}
+		}
+	}
 	// 审计查询仅 888
 	for _, p := range []struct {
 		Path   string
