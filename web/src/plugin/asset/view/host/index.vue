@@ -93,6 +93,7 @@
           <template #default="{ row }">
             <el-button link type="primary" icon="edit" @click="openDialog(row)">编辑</el-button>
             <el-button link type="success" icon="aim" @click="openCollect(row)">采集</el-button>
+            <el-button link type="success" icon="platform" @click="openTerm(row)">终端</el-button>
             <el-button link type="warning" icon="clock" @click="openHistory(row)">历史</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
@@ -189,6 +190,17 @@
       </template>
     </el-dialog>
 
+    <el-drawer v-model="termVisible" :title="`终端 · ${termHost}`" size="70%">
+      <div class="h-full">
+        <XtermShell
+          v-if="termVisible"
+          :host-id="termHostId"
+          :credential-id="termCredId"
+          :host-label="termHost"
+        />
+      </div>
+    </el-drawer>
+
     <el-dialog v-model="syncVisible" title="阿里云 ECS 实例同步" width="480px">
       <el-form label-width="100px">
         <el-form-item label="AK 凭据">
@@ -277,6 +289,7 @@
     syncAliyunECS
   } from '@/plugin/asset/api/assetHost'
   import { getCredentialList } from '@/plugin/asset/api/credential'
+  import XtermShell from '@/plugin/term/components/XtermShell.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { reactive, ref } from 'vue'
   import { useUserStore } from '@/pinia/modules/user'
@@ -438,6 +451,31 @@
         getTableData()
       }
     })
+  }
+
+  // Web 终端
+  const termVisible = ref(false)
+  const termHostId = ref(0)
+  const termCredId = ref(0)
+  const termHost = ref('')
+
+  const openTerm = async (row) => {
+    let credId = row.credentialId
+    if (!credId) {
+      const res = await getCredentialList()
+      const sshCreds = (res.data || []).filter(
+        (c) => c.type === 'ssh_password' || c.type === 'ssh_key'
+      )
+      if (sshCreds.length) credId = sshCreds[0].ID // 默认取第一个 SSH 凭据
+    }
+    if (!credId) {
+      ElMessage.warning('请先在凭据保险库创建 SSH 凭据')
+      return
+    }
+    termHostId.value = row.ID
+    termCredId.value = credId
+    termHost.value = `${row.hostname}（${row.ip}）`
+    termVisible.value = true
   }
 
   // 阿里云 ECS 同步

@@ -79,5 +79,6 @@
   "/src/plugin/auto/view/autoCodeAdmin/index.vue": "Index",
   "/src/plugin/auto/view/autoPkg/autoPkg.vue": "AutoPkg",
   "/src/plugin/auto/view/skills/index.vue": "Index",
-  "/src/plugin/email/view/index.vue": "Email"
+  "/src/plugin/email/view/index.vue": "Email",
+  "/src/plugin/term/components/XtermShell.vue": "XtermShell"
 }
