@@ -7,7 +7,7 @@ import (
 )
 
 func mkShellStep(name, content string) model.PipelineStep {
-	return model.PipelineStep{Name: name, Type: model.StepTypeShell, ShellContent: content}
+	return model.PipelineStep{Name: name, Type: model.StepTypeShell, HostID: 1, ShellContent: content}
 }
 
 func TestValidatePipeline_OK(t *testing.T) {
@@ -40,7 +40,8 @@ func TestValidatePipeline_Errors(t *testing.T) {
 		{"阶段无步骤", &model.Pipeline{Name: "x", Stages: []model.PipelineStage{{Name: "a"}}}, ErrCodePlStructInvalid},
 		{"步骤缺名称", &model.Pipeline{Name: "x", Stages: []model.PipelineStage{{Name: "a", Steps: []model.PipelineStep{{Type: model.StepTypeShell, ShellContent: "ls"}}}}}, ErrCodePlStructInvalid},
 		{"步骤类型非法", &model.Pipeline{Name: "x", Stages: []model.PipelineStage{{Name: "a", Steps: []model.PipelineStep{{Name: "s", Type: "grpc"}}}}}, ErrCodePlStructInvalid},
-		{"shell 缺内容", &model.Pipeline{Name: "x", Stages: []model.PipelineStage{{Name: "a", Steps: []model.PipelineStep{{Name: "s", Type: model.StepTypeShell}}}}}, ErrCodePlStructInvalid},
+		{"shell 缺内容", &model.Pipeline{Name: "x", Stages: []model.PipelineStage{{Name: "a", Steps: []model.PipelineStep{{Name: "s", Type: model.StepTypeShell, HostID: 1}}}}}, ErrCodePlStructInvalid},
+		{"shell 缺主机", &model.Pipeline{Name: "x", Stages: []model.PipelineStage{{Name: "a", Steps: []model.PipelineStep{{Name: "s", Type: model.StepTypeShell, ShellContent: "ls"}}}}}, ErrCodePlStructInvalid},
 		{"http 地址非法", &model.Pipeline{Name: "x", Stages: []model.PipelineStage{{Name: "a", Steps: []model.PipelineStep{{Name: "s", Type: model.StepTypeHTTP, HTTPURL: "ftp://x"}}}}}, ErrCodePlStructInvalid},
 	}
 	for _, c := range cases {

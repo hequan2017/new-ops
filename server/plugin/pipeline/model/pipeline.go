@@ -41,13 +41,14 @@ type PipelineStage struct {
 // PipelineStep 步骤（阶段内串行）
 type PipelineStep struct {
 	global.GVA_MODEL
-	StageID     uint   `json:"stageId" gorm:"comment:阶段ID;index"`
-	Name        string `json:"name" gorm:"comment:步骤名称" binding:"required"`
-	Sort        int    `json:"sort" gorm:"comment:顺序"`
-	Type        string `json:"type" gorm:"comment:类型(shell/http)"`
+	StageID      uint   `json:"stageId" gorm:"comment:阶段ID;index"`
+	Name         string `json:"name" gorm:"comment:步骤名称" binding:"required"`
+	Sort         int    `json:"sort" gorm:"comment:顺序"`
+	Type         string `json:"type" gorm:"comment:类型(shell/http)"`
+	HostID       uint   `json:"hostId" gorm:"comment:目标主机ID(shell步骤在资产上SSH执行)"`
 	ShellContent string `json:"shellContent" gorm:"type:text;comment:shell内容"`
-	HTTPMethod  string `json:"httpMethod" gorm:"comment:HTTP方法"`
-	HTTPURL     string `json:"httpUrl" gorm:"comment:HTTP地址"`
-	HTTPBody    string `json:"httpBody" gorm:"type:text;comment:HTTP体"`
-	TimeoutSec  int    `json:"timeoutSec" gorm:"comment:超时秒(0不限)"`
+	HTTPMethod   string `json:"httpMethod" gorm:"comment:HTTP方法"`
+	HTTPURL      string `json:"httpUrl" gorm:"comment:HTTP地址"`
+	HTTPBody     string `json:"httpBody" gorm:"type:text;comment:HTTP体"`
+	TimeoutSec   int    `json:"timeoutSec" gorm:"comment:超时秒(0不限)"`
 }

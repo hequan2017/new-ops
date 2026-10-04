@@ -48,6 +48,9 @@ func validatePipeline(p *model.Pipeline) error {
 				if strings.TrimSpace(sp.ShellContent) == "" {
 					return newPlErr(ErrCodePlStructInvalid, fmt.Sprintf("shell 步骤「%s」内容不能为空", sp.Name))
 				}
+				if sp.HostID == 0 {
+					return newPlErr(ErrCodePlStructInvalid, fmt.Sprintf("shell 步骤「%s」必须绑定目标主机（SSH 执行）", sp.Name))
+				}
 			case model.StepTypeHTTP:
 				if !strings.HasPrefix(sp.HTTPURL, "http://") && !strings.HasPrefix(sp.HTTPURL, "https://") {
 					return newPlErr(ErrCodePlStructInvalid, fmt.Sprintf("http 步骤「%s」地址必须以 http(s):// 开头", sp.Name))
