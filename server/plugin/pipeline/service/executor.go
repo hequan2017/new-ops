@@ -269,9 +269,9 @@ func (s *PipelineBuildService) runShellStep(ctx context.Context, buildID uint, s
 	}
 	ch := make(chan result, 1)
 	go func() {
-		b, e := io.ReadAll(stdout)
-		_ = session.Wait()
-		ch <- result{string(b), e}
+		b, _ := io.ReadAll(stdout) // 读错误以 Wait 退出码为准（EOF 属正常收尾）
+		waitErr := session.Wait()
+		ch <- result{string(b), waitErr}
 	}()
 	select {
 	case r := <-ch:
