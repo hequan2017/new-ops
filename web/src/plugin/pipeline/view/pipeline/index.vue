@@ -165,6 +165,7 @@
 <script setup>
   import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { useUserStore } from '@/pinia/modules/user'
   import {
     createPipeline, updatePipeline, deletePipeline, getPipelineList,
     startBuild, cancelBuild, approveBuild, getBuildList, getBuildLogs
@@ -322,18 +323,66 @@
 
   const openLogs = async (row) => {
     logsBuild.value = row
+    logsList.value = []
     logsVisible.value = true
-    await refreshLogs()
+    closeStream()
+    if (['等待中', '等待审批', '执行中'].includes(row.status)) {
+      startStream(row.ID) // 进行中构建走 SSE 实时流
+    } else {
+      await refreshLogs()
+    }
+  }
+
+  // SSE 实时日志流（断线/异常降级为一次性拉取）
+  let evtSource = null
+  const closeStream = () => {
+    if (evtSource) {
+      evtSource.close()
+      evtSource = null
+    }
+  }
+  const startStream = (buildId) => {
+    const proto = location.protocol === 'https:' ? 'https' : 'http'
+    const base = import.meta.env.VITE_BASE_API || '/api'
+    evtSource = new EventSource(
+      `${proto}://${location.host}${base}/sse/pipeline/build/logs?token=${useUserStore().token}&id=${buildId}`
+    )
+    evtSource.addEventListener('log', (e) => {
+      try {
+        logsList.value.push(JSON.parse(e.data))
+        nextTick(scrollLogBox)
+      } catch (err) {
+        /* 忽略畸形帧 */
+      }
+    })
+    evtSource.addEventListener('status', (e) => {
+      try {
+        const d = JSON.parse(e.data)
+        if (logsBuild.value) logsBuild.value.status = d.status
+      } catch (err) {
+        /* ignore */
+      }
+    })
+    evtSource.addEventListener('done', () => {
+      closeStream()
+      loadBuilds()
+    })
+    evtSource.onerror = () => {
+      closeStream()
+      refreshLogs()
+    }
   }
 
   const refreshLogs = async () => {
     const res = await getBuildLogs({ id: logsBuild.value.ID, page: 1, pageSize: 200 })
     if (res.code === 0) {
       logsList.value = res.data.list || []
-      nextTick(() => {
-        if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight
-      })
+      nextTick(scrollLogBox)
     }
+  }
+
+  const scrollLogBox = () => {
+    if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight
   }
 
   const buildTagType = (s) =>
@@ -342,6 +391,7 @@
   onMounted(getList)
   onUnmounted(() => {
     if (buildTimer) clearInterval(buildTimer)
+    closeStream()
   })
 </script>
 
