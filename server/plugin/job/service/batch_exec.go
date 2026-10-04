@@ -139,11 +139,29 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 		cancel()
 	}()
 
+	// 变量注入：显式变量组已在批次快照统一渲染；未选时按主机→资产组→变量组自动逐主机渲染
+	autoInject := record.VariableGroupID == nil || *record.VariableGroupID == 0
+	var vgIndex map[uint]model.JobVariableGroup
+	if autoInject {
+		var vgs []model.JobVariableGroup
+		if err := global.GVA_DB.Find(&vgs).Error; err == nil {
+			vgIndex = variableGroupsByAssetGroupID(vgs)
+		}
+	}
+
 	tasks := make([]PoolTask, 0, len(hosts))
 	hostByID := make(map[uint]*assetModel.AssetHost, len(hosts))
+	cmdByHost := make(map[uint]string, len(hosts))
 	for _, h := range hosts {
 		hostByID[h.ID] = h
-		tasks = append(tasks, PoolTask{HostID: h.ID, Run: s.sshRunTask(ctx, h, record.CredentialID, record.Command)})
+		cmd := record.Command
+		if autoInject {
+			if rendered, rerr := s.renderForHostByAssetGroup(record.Command, vgIndex, h.ID); rerr == nil {
+				cmd = rendered
+			}
+		}
+		cmdByHost[h.ID] = cmd
+		tasks = append(tasks, PoolTask{HostID: h.ID, Run: s.sshRunTask(ctx, h, record.CredentialID, cmd)})
 	}
 	results := runPool(ctx, tasks, record.Concurrency, time.Duration(record.TimeoutSec)*time.Second)
 
@@ -162,6 +180,7 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 		row := &model.JobExecResult{
 			RecordID: record.ID, HostID: r.HostID,
 			Status: st, Output: r.Output, ElapsedMs: r.Elapsed.Milliseconds(),
+			Command: cmdByHost[r.HostID],
 		}
 		if h != nil {
 			row.Hostname, row.IP = h.Hostname, h.IP
@@ -184,6 +203,21 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 	}).Error; err != nil {
 		global.GVA_LOG.Error(fmt.Sprintf("job 批次 %d 汇总更新失败: %v", record.ID, err))
 	}
+}
+
+// renderForHostByAssetGroup 按主机所在资产组解析变量组并渲染命令（取首个所在组；无组原样）
+func (s *jobService) renderForHostByAssetGroup(base string, vgIndex map[uint]model.JobVariableGroup, hostID uint) (string, error) {
+	groupIDs := []uint{}
+	if err := global.GVA_DB.Table("asset_group_hosts").Where("host_id = ?", hostID).
+		Pluck("group_id", &groupIDs).Error; err != nil {
+		return base, err
+	}
+	for _, gid := range groupIDs {
+		if vg, ok := vgIndex[gid]; ok {
+			return RenderTemplate(base, vg.Variables)
+		}
+	}
+	return base, nil
 }
 
 // sshRunTask 构造单主机 SSH 执行体：直连 + 指纹校验/TOFU + ctx 感知中断

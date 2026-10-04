@@ -32,6 +32,7 @@ type JobExecRecord struct {
 	Concurrency int        `json:"concurrency" gorm:"comment:并发数"`
 	TimeoutSec  int        `json:"timeoutSec" gorm:"comment:单机超时秒"`
 	CredentialID *uint     `json:"credentialId" gorm:"comment:统一凭据ID(空则用主机绑定凭据)"`
+	VariableGroupID *uint  `json:"variableGroupId" gorm:"comment:显式变量组ID(空则按主机资产组自动注入)"`
 	Total       int        `json:"total" gorm:"comment:主机总数"`
 	Success     int        `json:"success" gorm:"comment:成功数"`
 	Failed      int        `json:"failed" gorm:"comment:失败数"`
@@ -48,6 +49,7 @@ type JobExecResult struct {
 	RecordID  uint   `json:"recordId" gorm:"comment:批次ID;index"`
 	HostID    uint   `json:"hostId" gorm:"comment:主机ID"`
 	Hostname  string `json:"hostname" gorm:"comment:主机名快照"`
+	Command   string `json:"command" gorm:"type:text;comment:该主机实际执行的命令(变量渲染后)"`
 	IP        string `json:"ip" gorm:"comment:IP快照"`
 	Status    string `json:"status" gorm:"comment:结果状态"`
 	Output    string `json:"output" gorm:"type:text;comment:输出"`
