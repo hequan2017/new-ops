@@ -291,7 +291,9 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 - [x] 会话审计：命令抽取落库 + 流镜像（TermSessionStream 按 seq）+ 审计回放页（xterm 重演，上行标注）
 - [x] SFTP 文件浏览器（列表/上传/下载/删除；场21 交付，场22 回归通过：嵌套 mkdir/upload/list/递归删除全验证）
 - [x] 批量执行（并发池全链场22 交付：信号量限流/单任务超时/批次取消（4 组单测）、数据权限、逐主机凭据与指纹 TOFU、执行页轮询取消；场23 补齐：脚本库 CRUD+版本归档（更新递增、历史抽屉）、变量组 CRUD（key=value 编辑器+JSON 校验）、执行联动——脚本内容为命令+变量组 {{key}} 服务端渲染入批次快照；真机端到端：v1→v2 版本归档、{{greeting}}→baize 渲染执行通过；待后续增强：按主机所在资产组自动聚合注入变量（当前为执行时选组统一渲染））
-- [ ] 远程日志 tail、CIDR 网段发现一键导入资产
+- [x] 远程日志 tail、CIDR 网段发现一键导入资产（场24 交付：/term/logtail WS——复用级联拨号+指纹校验，远端 tail -n N -F -- 路径防注入，前端 LogTail 组件滚动跟随/截断防膨胀；CIDR 发现 ExpandCIDR 纯函数（4096 上限/网络广播跳过，6 场景单测）+并发 SSH banner 探测+按 IP 导入（存在跳过）；真机：/29 段发现本机横幅、非法 CIDR 1006 拦截、导入 1 台/重复跳过 1 台、tail 初始回看+实时追加全到达）
+
+> **M2 全部完成（2026-10-03，场次 19-24）**：WebSSH/级联/审计/SFTP/批量执行（含脚本库变量组）/日志 tail/网段发现。
 
 ### M3 任务清单
 
@@ -541,3 +543,4 @@ web/src/plugin/asset/
 | 2026-10-03 | 21 | 排期收官场：SFTP 文件浏览器全链路交付（六接口+前端浏览器页+真实 sftp 验证 list/upload/download/rename 通过；递归删除验证因并行部署窗口未完成，下一场回归）；README/plugin-dev-guide 定稿；tag v0.1.0 发布 | 下一周期（10-04 起）：M2 收尾（批量执行/日志tail/网段发现）→ M3 流水线；⚠️ 并行会话冲突待用户收敛 |
 | 2026-10-03 | 22 | M2 场22（job 插件开工）：批量命令执行全链——两表模型、信号量并发池（限流/单任务超时/批次取消，4 组单测）、数据权限+逐主机凭据解析+指纹 TOFU、cancelRegistry、四接口+种子、前端执行页（轮询/取消/结果抽屉）；真机验证全过：批次 269ms 成功、sleep60 取消生效、SFTP 递归删除与 upload 回归通过（此前 upload 报错系本地 GitBash curl 路径转换污染 path 字段，非服务端缺陷）、ProxyJump 级联双机验证通过（目标机 Last login from 127.0.0.1 证实经跳板隧道）；核实 tag v0.1.0 远端在（本地未 fetch） | 下一场：脚本库 CRUD+版本、变量组关联资产；远程日志 tail、CIDR 网段发现 |
 | 2026-10-03 | 23 | M2 场23：脚本库与变量组全链（并行会话半成品 model/service 接手补全）——三表迁移、9 接口+种子（9528 只读）、脚本更新版本递增归档、变量组 key=value 前端编辑器；批量执行联动（scriptId 脚本内容为命令+variableGroupId 服务端渲染 {{key}} 入批次快照）；错误码分段统一（脚本 1201-1207/执行 1211-1214）；单测 validate×2+RenderTemplate；真机端到端：v1→v2 归档正确、{{greeting}}→baize 渲染执行输出一致 | 下一场：M2 收官（远程日志 tail、CIDR 网段发现）→ M3 流水线开工 |
+| 2026-10-04 | 24 | **M2 收官（场24）**：远程日志 tail（/term/logtail WS 复用级联拨号+指纹校验、tail -F 防选项注入、LogTail 组件滚动跟随/截断）+ CIDR 网段发现（ExpandCIDR 上限保护 6 场景单测、并发 SSH banner 探测、按 IP 导入跳过已存在）；真机验证全过：/29 段发现本机 OpenSSH 横幅、非法 CIDR 1006 拦截、导入 1 台/重复跳过、tail 初始回看+实时追加全到达。**M2 全部完成**（场次 19-24：WebSSH/级联/审计/SFTP/批量执行/脚本库变量组/日志 tail/网段发现） | 下一场：M3 流水线开工（pipeline/stage/step 三层模型+CRUD） |
