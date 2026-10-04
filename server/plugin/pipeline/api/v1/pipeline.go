@@ -16,6 +16,9 @@ var PipelineApi = new(pipelineApi)
 // pipelineSvc 指针接收者服务实例（与 asset/job 插件出口惯例一致）
 var pipelineSvc = new(service.PipelineService)
 
+// buildSvc 构建服务实例（build.go 共用）
+var buildSvc = new(service.PipelineBuildService)
+
 type pipelineApi struct{}
 
 // CreatePipeline 创建流水线

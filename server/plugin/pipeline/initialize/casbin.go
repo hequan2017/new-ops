@@ -24,6 +24,11 @@ func Casbin(ctx context.Context) {
 		{"/pipeline", "DELETE"},
 		{"/pipeline/list", "GET"},
 		{"/pipeline/find", "GET"},
+		{"/pipeline/build/start", "POST"},
+		{"/pipeline/build/cancel", "POST"},
+		{"/pipeline/build/approve", "POST"},
+		{"/pipeline/build/list", "POST"},
+		{"/pipeline/build/logs", "GET"},
 	}
 	for _, p := range policies {
 		roles := []string{"888"}

@@ -21,4 +21,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		pl.GET("list", v1.PipelineApi.GetPipelineList)
 		pl.GET("find", v1.PipelineApi.GetPipelineDetail)
 	}
+	build := Router.Group("pipeline/build")
+	{
+		build.POST("start", v1.PipelineBuildApi.StartBuild)
+		build.POST("cancel", v1.PipelineBuildApi.CancelBuild)
+		build.POST("approve", v1.PipelineBuildApi.ApproveBuild)
+		build.POST("list", v1.PipelineBuildApi.GetBuildList)
+		build.GET("logs", v1.PipelineBuildApi.GetBuildLogs)
+	}
 }

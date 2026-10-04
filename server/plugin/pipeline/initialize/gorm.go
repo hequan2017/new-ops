@@ -16,6 +16,8 @@ func Gorm(ctx context.Context) {
 		new(model.Pipeline),
 		new(model.PipelineStage),
 		new(model.PipelineStep),
+		new(model.PipelineBuild),
+		new(model.BuildLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "pipeline 注册表失败!")
