@@ -297,7 +297,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 ### M3 任务清单
 
-- [ ] pipeline/stage/step 三层模型表与 CRUD、前端编排页
+- [x] pipeline/stage/step 三层模型表与 CRUD、前端编排页（场25 交付：三表迁移、嵌套校验纯函数 8 场景单测、Create/Update（整体替换）/Delete（级联）/列表/详情按 Sort 预载、五接口+菜单/API/casbin 种子（888 全量 9528 只读）、错误码 1301-1304；前端列表+编排弹窗（阶段卡片：审批 gate/失败继续，步骤 shell/http 切换）；真机嵌套 CRUD 验证：Sort 归一/审批位/http 默认 GET/级联删除全过；修复 Create 走 replaceStages（Omit 关联跳过阶段落库，真机回读发现））
 - [ ] 执行器：构建状态机、参数校验与变量替换、人工审批 gate、并行阶段、continue_on_error
 - [ ] SSE 日志网关 + 构建日志落库分页拉取
 - [ ] 触发器：cron（注册到底座定时任务）/webhook/手动
@@ -544,3 +544,4 @@ web/src/plugin/asset/
 | 2026-10-03 | 22 | M2 场22（job 插件开工）：批量命令执行全链——两表模型、信号量并发池（限流/单任务超时/批次取消，4 组单测）、数据权限+逐主机凭据解析+指纹 TOFU、cancelRegistry、四接口+种子、前端执行页（轮询/取消/结果抽屉）；真机验证全过：批次 269ms 成功、sleep60 取消生效、SFTP 递归删除与 upload 回归通过（此前 upload 报错系本地 GitBash curl 路径转换污染 path 字段，非服务端缺陷）、ProxyJump 级联双机验证通过（目标机 Last login from 127.0.0.1 证实经跳板隧道）；核实 tag v0.1.0 远端在（本地未 fetch） | 下一场：脚本库 CRUD+版本、变量组关联资产；远程日志 tail、CIDR 网段发现 |
 | 2026-10-03 | 23 | M2 场23：脚本库与变量组全链（并行会话半成品 model/service 接手补全）——三表迁移、9 接口+种子（9528 只读）、脚本更新版本递增归档、变量组 key=value 前端编辑器；批量执行联动（scriptId 脚本内容为命令+variableGroupId 服务端渲染 {{key}} 入批次快照）；错误码分段统一（脚本 1201-1207/执行 1211-1214）；单测 validate×2+RenderTemplate；真机端到端：v1→v2 归档正确、{{greeting}}→baize 渲染执行输出一致 | 下一场：M2 收官（远程日志 tail、CIDR 网段发现）→ M3 流水线开工 |
 | 2026-10-04 | 24 | **M2 收官（场24）**：远程日志 tail（/term/logtail WS 复用级联拨号+指纹校验、tail -F 防选项注入、LogTail 组件滚动跟随/截断）+ CIDR 网段发现（ExpandCIDR 上限保护 6 场景单测、并发 SSH banner 探测、按 IP 导入跳过已存在）；真机验证全过：/29 段发现本机 OpenSSH 横幅、非法 CIDR 1006 拦截、导入 1 台/重复跳过、tail 初始回看+实时追加全到达。**M2 全部完成**（场次 19-24：WebSSH/级联/审计/SFTP/批量执行/脚本库变量组/日志 tail/网段发现） | 下一场：M3 流水线开工（pipeline/stage/step 三层模型+CRUD） |
+| 2026-10-04 | 25 | M3 开工（场25）：pipeline 三层模型与 CRUD——三表迁移、嵌套校验纯函数 8 场景单测、五接口+种子（888 全量/9528 只读、错误码 1301-1304）、前端列表+编排弹窗（阶段卡片审批 gate/失败继续+步骤 shell/http）；真机嵌套 CRUD 验证（Sort 归一/审批位/http 默认 GET/级联删除）；修复 Create 走 replaceStages（Omit 关联跳过阶段落库，真机回读发现） | 下一场：执行器（构建状态机/变量替换/审批 gate）+ SSE 日志网关 |
