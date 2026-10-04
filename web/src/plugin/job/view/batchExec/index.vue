@@ -47,7 +47,7 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="变量组">
-              <el-select v-model="form.variableGroupId" clearable placeholder="渲染 {{key}} 占位" style="width: 100%">
+              <el-select v-model="form.variableGroupId" clearable placeholder="留空则按主机所在资产组自动注入变量" style="width: 100%">
                 <el-option v-for="v in varGroupOptions" :key="v.ID" :label="v.name" :value="v.ID" />
               </el-select>
             </el-form-item>
