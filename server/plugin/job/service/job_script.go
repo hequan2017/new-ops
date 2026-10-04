@@ -28,10 +28,10 @@ type ScriptService struct{}
 // validateScript 脚本校验（纯逻辑）
 func validateScript(sc *model.JobScript) error {
 	if sc == nil || sc.Name == "" {
-		return newScriptErr(ErrCodeScriptNameRequired, "脚本名称不能为空")
+		return newJobErr(ErrCodeScriptNameRequired, "脚本名称不能为空")
 	}
 	if !model.ValidScriptLangs()[sc.Language] {
-		return newScriptErr(ErrCodeScriptLangInvalid, fmt.Sprintf("非法的脚本语言: %s", sc.Language))
+		return newJobErr(ErrCodeScriptLangInvalid, fmt.Sprintf("非法的脚本语言: %s", sc.Language))
 	}
 	return nil
 }
@@ -44,7 +44,7 @@ func (s *ScriptService) CreateScript(sc *model.JobScript, operator string) error
 	var count int64
 	global.GVA_DB.Model(&model.JobScript{}).Where("name = ?", sc.Name).Count(&count)
 	if count > 0 {
-		return newScriptErr(ErrCodeScriptDuplicate, fmt.Sprintf("脚本已存在: %s", sc.Name))
+		return newJobErr(ErrCodeScriptDuplicate, fmt.Sprintf("脚本已存在: %s", sc.Name))
 	}
 	sc.Version = 1
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
@@ -58,19 +58,19 @@ func (s *ScriptService) CreateScript(sc *model.JobScript, operator string) error
 // UpdateScript 更新脚本（内容变更时版本递增并归档旧内容）
 func (s *ScriptService) UpdateScript(sc *model.JobScript, operator string) error {
 	if sc == nil || sc.ID == 0 || sc.Name == "" {
-		return newScriptErr(ErrCodeScriptNameRequired, "脚本ID与名称不能为空")
+		return newJobErr(ErrCodeScriptNameRequired, "脚本ID与名称不能为空")
 	}
 	if !model.ValidScriptLangs()[sc.Language] {
-		return newScriptErr(ErrCodeScriptLangInvalid, fmt.Sprintf("非法的脚本语言: %s", sc.Language))
+		return newJobErr(ErrCodeScriptLangInvalid, fmt.Sprintf("非法的脚本语言: %s", sc.Language))
 	}
 	var exist model.JobScript
 	if err := global.GVA_DB.First(&exist, sc.ID).Error; err != nil {
-		return newScriptErr(ErrCodeScriptNotFound, "脚本不存在")
+		return newJobErr(ErrCodeScriptNotFound, "脚本不存在")
 	}
 	var count int64
 	global.GVA_DB.Model(&model.JobScript{}).Where("name = ? AND id <> ?", sc.Name, sc.ID).Count(&count)
 	if count > 0 {
-		return newScriptErr(ErrCodeScriptDuplicate, fmt.Sprintf("脚本已存在: %s", sc.Name))
+		return newJobErr(ErrCodeScriptDuplicate, fmt.Sprintf("脚本已存在: %s", sc.Name))
 	}
 	newVersion := exist.Version + 1
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
@@ -114,15 +114,7 @@ func (s *ScriptService) GetScriptVersions(scriptID uint) (list []*model.JobScrip
 	return list, err
 }
 
-// newScriptErr job 插件错误（避免与其他服务错误类型耦合）
-func newScriptErr(code int, msg string) error { return &scriptError{Code: code, Msg: msg} }
 
-type scriptError struct {
-	Code int
-	Msg  string
-}
-
-func (e *scriptError) Error() string { return e.Msg }
 
 // VariableGroupService 变量组服务
 type VariableGroupService struct{}
@@ -130,12 +122,12 @@ type VariableGroupService struct{}
 // validateVariableGroup 变量组校验（纯逻辑：名称必填、variables 为合法 JSON 数组）
 func validateVariableGroup(vg *model.JobVariableGroup) error {
 	if vg == nil || vg.Name == "" {
-		return newScriptErr(ErrCodeVarGroupRequired, "变量组名称不能为空")
+		return newJobErr(ErrCodeVarGroupRequired, "变量组名称不能为空")
 	}
 	if vg.Variables != "" {
 		var arr []map[string]string
 		if err := json.Unmarshal([]byte(vg.Variables), &arr); err != nil {
-			return newScriptErr(ErrCodeVariablesInvalid, "变量 JSON 格式不合法（应为 [{key,value}]）")
+			return newJobErr(ErrCodeVariablesInvalid, "变量 JSON 格式不合法（应为 [{key,value}]）")
 		}
 	}
 	return nil
@@ -149,7 +141,7 @@ func (s *VariableGroupService) CreateVariableGroup(vg *model.JobVariableGroup) e
 	var count int64
 	global.GVA_DB.Model(&model.JobVariableGroup{}).Where("name = ?", vg.Name).Count(&count)
 	if count > 0 {
-		return newScriptErr(ErrCodeVarGroupDuplicate, fmt.Sprintf("变量组已存在: %s", vg.Name))
+		return newJobErr(ErrCodeVarGroupDuplicate, fmt.Sprintf("变量组已存在: %s", vg.Name))
 	}
 	return global.GVA_DB.Create(vg).Error
 }
@@ -162,18 +154,18 @@ func (s *VariableGroupService) DeleteVariableGroup(id uint) error {
 // UpdateVariableGroup 更新变量组
 func (s *VariableGroupService) UpdateVariableGroup(vg *model.JobVariableGroup) error {
 	if vg == nil || vg.ID == 0 || vg.Name == "" {
-		return newScriptErr(ErrCodeVarGroupRequired, "变量组ID与名称不能为空")
+		return newJobErr(ErrCodeVarGroupRequired, "变量组ID与名称不能为空")
 	}
 	if vg.Variables != "" {
 		var arr []map[string]string
 		if err := json.Unmarshal([]byte(vg.Variables), &arr); err != nil {
-			return newScriptErr(ErrCodeVariablesInvalid, "变量 JSON 格式不合法")
+			return newJobErr(ErrCodeVariablesInvalid, "变量 JSON 格式不合法")
 		}
 	}
 	var count int64
 	global.GVA_DB.Model(&model.JobVariableGroup{}).Where("name = ? AND id <> ?", vg.Name, vg.ID).Count(&count)
 	if count > 0 {
-		return newScriptErr(ErrCodeVarGroupDuplicate, fmt.Sprintf("变量组已存在: %s", vg.Name))
+		return newJobErr(ErrCodeVarGroupDuplicate, fmt.Sprintf("变量组已存在: %s", vg.Name))
 	}
 	return global.GVA_DB.Model(&model.JobVariableGroup{}).Where("id = ?", vg.ID).Omit("ID").Updates(map[string]any{
 		"name": vg.Name, "variables": vg.Variables, "asset_group_id": vg.AssetGroupID, "notes": vg.Notes,
@@ -201,7 +193,7 @@ func RenderTemplate(content string, variables string) (string, error) {
 		Value string `json:"value"`
 	}
 	if err := json.Unmarshal([]byte(variables), &arr); err != nil {
-		return content, newScriptErr(ErrCodeVariablesInvalid, "变量 JSON 格式不合法")
+		return content, newJobErr(ErrCodeVariablesInvalid, "变量 JSON 格式不合法")
 	}
 	for _, kv := range arr {
 		if kv.Key == "" {

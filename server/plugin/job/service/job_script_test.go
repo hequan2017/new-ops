@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/hequan2017/new-ops/server/plugin/job/model"
@@ -13,13 +14,15 @@ func TestValidateScript(t *testing.T) {
 	}
 	// 缺名称
 	err := validateScript(&model.JobScript{Language: "shell"})
-	if se, ok := err.(*scriptError); !ok || se.Code != ErrCodeScriptNameRequired {
-		t.Fatalf("缺名称应报 1201: %v", err)
+	var se *JobError
+	if !errors.As(err, &se) || se.Code != ErrCodeScriptNameRequired {
+		t.Fatalf("缺名称应报 %d: %v", ErrCodeScriptNameRequired, err)
 	}
 	// 非法语言
 	err = validateScript(&model.JobScript{Name: "x", Language: "batch"})
-	if se, ok := err.(*scriptError); !ok || se.Code != ErrCodeScriptLangInvalid {
-		t.Fatalf("非法语言应报 1203: %v", err)
+	var seLang *JobError
+	if !errors.As(err, &seLang) || seLang.Code != ErrCodeScriptLangInvalid {
+		t.Fatalf("非法语言应报 %d: %v", ErrCodeScriptLangInvalid, err)
 	}
 }
 
@@ -37,8 +40,9 @@ func TestValidateVariableGroup(t *testing.T) {
 	}
 	// 非法 JSON
 	err := validateVariableGroup(&model.JobVariableGroup{Name: "bad", Variables: `{not-json`})
-	if se, ok := err.(*scriptError); !ok || se.Code != ErrCodeVariablesInvalid {
-		t.Fatalf("非法 JSON 应报 1207: %v", err)
+	var seJson *JobError
+	if !errors.As(err, &seJson) || seJson.Code != ErrCodeVariablesInvalid {
+		t.Fatalf("非法 JSON 应报 %d: %v", ErrCodeVariablesInvalid, err)
 	}
 }
 
