@@ -31,9 +31,10 @@
             <el-tag :type="row.enabled ? 'success' : 'info'" size="small">{{ row.enabled ? '启用' : '停用' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="190" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDialog(row)">编排</el-button>
+            <el-button link type="success" @click="openBuild(row)">构建</el-button>
             <el-button link type="danger" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -107,14 +108,66 @@
         <el-button type="primary" :loading="saving" @click="submitForm">保 存</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer v-model="buildVisible" :title="`构建 · ${buildPipeline?.name || ''}`" size="60%">
+      <el-form inline>
+        <el-form-item label="参数">
+          <div style="width: 420px">
+            <div v-for="(kv, i) in buildParams" :key="i" style="display: flex; gap: 6px; margin-bottom: 6px">
+              <el-input v-model="kv.key" placeholder="key" style="width: 140px" />
+              <el-input v-model="kv.value" placeholder="value" style="flex: 1" />
+              <el-button link type="danger" @click="buildParams.splice(i, 1)">删</el-button>
+            </div>
+            <el-button size="small" @click="buildParams.push({ key: '', value: '' })">加参数</el-button>
+          </div>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="triggering" @click="submitStartBuild">触发构建</el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-table :data="buildList" v-loading="buildLoading" stripe size="small">
+        <el-table-column prop="buildNo" label="#" width="55" />
+        <el-table-column label="状态" width="95">
+          <template #default="{ row }">
+            <el-tag :type="buildTagType(row.status)" size="small">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="operator" label="触发人" width="90" />
+        <el-table-column label="开始时间" width="150">
+          <template #default="{ row }">{{ (row.startedAt || '—').replace('T', ' ').slice(0, 19) }}</template>
+        </el-table-column>
+        <el-table-column label="结束时间" width="150">
+          <template #default="{ row }">{{ (row.finishedAt || '—').replace('T', ' ').slice(0, 19) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openLogs(row)">日志</el-button>
+            <el-button v-if="row.status === '等待审批'" link type="warning" @click="doApprove(row)">放行</el-button>
+            <el-button v-if="['等待中', '等待审批', '执行中'].includes(row.status)" link type="danger" @click="doCancel(row)">取消</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-drawer v-model="logsVisible" :title="`日志 · 构建 #${logsBuild?.buildNo || ''}`" size="55%" append-to-body>
+        <div ref="logBox" class="build-log">
+          <div v-for="l in logsList" :key="l.ID" :class="['log-line', 'lv-' + l.level]">
+            <span class="log-prefix">[{{ l.stageName || '系统' }}{{ l.stepName ? '/' + l.stepName : '' }}]</span>
+            {{ l.content }}
+          </div>
+          <el-empty v-if="!logsList.length" description="暂无日志" />
+        </div>
+      </el-drawer>
+    </el-drawer>
   </div>
 </template>
 
 <script setup>
-  import { ref, reactive, onMounted } from 'vue'
+  import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import {
-    createPipeline, updatePipeline, deletePipeline, getPipelineList
+    createPipeline, updatePipeline, deletePipeline, getPipelineList,
+    startBuild, cancelBuild, approveBuild, getBuildList, getBuildLogs
   } from '@/plugin/pipeline/api/pipeline'
 
   defineOptions({ name: 'pipelineList' })
@@ -187,5 +240,135 @@
     })
   }
 
+  // ---------- 构建抽屉 ----------
+  const buildVisible = ref(false)
+  const buildPipeline = ref(null)
+  const buildParams = ref([])
+  const triggering = ref(false)
+  const buildList = ref([])
+  const buildLoading = ref(false)
+  const logsVisible = ref(false)
+  const logsBuild = ref(null)
+  const logsList = ref([])
+  const logBox = ref(null)
+  let buildTimer = null
+
+  const openBuild = (row) => {
+    buildPipeline.value = row
+    buildParams.value = [{ key: '', value: '' }]
+    buildVisible.value = true
+    loadBuilds()
+    if (!buildTimer) buildTimer = setInterval(pollBuilds, 3000)
+  }
+
+  const loadBuilds = async () => {
+    if (!buildPipeline.value) return
+    buildLoading.value = true
+    try {
+      const res = await getBuildList({ page: 1, pageSize: 20, pipelineId: buildPipeline.value.ID })
+      if (res.code === 0) buildList.value = res.data.list || []
+    } finally {
+      buildLoading.value = false
+    }
+  }
+
+  const pollBuilds = () => {
+    if (!buildVisible.value || !buildPipeline.value) return
+    getBuildList({ page: 1, pageSize: 20, pipelineId: buildPipeline.value.ID }).then((res) => {
+      if (res.code === 0) {
+        buildList.value = res.data.list || []
+        // 日志抽屉打开且对应构建进行中时静默刷新日志
+        if (logsVisible.value && logsBuild.value) {
+          const cur = buildList.value.find((b) => b.ID === logsBuild.value.ID)
+          if (cur && ['等待中', '等待审批', '执行中'].includes(cur.status)) refreshLogs()
+        }
+      }
+    })
+  }
+
+  const submitStartBuild = async () => {
+    const params = {}
+    buildParams.value.forEach((kv) => {
+      if (kv.key) params[kv.key] = kv.value
+    })
+    triggering.value = true
+    try {
+      const res = await startBuild({ pipelineId: buildPipeline.value.ID, params })
+      if (res.code === 0) {
+        ElMessage.success(`构建 #${res.data.buildNo} 已触发`)
+        loadBuilds()
+      }
+    } finally {
+      triggering.value = false
+    }
+  }
+
+  const doApprove = async (row) => {
+    const res = await approveBuild({ id: row.ID })
+    if (res.code === 0) {
+      ElMessage.success('已放行')
+      loadBuilds()
+    }
+  }
+
+  const doCancel = (row) => {
+    ElMessageBox.confirm(`确定取消构建 #${row.buildNo} 吗？`, '提示', {
+      confirmButtonText: '取消构建', cancelButtonText: '返回', type: 'warning'
+    }).then(async () => {
+      const res = await cancelBuild({ id: row.ID })
+      if (res.code === 0) loadBuilds()
+    })
+  }
+
+  const openLogs = async (row) => {
+    logsBuild.value = row
+    logsVisible.value = true
+    await refreshLogs()
+  }
+
+  const refreshLogs = async () => {
+    const res = await getBuildLogs({ id: logsBuild.value.ID, page: 1, pageSize: 200 })
+    if (res.code === 0) {
+      logsList.value = res.data.list || []
+      nextTick(() => {
+        if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight
+      })
+    }
+  }
+
+  const buildTagType = (s) =>
+    ({ 成功: 'success', 失败: 'danger', 已取消: 'info', 执行中: 'primary', 等待审批: 'warning' }[s] || 'info')
+
   onMounted(getList)
+  onUnmounted(() => {
+    if (buildTimer) clearInterval(buildTimer)
+  })
 </script>
+
+<style scoped>
+  .build-log {
+    height: calc(100vh - 160px);
+    overflow: auto;
+    background: #0b1021;
+    color: #e2e8f0;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 12px;
+  }
+  .log-line {
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin-bottom: 2px;
+  }
+  .log-prefix {
+    color: #7dd3fc;
+    margin-right: 6px;
+  }
+  .lv-stderr {
+    color: #fca5a5;
+  }
+  .lv-system {
+    color: #fbbf24;
+  }
+</style>
