@@ -2,7 +2,9 @@
 package api
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/model/common/request"
@@ -300,4 +302,64 @@ func (a *assetHost) SyncAliyunECS(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(res, "同步完成", c)
+}
+
+// DiscoverHosts CIDR 网段 SSH 服务探测
+// @Tags AssetHost
+// @Summary 网段发现（探测 CIDR 内开放 SSH 的主机）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body object true "cidr(如 192.168.1.0/24)/port(默认22)/concurrency(默认50)/timeoutMs(默认1500)"
+// @Success 200 {object} response.Response{data=[]service.DiscoveredHost} "探测完成"
+// @Router /asset/host/discover [post]
+func (a *assetHost) DiscoverHosts(c *gin.Context) {
+	var req struct {
+		CIDR        string `json:"cidr" binding:"required"`
+		Port        int    `json:"port"`
+		Concurrency int    `json:"concurrency"`
+		TimeoutMs   int    `json:"timeoutMs"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	// 探测整体限时，防超大段长阻塞
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+	list, err := assetHostService.DiscoverHosts(ctx, req.CIDR, req.Port, req.Concurrency, req.TimeoutMs)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "探测完成", c)
+}
+
+// ImportDiscoveredHosts 导入发现的资产
+// @Tags AssetHost
+// @Summary 导入网段发现的主机（已存在IP跳过）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body object true "hosts:[{ip,banner}]"
+// @Success 200 {object} response.Response{data=object} "导入完成（created/skipped）"
+// @Router /asset/host/discover/import [post]
+func (a *assetHost) ImportDiscoveredHosts(c *gin.Context) {
+	var req struct {
+		Hosts []service.DiscoveredHost `json:"hosts" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if len(req.Hosts) > 4096 {
+		response.FailWithMessage("单次导入超过 4096 台上限", c)
+		return
+	}
+	created, skipped, err := assetHostService.ImportDiscoveredHosts(req.Hosts, utils.GetUserName(c))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"created": created, "skipped": skipped}, "导入完成", c)
 }

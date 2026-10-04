@@ -38,6 +38,8 @@ func Api(ctx context.Context) {
 		{Path: "/asset/group/update", Description: "更新资产组", ApiGroup: "资产管理", Method: "PUT"},
 		{Path: "/asset/group/list", Description: "资产组全量列表", ApiGroup: "资产管理", Method: "GET"},
 		{Path: "/asset/host/sync/aliyun-ecs", Description: "阿里云ECS实例同步", ApiGroup: "资产管理", Method: "POST"},
+		{Path: "/asset/host/discover", Description: "CIDR网段SSH探测", ApiGroup: "资产管理", Method: "POST"},
+		{Path: "/asset/host/discover/import", Description: "导入网段发现的主机", ApiGroup: "资产管理", Method: "POST"},
 		{Path: "/asset/credential/create", Description: "创建凭据", ApiGroup: "资产管理", Method: "POST"},
 		{Path: "/asset/credential/delete", Description: "删除凭据", ApiGroup: "资产管理", Method: "DELETE"},
 		{Path: "/asset/credential/update", Description: "更新凭据", ApiGroup: "资产管理", Method: "PUT"},

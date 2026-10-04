@@ -12,6 +12,7 @@ type TerminalRouter struct{}
 // InitTerminalRouter 注册 WebSSH WebSocket 端点
 func (r *TerminalRouter) InitTerminalRouter(Router *gin.RouterGroup) {
 	Router.GET("term/ws", v1.Api.Terminal.WebSSH)
+	Router.GET("term/logtail", v1.Api.Terminal.LogTail)
 }
 
 type TermSessionRouter struct{}

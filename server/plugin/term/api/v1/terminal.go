@@ -74,5 +74,58 @@ func (t *terminal) WebSSH(c *gin.Context) {
 	_ = service.TermService.StartWebSSH(ws, params)
 }
 
+// LogTail 远程日志 tail WebSocket 端点
+// @Tags Term
+// @Summary 远程日志 tail（WebSocket，只读流）
+// @Security ApiKeyAuth
+// @Param token query string true "JWT"
+// @Param hostId query int true "主机ID"
+// @Param credentialId query int true "SSH凭据ID"
+// @Param path query string true "日志绝对路径"
+// @Param lines query int false "初始回看行数（默认200，上限2000）"
+// @Success 200 {string} string "升级为 WebSocket"
+// @Router /term/logtail [get]
+func (t *terminal) LogTail(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.String(http.StatusUnauthorized, "缺少 token")
+		return
+	}
+	claims, err := utils.NewJWT().ParseToken(token)
+	if err != nil {
+		c.String(http.StatusUnauthorized, "token 无效: "+err.Error())
+		return
+	}
+	hostID, err := strconv.ParseUint(c.Query("hostId"), 10, 64)
+	if err != nil || hostID == 0 {
+		c.String(http.StatusBadRequest, "hostId 无效")
+		return
+	}
+	credID, err := strconv.ParseUint(c.Query("credentialId"), 10, 64)
+	if err != nil || credID == 0 {
+		c.String(http.StatusBadRequest, "credentialId 无效")
+		return
+	}
+	pathParam := c.Query("path")
+	if pathParam == "" || pathParam[0] != '/' {
+		c.String(http.StatusBadRequest, "path 必须为绝对路径")
+		return
+	}
+	lines, _ := strconv.Atoi(c.DefaultQuery("lines", "200"))
+
+	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		return
+	}
+	params := service.LogTailParams{
+		HostID:       uint(hostID),
+		CredentialID: uint(credID),
+		Path:         pathParam,
+		Lines:        lines,
+		Operator:     claims.Username,
+	}
+	_ = service.TermService.StartLogTail(ws, params)
+}
+
 // 提示：handler 中 fmt 引用由路由组注册使用
 var _ = fmt.Sprintf

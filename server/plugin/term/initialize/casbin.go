@@ -16,12 +16,17 @@ func Casbin(ctx context.Context) {
 		return
 	}
 	for _, role := range []string{"888", "9528"} {
-		has, err := e.HasPolicy(role, "/term/ws", "GET")
-		if err != nil || has {
-			continue
-		}
-		if _, err := e.AddPolicy(role, "/term/ws", "GET"); err != nil {
-			zap.L().Error("term 插件：添加 casbin 策略失败", zap.Error(err))
+		for _, p := range []struct{ Path, Method string }{
+			{"/term/ws", "GET"},
+			{"/term/logtail", "GET"},
+		} {
+			has, err := e.HasPolicy(role, p.Path, p.Method)
+			if err != nil || has {
+				continue
+			}
+			if _, err := e.AddPolicy(role, p.Path, p.Method); err != nil {
+				zap.L().Error("term 插件：添加 casbin 策略失败", zap.Error(err))
+			}
 		}
 	}
 	// SFTP：888 全部；9528 只读（list/download）
