@@ -26,6 +26,8 @@ type Pipeline struct {
 	Enabled        bool            `json:"enabled" gorm:"comment:是否启用;default:true"`
 	WebhookEnabled bool            `json:"webhookEnabled" gorm:"comment:启用webhook触发"`
 	WebhookToken   string          `json:"webhookToken" gorm:"size:64;comment:webhook令牌(即凭据,仅开启时生成)"`
+	CronEnabled    bool            `json:"cronEnabled" gorm:"comment:启用定时触发"`
+	CronSpec       string          `json:"cronSpec" gorm:"size:32;comment:cron表达式(robfig标准5段)"`
 	Stages         []PipelineStage `json:"stages" gorm:"foreignKey:PipelineID"`
 }
 

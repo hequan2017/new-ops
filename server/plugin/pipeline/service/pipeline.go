@@ -28,6 +28,9 @@ func validatePipeline(p *model.Pipeline) error {
 	if p == nil || strings.TrimSpace(p.Name) == "" {
 		return newPlErr(ErrCodePlNameRequired, "流水线名称不能为空")
 	}
+	if p.CronEnabled && strings.TrimSpace(p.CronSpec) == "" {
+		return newPlErr(ErrCodePlStructInvalid, "启用定时触发必须填写 cron 表达式")
+	}
 	for si := range p.Stages {
 		st := &p.Stages[si]
 		if strings.TrimSpace(st.Name) == "" {
@@ -93,7 +96,11 @@ func (s *PipelineService) CreatePipeline(p *model.Pipeline) error {
 		if err := tx.Omit("Stages").Create(p).Error; err != nil {
 			return err
 		}
-		return replaceStages(tx, p.ID, p.Stages)
+		if err := replaceStages(tx, p.ID, p.Stages); err != nil {
+			return err
+		}
+		s.SyncPipelineCron(p)
+		return nil
 	})
 }
 
@@ -106,6 +113,30 @@ func webhookTokenFor(p *model.Pipeline) string {
 		return p.WebhookToken
 	}
 	return strings.ReplaceAll(uuid.NewString(), "-", "")
+}
+
+// pipelineCronName / pipelineCronTask 底座定时任务的 cron 名与任务名约定
+const (
+	pipelineCronName = "pipeline"
+	cronTaskPrefix   = "pipeline-cron-"
+)
+
+// SyncPipelineCron 将流水线的定时触发同步到底座 timer（幂等：先移除旧任务再按需注册）
+func (s *PipelineService) SyncPipelineCron(pl *model.Pipeline) {
+	taskName := fmt.Sprintf("%s%d", cronTaskPrefix, pl.ID)
+	global.GVA_Timer.RemoveTaskByName(pipelineCronName, taskName)
+	if !pl.CronEnabled || pl.CronSpec == "" || !pl.Enabled {
+		return
+	}
+	buildSvcCron := new(PipelineBuildService)
+	_, err := global.GVA_Timer.AddTaskByFunc(pipelineCronName, pl.CronSpec, func() {
+		if _, err := buildSvcCron.CreateBuild(pl.ID, nil, "cron", 0); err != nil {
+			global.GVA_LOG.Error(fmt.Sprintf("cron 触发流水线 %s 失败: %v", pl.Name, err))
+		}
+	}, taskName)
+	if err != nil {
+		global.GVA_LOG.Error(fmt.Sprintf("注册流水线 %s cron(%s) 失败: %v", pl.Name, pl.CronSpec, err))
+	}
 }
 
 // UpdatePipeline 更新定义（阶段/步骤整体替换；执行快照语义由构建侧保证，改定义不影响历史构建）
@@ -129,6 +160,7 @@ func (s *PipelineService) UpdatePipeline(p *model.Pipeline) error {
 		if err := tx.Model(&exist).Omit("Stages").Updates(map[string]any{
 			"name": p.Name, "description": p.Description, "enabled": p.Enabled,
 			"webhook_enabled": p.WebhookEnabled, "webhook_token": webhookTokenFor(p),
+			"cron_enabled": p.CronEnabled, "cron_spec": p.CronSpec,
 		}).Error; err != nil {
 			return err
 		}
@@ -145,10 +177,14 @@ func (s *PipelineService) UpdatePipeline(p *model.Pipeline) error {
 		if err := tx.Where("pipeline_id = ?", p.ID).Delete(&model.PipelineStage{}).Error; err != nil {
 			return err
 		}
-		return replaceStages(tx, p.ID, p.Stages)
+		if err := replaceStages(tx, p.ID, p.Stages); err != nil {
+			return err
+		}
+		p.ID = exist.ID
+		s.SyncPipelineCron(p)
+		return nil
 	})
 }
-
 // replaceStages 写入阶段与步骤（Sort 按下标归一）
 func replaceStages(tx *gorm.DB, pipelineID uint, stages []model.PipelineStage) error {
 	for i := range stages {
@@ -179,8 +215,9 @@ func replaceStages(tx *gorm.DB, pipelineID uint, stages []model.PipelineStage) e
 	return nil
 }
 
-// DeletePipeline 删除定义（级联清理阶段与步骤）
+// DeletePipeline 删除定义（级联清理阶段与步骤，并摘除定时任务）
 func (s *PipelineService) DeletePipeline(id uint) error {
+	global.GVA_Timer.RemoveTaskByName(pipelineCronName, fmt.Sprintf("%s%d", cronTaskPrefix, id))
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		var stages []model.PipelineStage
 		if err := tx.Where("pipeline_id = ?", id).Find(&stages).Error; err != nil {

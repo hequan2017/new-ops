@@ -77,6 +77,19 @@
               </div>
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="定时触发">
+              <div style="display: flex; align-items: center; gap: 8px; width: 100%">
+                <el-switch v-model="form.cronEnabled" />
+                <el-input
+                  v-if="form.cronEnabled"
+                  v-model="form.cronSpec"
+                  placeholder="cron 表达式，如 0 9 * * *"
+                  style="flex: 1"
+                />
+              </div>
+            </el-form-item>
+          </el-col>
         </el-row>
 
         <el-card v-for="(st, si) in form.stages" :key="si" shadow="never" style="margin-bottom: 10px">
@@ -212,7 +225,7 @@
   const dialogVisible = ref(false)
   const saving = ref(false)
   const formRef = ref(null)
-  const emptyForm = () => ({ ID: 0, name: '', description: '', enabled: true, webhookEnabled: false, webhookToken: '', stages: [emptyStage()] })
+  const emptyForm = () => ({ ID: 0, name: '', description: '', enabled: true, webhookEnabled: false, webhookToken: '', cronEnabled: false, cronSpec: '', stages: [emptyStage()] })
   const form = reactive(emptyForm())
   const rules = { name: [{ required: true, message: '请输入名称', trigger: 'blur' }] }
 
