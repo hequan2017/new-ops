@@ -299,7 +299,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 - [x] pipeline/stage/step 三层模型表与 CRUD、前端编排页（场25 交付：三表迁移、嵌套校验纯函数 8 场景单测、Create/Update（整体替换）/Delete（级联）/列表/详情按 Sort 预载、五接口+菜单/API/casbin 种子（888 全量 9528 只读）、错误码 1301-1304；前端列表+编排弹窗（阶段卡片：审批 gate/失败继续，步骤 shell/http 切换）；真机嵌套 CRUD 验证：Sort 归一/审批位/http 默认 GET/级联删除全过；修复 Create 走 replaceStages（Omit 关联跳过阶段落库，真机回读发现））
 - [ ] 执行器（进行中：场26 交付核心链——pipeline_build/build_log 两表、CreateBuild 快照落库（步骤 {{key}} 参数替换入快照）+ 后台执行、状态机 等待中→执行中→（等待审批）→成功/失败/已取消、审批 gate approveCh 放行、continueOnError 阶段级跳过、构建序号按流水线递增；shell 步骤经 SSH 在绑定资产执行（无本机 exec 面，复用指纹校验，校验强制 HostID）；构建 API 五接口+种子+前端构建抽屉（参数触发/轮询/放行/取消/分级日志）；真机四链路验证：参数渲染成功、exit7 失败（修复 Wait 退出码误用）、等待审批→放行→成功、取消→已取消；剩余：并行阶段）
-- [ ] SSE 日志网关 + 构建日志落库分页拉取（进行中：落库+分页拉取已随场26 交付（logs 接口+前端日志抽屉随构建轮询静默追加），SSE 实时推送端点下一场）
+- [x] SSE 日志网关 + 构建日志落库分页拉取（场26 交付落库+分页拉取+前端日志抽屉；场28 补 SSE：GET /sse/pipeline/build/logs（public 组 query token 自验，与 term/ws 同模式）、GetBuildLogsAfter 按 lastId 1s tick 增量推送+status/done 事件收流、X-Accel-Buffering no 防 nginx 缓冲、断线 lastId 续传；前端进行中构建 EventSource 订阅（log/status/done 三事件），done 自动刷新列表、异常降级一次性拉取；真机验证：drip 步骤逐秒输出，事件序列 status→5×log→status→done 全部到达）
 - [ ] 触发器：cron（注册到底座定时任务）/webhook/手动
 - [ ] 工单发版闭环：workflow 审批通过事件钩子 → 自动触发流水线
 - [ ] 构建历史：即时取消、复用历史参数重跑
@@ -548,3 +548,4 @@ web/src/plugin/asset/
 | 2026-10-04 | 23 | job 错误类型统一（newScriptErr/scriptError 重复定义移除，复用 errors.go 的 JobError；错误码接续 1205-1211；测试断言 errors.As 化）——修复与并行会话协作中的类型冲突；SFTP 递归删除回归验证被并行部署窗口反复打断（404 窗口），标记进行中下一场回归 | 下一场：SFTP 递归删除回归 + 部署窗口错峰验证；M3 流水线由并行会话推进中，本会话避免抢主线 |
 | 2026-10-04 | 26 | M2 增强：批量执行按主机资产组自动注入变量——variableGroupsByAssetGroupID 索引（同组取最新）+ renderForHost 决策（显式组>资产组绑定>原样，单测5组）+ runBatch 逐主机渲染 + JobExecResult.Command 每主机实际命令快照 + 前端变量组可留空（自动注入模式提示）；真机：批次创建成功，结果查询撞并行部署窗口待回归 | 下一场：自动注入真机结果回归；配合并行会话 M3 主线 |
 | 2026-10-04 | 27 | M3 场27（执行器核心）：pipeline_build/build_log 两表 + CreateBuild 定义快照（步骤 {{key}} 参数替换入快照，改定义不影响进行中构建）+ 后台状态机（等待中→执行中→等待审批→成功/失败/已取消）+ 审批 gate（approveCh 放行）+ continueOnError + 构建序号递增；安全设计：shell 步骤一律 SSH 到绑定资产执行（无本机 exec 面，Mimosa 拦截后采纳更优方案，对齐 M3「发布目标绑定资产」）；构建五接口+种子+前端构建抽屉（参数触发/3s 轮询/放行/取消/分级日志）；真机四链路全过：参数渲染成功输出、exit7 失败（修复 session.Wait 退出码误用真 bug）、等待审批→放行→成功、执行中→取消→已取消；验证数据已清理 | 下一场：SSE 实时日志端点、并行阶段、构建历史重跑/取消收尾 |
+| 2026-10-04 | 28 | M3 场28（SSE 实时日志）：GET /sse/pipeline/build/logs（public 组 query token 自验、GetBuildLogsAfter lastId 1s tick 增量、status/done 事件收流、X-Accel-Buffering no）+ 前端进行中构建 EventSource 订阅（done 自动刷新、异常降级拉取）；真机验证：drip 步骤逐秒输出，事件序列 status→5×log→status→done 全到达，验证数据已清理。M3 进度：CRUD✓ 执行器核心✓ SSE✓；剩余：并行阶段、触发器 cron/webhook、工单闭环、构建历史重跑 | 下一场：并行阶段（stage 内 step 并发组）与触发器（手动已可用，补 cron/webhook） |
