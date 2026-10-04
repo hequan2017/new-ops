@@ -83,6 +83,7 @@
   "/src/plugin/job/view/batchExec/index.vue": "jobBatchExec",
   "/src/plugin/job/view/script/index.vue": "jobScript",
   "/src/plugin/job/view/varGroup/index.vue": "jobVarGroup",
+  "/src/plugin/term/components/LogTail.vue": "LogTail",
   "/src/plugin/term/components/XtermShell.vue": "XtermShell",
   "/src/plugin/term/view/audit/index.vue": "TermAudit",
   "/src/plugin/term/view/sftp/index.vue": "TermSftp"

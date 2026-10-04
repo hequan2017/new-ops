@@ -43,6 +43,7 @@
         </el-upload>
         <el-button icon="download" @click="onExport">导出 Excel</el-button>
         <el-button icon="connection" @click="openSync">阿里云导入</el-button>
+        <el-button icon="search" @click="openDiscover">网段发现</el-button>
         <el-button
           type="danger"
           icon="delete"
@@ -89,11 +90,12 @@
             <el-tag :type="statusTagType(row.status)">{{ row.status || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="190" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" icon="edit" @click="openDialog(row)">编辑</el-button>
             <el-button link type="success" icon="aim" @click="openCollect(row)">采集</el-button>
             <el-button link type="success" icon="platform" @click="openTerm(row)">终端</el-button>
+            <el-button link type="warning" icon="document" @click="openLogTail(row)">日志</el-button>
             <el-button link type="warning" icon="clock" @click="openHistory(row)">历史</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
@@ -228,6 +230,75 @@
       </div>
     </el-drawer>
 
+    <el-drawer v-model="logVisible" :title="`日志 tail · ${logHost}`" size="70%">
+      <el-form inline>
+        <el-form-item label="SSH 凭据">
+          <el-select v-model="logCredId" style="width: 220px" :disabled="logConnected">
+            <el-option
+              v-for="c in credList"
+              :key="c.ID"
+              :label="`${c.name}（${c.username || 'SSH'}）`"
+              :value="c.ID"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="路径">
+          <el-input v-model="logPath" :disabled="logConnected" placeholder="/var/log/syslog" style="width: 320px" />
+        </el-form-item>
+        <el-form-item v-if="!logConnected">
+          <el-button type="primary" :disabled="!logCredId || !logPath" @click="startLogTail">开始 tail</el-button>
+        </el-form-item>
+      </el-form>
+      <LogTail
+        v-if="logConnected"
+        :host-id="logHostId"
+        :credential-id="logCredId"
+        :path="logPath"
+      />
+    </el-drawer>
+
+    <el-dialog v-model="discoverVisible" title="CIDR 网段发现（SSH 探测）" width="720px">
+      <el-form inline label-width="70px">
+        <el-form-item label="网段">
+          <el-input v-model="discoverForm.cidr" placeholder="如 192.168.112.0/29" style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="端口">
+          <el-input-number v-model="discoverForm.port" :min="1" :max="65535" style="width: 110px" />
+        </el-form-item>
+        <el-form-item label="并发">
+          <el-input-number v-model="discoverForm.concurrency" :min="1" :max="200" style="width: 110px" />
+        </el-form-item>
+        <el-form-item label="超时ms">
+          <el-input-number v-model="discoverForm.timeoutMs" :min="200" :max="10000" :step="100" style="width: 120px" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="discovering" @click="submitDiscover">开始探测</el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-table
+        ref="discoverTableRef"
+        :data="discoverResults"
+        v-loading="discovering"
+        stripe
+        max-height="360"
+        @selection-change="discoverSelection = $event"
+      >
+        <el-table-column type="selection" width="45" />
+        <el-table-column prop="ip" label="IP" width="150" />
+        <el-table-column prop="banner" label="SSH 横幅" show-overflow-tooltip />
+      </el-table>
+      <template #footer>
+        <el-button @click="discoverVisible = false">关 闭</el-button>
+        <el-button
+          type="primary"
+          :disabled="!discoverSelection.length"
+          :loading="importing"
+          @click="submitDiscoverImport"
+        >导入所选（{{ discoverSelection.length }}）</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="syncVisible" title="阿里云 ECS 实例同步" width="480px">
       <el-form label-width="100px">
         <el-form-item label="AK 凭据">
@@ -317,8 +388,10 @@
   } from '@/plugin/asset/api/assetHost'
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import XtermShell from '@/plugin/term/components/XtermShell.vue'
+  import LogTail from '@/plugin/term/components/LogTail.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { reactive, ref } from 'vue'
+  import { discoverHosts, importDiscoveredHosts } from '@/plugin/asset/api/assetHost'
   import { useUserStore } from '@/pinia/modules/user'
 
   defineOptions({ name: 'AssetHost' })
@@ -515,6 +588,88 @@
     termCredId.value = credId
     termHost.value = `${row.hostname}（${row.ip}）`
     termVisible.value = true
+  }
+
+  // 远程日志 tail
+  const logVisible = ref(false)
+  const logConnected = ref(false)
+  const logHostId = ref(0)
+  const logCredId = ref(undefined)
+  const logPath = ref('')
+  const logHost = ref('')
+
+  const openLogTail = async (row) => {
+    logHostId.value = row.ID
+    logHost.value = `${row.hostname}（${row.ip}）`
+    logConnected.value = false
+    logCredId.value = row.credentialId || undefined
+    if (!logCredId.value) {
+      const res = await getCredentialList()
+      if (res.code === 0) {
+        const sshCreds = (res.data || []).filter(
+          (c) => c.type === 'ssh_password' || c.type === 'ssh_key'
+        )
+        if (sshCreds.length) logCredId.value = sshCreds[0].ID
+      }
+    }
+    if (!logCredId.value) {
+      ElMessage.warning('请先在凭据保险库创建 SSH 凭据')
+      return
+    }
+    logVisible.value = true
+  }
+
+  const startLogTail = () => {
+    if (!logCredId.value || !logPath.value) {
+      ElMessage.warning('请选择凭据并填写日志绝对路径')
+      return
+    }
+    logConnected.value = true
+  }
+
+  // CIDR 网段发现
+  const discoverVisible = ref(false)
+  const discovering = ref(false)
+  const importing = ref(false)
+  const discoverForm = reactive({ cidr: '', port: 22, concurrency: 50, timeoutMs: 1500 })
+  const discoverResults = ref([])
+  const discoverSelection = ref([])
+
+  const openDiscover = () => {
+    discoverResults.value = []
+    discoverSelection.value = []
+    discoverVisible.value = true
+  }
+
+  const submitDiscover = async () => {
+    if (!discoverForm.cidr) {
+      ElMessage.warning('请填写网段')
+      return
+    }
+    discovering.value = true
+    try {
+      const res = await discoverHosts(discoverForm)
+      if (res.code === 0) {
+        discoverResults.value = res.data || []
+        ElMessage.success(`探测完成：发现 ${discoverResults.value.length} 台 SSH 主机`)
+      }
+    } finally {
+      discovering.value = false
+    }
+  }
+
+  const submitDiscoverImport = async () => {
+    importing.value = true
+    try {
+      const res = await importDiscoveredHosts({ hosts: discoverSelection.value })
+      if (res.code === 0) {
+        ElMessage.success(`导入完成：新建 ${res.data.created}，跳过 ${res.data.skipped}`)
+        discoverVisible.value = false
+        getTableData()
+      }
+    } finally {
+      importing.value = false
+    }
   }
 
   // 阿里云 ECS 同步

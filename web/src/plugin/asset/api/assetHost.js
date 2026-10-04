@@ -129,6 +129,18 @@ export const importAssetHost = (file) => {
 }
 
 // @Tags AssetHost
+// @Summary CIDR 网段 SSH 探测
+export const discoverHosts = (data) => {
+  return service({ url: '/asset/host/discover', method: 'post', data, timeout: 70000 })
+}
+
+// @Tags AssetHost
+// @Summary 导入网段发现的主机
+export const importDiscoveredHosts = (data) => {
+  return service({ url: '/asset/host/discover/import', method: 'post', data })
+}
+
+// @Tags AssetHost
 // @Summary SSH 现场采集主机信息
 // @Security ApiKeyAuth
 // @accept application/json
