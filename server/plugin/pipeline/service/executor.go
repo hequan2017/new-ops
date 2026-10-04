@@ -438,3 +438,36 @@ func (s *PipelineBuildService) GetBuildStatus(buildID uint) (string, error) {
 	}
 	return build.Status, nil
 }
+
+// RestartBuild 复用历史参数重跑：以原构建的参数对当前定义重新触发（新构建新快照）
+func (s *PipelineBuildService) RestartBuild(buildID uint, operator string, userID uint) (*model.PipelineBuild, error) {
+	var old model.PipelineBuild
+	if err := global.GVA_DB.First(&old, buildID).Error; err != nil {
+		return nil, newPlErr(ErrCodePlNotFound, "构建不存在")
+	}
+	var params map[string]string
+	if old.Params != "" {
+		if err := json.Unmarshal([]byte(old.Params), &params); err != nil {
+			params = map[string]string{}
+		}
+	}
+	build, err := s.CreateBuild(old.PipelineID, params, operator, userID)
+	if err != nil {
+		return nil, err
+	}
+	s.appendLog(build.ID, "", "", model.LogSystem, fmt.Sprintf("复用构建 #%d 参数重跑（%s）", old.BuildNo, operator))
+	return build, nil
+}
+
+// WebhookTrigger webhook 触发：令牌即凭据（public 端点无登录态），未开启/令牌不符一律 404 语义
+func (s *PipelineBuildService) WebhookTrigger(token string, params map[string]string) (*model.PipelineBuild, error) {
+	if token == "" {
+		return nil, newPlErr(ErrCodePlNotFound, "无效的 webhook 令牌")
+	}
+	var pl model.Pipeline
+	if err := global.GVA_DB.Where("webhook_token = ? AND webhook_enabled = ? AND enabled = ?",
+		token, true, true).First(&pl).Error; err != nil {
+		return nil, newPlErr(ErrCodePlNotFound, "无效的 webhook 令牌")
+	}
+	return s.CreateBuild(pl.ID, params, "webhook", 0)
+}

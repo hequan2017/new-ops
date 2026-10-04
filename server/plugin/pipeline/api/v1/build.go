@@ -145,6 +145,50 @@ func (p *pipelineBuild) GetBuildLogs(c *gin.Context) {
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
 
+// RestartBuild 复用历史参数重跑
+// @Tags PipelineBuild
+// @Summary 复用历史构建参数重新触发（对当前定义生成新快照）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "原构建ID"
+// @Success 200 {object} response.Response{data=model.PipelineBuild} "已触发"
+// @Router /pipeline/build/restart [post]
+func (p *pipelineBuild) RestartBuild(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 无效", c)
+		return
+	}
+	build, err := buildSvc.RestartBuild(uint(id), utils.GetUserName(c), utils.GetUserID(c))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(build, "已重跑", c)
+}
+
+// WebhookTrigger webhook 触发构建
+// @Tags PipelineBuild
+// @Summary webhook 触发（令牌即凭据，无需登录态）
+// @Accept application/json
+// @Produce application/json
+// @Param token path string true "webhook令牌"
+// @Param data body object false "params(map[string]string)"
+// @Success 200 {object} response.Response{data=model.PipelineBuild} "已触发"
+// @Router /pipeline/webhook/{token} [post]
+func (p *pipelineBuild) WebhookTrigger(c *gin.Context) {
+	var req struct {
+		Params map[string]string `json:"params"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	build, err := buildSvc.WebhookTrigger(c.Param("token"), req.Params)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"buildNo": build.BuildNo}, "已触发", c)
+}
+
 // StreamBuildLogs 构建日志 SSE 实时流
 // @Tags PipelineBuild
 // @Summary 构建日志 SSE（增量推送，构建结束自动收流）

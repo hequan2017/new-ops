@@ -21,10 +21,12 @@ func ValidStepTypes() map[string]bool {
 // Pipeline 流水线定义
 type Pipeline struct {
 	global.GVA_MODEL
-	Name        string         `json:"name" gorm:"comment:流水线名称;unique" binding:"required"`
-	Description string         `json:"description" gorm:"comment:描述"`
-	Enabled     bool           `json:"enabled" gorm:"comment:是否启用;default:true"`
-	Stages      []PipelineStage `json:"stages" gorm:"foreignKey:PipelineID"`
+	Name           string          `json:"name" gorm:"comment:流水线名称;unique" binding:"required"`
+	Description    string          `json:"description" gorm:"comment:描述"`
+	Enabled        bool            `json:"enabled" gorm:"comment:是否启用;default:true"`
+	WebhookEnabled bool            `json:"webhookEnabled" gorm:"comment:启用webhook触发"`
+	WebhookToken   string          `json:"webhookToken" gorm:"size:64;comment:webhook令牌(即凭据,仅开启时生成)"`
+	Stages         []PipelineStage `json:"stages" gorm:"foreignKey:PipelineID"`
 }
 
 // PipelineStage 阶段（串行执行，Sort 升序）

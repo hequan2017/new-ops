@@ -26,8 +26,10 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		build.POST("start", v1.PipelineBuildApi.StartBuild)
 		build.POST("cancel", v1.PipelineBuildApi.CancelBuild)
 		build.POST("approve", v1.PipelineBuildApi.ApproveBuild)
+		build.POST("restart", v1.PipelineBuildApi.RestartBuild)
 		build.POST("list", v1.PipelineBuildApi.GetBuildList)
 		build.GET("logs", v1.PipelineBuildApi.GetBuildLogs)
 	}
 	Public.GET("sse/pipeline/build/logs", v1.PipelineBuildApi.StreamBuildLogs)
+	Public.POST("pipeline/webhook/:token", v1.PipelineBuildApi.WebhookTrigger)
 }

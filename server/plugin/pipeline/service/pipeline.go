@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/pipeline/model"
 	"gorm.io/gorm"
@@ -88,11 +89,23 @@ func (s *PipelineService) CreatePipeline(p *model.Pipeline) error {
 	}
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		// Omit 防止 GVA 关联自动落库丢失 Sort 归一，阶段/步骤统一走 replaceStages
+		p.WebhookToken = webhookTokenFor(p)
 		if err := tx.Omit("Stages").Create(p).Error; err != nil {
 			return err
 		}
 		return replaceStages(tx, p.ID, p.Stages)
 	})
+}
+
+// webhookTokenFor 开启 webhook 且无令牌时生成（令牌即凭据，仅管理端可见）
+func webhookTokenFor(p *model.Pipeline) string {
+	if !p.WebhookEnabled {
+		return ""
+	}
+	if p.WebhookToken != "" {
+		return p.WebhookToken
+	}
+	return strings.ReplaceAll(uuid.NewString(), "-", "")
 }
 
 // UpdatePipeline 更新定义（阶段/步骤整体替换；执行快照语义由构建侧保证，改定义不影响历史构建）
@@ -115,6 +128,7 @@ func (s *PipelineService) UpdatePipeline(p *model.Pipeline) error {
 		}
 		if err := tx.Model(&exist).Omit("Stages").Updates(map[string]any{
 			"name": p.Name, "description": p.Description, "enabled": p.Enabled,
+			"webhook_enabled": p.WebhookEnabled, "webhook_token": webhookTokenFor(p),
 		}).Error; err != nil {
 			return err
 		}

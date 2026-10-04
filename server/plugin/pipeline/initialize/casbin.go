@@ -25,6 +25,7 @@ func Casbin(ctx context.Context) {
 		{"/pipeline/list", "GET"},
 		{"/pipeline/find", "GET"},
 		{"/pipeline/build/start", "POST"},
+		{"/pipeline/build/restart", "POST"},
 		{"/pipeline/build/cancel", "POST"},
 		{"/pipeline/build/approve", "POST"},
 		{"/pipeline/build/list", "POST"},
