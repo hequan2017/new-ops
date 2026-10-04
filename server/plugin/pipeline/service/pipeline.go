@@ -84,7 +84,11 @@ func (s *PipelineService) CreatePipeline(p *model.Pipeline) error {
 		return newPlErr(ErrCodePlDuplicate, fmt.Sprintf("流水线已存在: %s", p.Name))
 	}
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
-		return tx.Omit("Stages").Create(p).Error
+		// Omit 防止 GVA 关联自动落库丢失 Sort 归一，阶段/步骤统一走 replaceStages
+		if err := tx.Omit("Stages").Create(p).Error; err != nil {
+			return err
+		}
+		return replaceStages(tx, p.ID, p.Stages)
 	})
 }
 
