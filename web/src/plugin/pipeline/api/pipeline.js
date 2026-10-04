@@ -29,3 +29,6 @@ export const getBuildList = (data) => service({ url: '/pipeline/build/list', met
 
 // 构建日志
 export const getBuildLogs = (params) => service({ url: '/pipeline/build/logs', method: 'get', params })
+
+// 复用历史参数重跑
+export const restartBuild = (params) => service({ url: '/pipeline/build/restart', method: 'post', params })

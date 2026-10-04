@@ -59,6 +59,24 @@
               <el-switch v-model="form.enabled" />
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="Webhook">
+              <div style="display: flex; align-items: center; gap: 8px; width: 100%">
+                <el-switch v-model="form.webhookEnabled" />
+                <el-input
+                  v-if="form.webhookEnabled && form.webhookToken"
+                  :model-value="form.webhookToken"
+                  readonly
+                  size="small"
+                >
+                  <template #append>
+                    <el-button @click="copyWebhook(form.webhookToken)">复制地址</el-button>
+                  </template>
+                </el-input>
+                <span v-else-if="form.webhookEnabled" class="ops-text-muted">保存后生成令牌</span>
+              </div>
+            </el-form-item>
+          </el-col>
         </el-row>
 
         <el-card v-for="(st, si) in form.stages" :key="si" shadow="never" style="margin-bottom: 10px">
@@ -140,11 +158,12 @@
         <el-table-column label="结束时间" width="150">
           <template #default="{ row }">{{ (row.finishedAt || '—').replace('T', ' ').slice(0, 19) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openLogs(row)">日志</el-button>
             <el-button v-if="row.status === '等待审批'" link type="warning" @click="doApprove(row)">放行</el-button>
             <el-button v-if="['等待中', '等待审批', '执行中'].includes(row.status)" link type="danger" @click="doCancel(row)">取消</el-button>
+            <el-button v-if="['成功', '失败', '已取消'].includes(row.status)" link type="success" @click="doRestart(row)">重跑</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -168,7 +187,7 @@
   import { useUserStore } from '@/pinia/modules/user'
   import {
     createPipeline, updatePipeline, deletePipeline, getPipelineList,
-    startBuild, cancelBuild, approveBuild, getBuildList, getBuildLogs
+    startBuild, cancelBuild, approveBuild, getBuildList, getBuildLogs, restartBuild
   } from '@/plugin/pipeline/api/pipeline'
 
   defineOptions({ name: 'pipelineList' })
@@ -193,7 +212,7 @@
   const dialogVisible = ref(false)
   const saving = ref(false)
   const formRef = ref(null)
-  const emptyForm = () => ({ ID: 0, name: '', description: '', enabled: true, stages: [emptyStage()] })
+  const emptyForm = () => ({ ID: 0, name: '', description: '', enabled: true, webhookEnabled: false, webhookToken: '', stages: [emptyStage()] })
   const form = reactive(emptyForm())
   const rules = { name: [{ required: true, message: '请输入名称', trigger: 'blur' }] }
 
@@ -387,6 +406,21 @@
 
   const buildTagType = (s) =>
     ({ 成功: 'success', 失败: 'danger', 已取消: 'info', 执行中: 'primary', 等待审批: 'warning' }[s] || 'info')
+
+  const doRestart = async (row) => {
+    const res = await restartBuild({ id: row.ID })
+    if (res.code === 0) {
+      ElMessage.success(`构建 #${res.data.buildNo} 已重跑`)
+      loadBuilds()
+    }
+  }
+
+  const copyWebhook = (token) => {
+    const base = import.meta.env.VITE_BASE_API || '/api'
+    const url = `${location.origin}${base}/pipeline/webhook/${token}`
+    navigator.clipboard?.writeText(url)
+    ElMessage.success('webhook 地址已复制')
+  }
 
   onMounted(getList)
   onUnmounted(() => {
