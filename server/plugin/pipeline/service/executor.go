@@ -422,3 +422,19 @@ func (s *PipelineBuildService) GetBuildLogs(buildID uint, page, pageSize int) (l
 	err = db.Order("id ASC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
 	return list, total, err
 }
+
+// GetBuildLogsAfter 增量拉取：构建日志 id > afterID 的记录（SSE 轮询底座）
+func (s *PipelineBuildService) GetBuildLogsAfter(buildID uint, afterID uint) (list []*model.BuildLog, err error) {
+	err = global.GVA_DB.Where("build_id = ? AND id > ?", buildID, afterID).
+		Order("id ASC").Limit(200).Find(&list).Error
+	return list, err
+}
+
+// GetBuildStatus 构建状态快照（SSE 结束判定用）
+func (s *PipelineBuildService) GetBuildStatus(buildID uint) (string, error) {
+	var build model.PipelineBuild
+	if err := global.GVA_DB.Select("status").First(&build, buildID).Error; err != nil {
+		return "", err
+	}
+	return build.Status, nil
+}

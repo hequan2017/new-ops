@@ -11,8 +11,8 @@ type RouterGroup struct{}
 
 var RouterGroupApp = new(RouterGroup)
 
-// Init 注册流水线路由（private 组，casbin 鉴权）
-func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
+// Init 注册流水线路由：定义与构建操作走 private（casbin）；SSE 日志流走 public（query token 自验，与 term/ws 一致）
+func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 	pl := Router.Group("pipeline")
 	{
 		pl.POST("", v1.PipelineApi.CreatePipeline)
@@ -29,4 +29,5 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		build.POST("list", v1.PipelineBuildApi.GetBuildList)
 		build.GET("logs", v1.PipelineBuildApi.GetBuildLogs)
 	}
+	Public.GET("sse/pipeline/build/logs", v1.PipelineBuildApi.StreamBuildLogs)
 }

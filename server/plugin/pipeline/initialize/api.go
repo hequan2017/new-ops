@@ -21,6 +21,7 @@ func Api(ctx context.Context) {
 		{Path: "/pipeline/build/approve", Description: "审批放行", ApiGroup: "流水线", Method: "POST"},
 		{Path: "/pipeline/build/list", Description: "构建分页列表", ApiGroup: "流水线", Method: "POST"},
 		{Path: "/pipeline/build/logs", Description: "构建日志", ApiGroup: "流水线", Method: "GET"},
+		{Path: "/sse/pipeline/build/logs", Description: "构建日志 SSE 实时流", ApiGroup: "流水线", Method: "GET"},
 	}
 	utils.RegisterApis(entities...)
 }
