@@ -3,8 +3,11 @@
 package k8s
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 
+	"github.com/hequan2017/new-ops/server/plugin/k8s/initialize"
 	interfaces "github.com/hequan2017/new-ops/server/utils/plugin/v2"
 )
 
@@ -18,6 +21,12 @@ func init() {
 	interfaces.Register(Plugin)
 }
 
-// Register 插件加载时调用；M4 起实现路由/菜单/API/字典初始化。
+// Register 插件加载时调用：表迁移 → API 种子 → 授权种子 → 路由
 func (p *plugin) Register(group *gin.Engine) {
+	ctx := context.Background()
+	initialize.Gorm(ctx)
+	initialize.Api(ctx)
+	initialize.Menu(ctx)
+	initialize.Casbin()
+	initialize.Router(group)
 }
