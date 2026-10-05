@@ -68,8 +68,6 @@ func (s *MonitorService) evalMetricRule(rule *model.MonitorAlertRule) {
 	for i, p := range pts {
 		vals[i] = p.Value
 	}
-	host := ruleAssetName(rule.AssetID)
-	_ = host // 摘要在 fireAlert 内统一拼装
 	if evaluateMetric(vals, rule.Operator, rule.Threshold) {
 		s.fireAlert(rule, fmt.Sprintf("%s %s %.2f（当前 %.2f，连续 %d 次）",
 			rule.MetricName, rule.Operator, rule.Threshold, vals[0], dur), vals[0])
@@ -89,11 +87,11 @@ func (s *MonitorService) evalPortRule(rule *model.MonitorAlertRule) {
 	if conn != nil {
 		_ = conn.Close()
 	}
-	host := ruleAssetName(rule.AssetID)
+	// 摘要中主机名由 fireAlert 统一拼装
 	if !reachable {
-		s.fireAlert(rule, fmt.Sprintf("%s:%d 端口不可达", host, rule.Port), 0)
+		s.fireAlert(rule, fmt.Sprintf("端口 %d 不可达", rule.Port), 0)
 	} else {
-		s.resolveAlert(rule, fmt.Sprintf("%s:%d 端口恢复可达", host, rule.Port))
+		s.resolveAlert(rule, fmt.Sprintf("端口 %d 恢复可达", rule.Port))
 	}
 }
 
