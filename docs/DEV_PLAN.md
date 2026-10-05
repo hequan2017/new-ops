@@ -306,7 +306,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 ### M4 任务清单（container C1 + k8s K1/K2，细节见第六节 6.2/6.3）
 
-- [ ] container：endpoint CRUD + TLS 凭据入保险库 + 30s 巡检；容器生命周期与创建参数（端口/挂载/环境变量/资源限制）
+- [ ] container：endpoint CRUD + TLS 凭据入保险库 + 30s 巡检（进行中：场32 交付——docker_endpoint 模型、NewDockerClient（unix 直连/TCP+TLS，v28 WithTLSClientConfig 直收 PEM，凭据保险库 docker_tls 解密 JSON{ca,cert,key}）、PingEndpoint+StartInspectLoop 30s 合并巡检（并发5）、五接口+种子+前端接入点页（35s 轻刷新）；Docker SDK v28.0.4 登记 3.5（go-connections 钉 v0.5.0 修 Windows 编译）；真机：unix socket 巡检在线 API 1.54、离线节点状态回写、重名拦截；剩余：容器生命周期与创建参数）
 - [ ] container：日志流 + exec 终端（WebSocket 桥接）；inspect 回写 + docker events 订阅
 - [ ] k8s：集群注册（kubeconfig 加密）+ 连接测试 + 连接池；集群总览（metrics-server 用量）；Node 管理（cordon/drain）
 - [ ] k8s：工作负载（列表/YAML/扩缩容/滚动重启）；Pod（列表/详情/日志/WebShell/删除）；ConfigMap/Secret(脱敏)/PVC/Service/Ingress/Event
@@ -552,3 +552,4 @@ web/src/plugin/asset/
 | 2026-10-04 | 29 | M3 场29（触发器+历史）：webhook 触发全链（public 组 /pipeline/webhook/:token，令牌即凭据 uuid 生成/404 语义防枚举、params 渲染快照、编排弹窗开关+地址复制）+ 构建重跑（restart 复用原参数对当前定义生成新快照，前端已结束构建「重跑」按钮）；真机验证：错误令牌拒绝、无登录态触发 HOOK=CICD operator=webhook、重跑 buildNo 递归递增 operator=admin，数据已清理。构建历史项整体勾选；触发器剩 cron（需打通 plugin-tool timer 入口） | 下一场：cron 触发接入底座定时任务、并行阶段；M3 收官后过工单闭环 |
 | 2026-10-04 | 30 | M3 场30（cron 触发）：SyncPipelineCron 幂等同步 global.GVA_Timer（robfig 标准 5 段/@every、RemoveTaskByName→AddTaskByFunc）挂接 Create/Update/Delete + 启动 initialize.Timer 全量恢复 + 前端开关/表达式输入；真机验证：@every 10s 25s 自动 2 次构建 operator=cron、删除流水线任务即摘不再触发，数据已清理。触发器项整体勾选（手动/webhook/cron）| 下一场：并行阶段；工单发版闭环依赖 M7 workflow 按里程碑顺延 |
 | 2026-10-05 | 31 | **M3 场31（并行阶段，执行器收官）**：PipelineStage.parallel 位 + runStageSteps 串行/并发双路径（信号量上限 10、首败 cancel 快速中断兄弟步骤、ContinueOnError 跑完收集）+ 前端「步骤并发」checkbox；修复两处真机暴露缺陷：并发快速失败未传导 cancel（run1 误传外层 ctx）、取消路径双重收档竞态；真机验证：并行双步日志交错成功、exit3 快速失败后 sleep6 兄弟步骤被中断无输出、失败正确记录，数据已清理。**执行器项整体勾选；M3 仅剩工单发版闭环（依赖 M7 workflow 顺延）** | 下一场：M4 开工（container C1：endpoint CRUD+TLS 凭据入保险库+30s 巡检）；工单闭环等 M7 |
+| 2026-10-05 | 32 | **M4 开工（场32，container C1）**：Docker 接入点管理全链——SDK v28.0.4 登记 3.5（go-connections 钉 v0.5.0 修 Windows 编译缺 DialPipe）、docker_endpoint 模型、NewDockerClient（unix 直连/TCP+TLS 凭据保险库 docker_tls 解密 JSON{ca,cert,key}）、PingEndpoint+30s 合并巡检循环（并发5）、五接口+菜单/API/casbin 种子（错误码 1401-1406）、前端接入点页；真机验证：unix socket 巡检在线 API 1.54、离线节点回写、重名拦截；演示数据保留 local-docker | 下一场：容器列表/生命周期（启停删+创建参数）→ 日志流+exec 终端 |
