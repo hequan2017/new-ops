@@ -99,6 +99,7 @@
               <el-input v-model="st.name" placeholder="阶段名称" style="width: 200px" />
               <el-checkbox v-model="st.approval">人工审批</el-checkbox>
               <el-checkbox v-model="st.continueOnError">失败继续</el-checkbox>
+              <el-checkbox v-model="st.parallel">步骤并发</el-checkbox>
               <el-button link type="danger" style="margin-left: auto" @click="form.stages.splice(si, 1)">删阶段</el-button>
             </div>
           </template>
@@ -220,7 +221,7 @@
   }
 
   const emptyStep = () => ({ name: '', type: 'shell', shellContent: '', httpUrl: '', timeoutSec: 0 })
-  const emptyStage = () => ({ name: '', approval: false, continueOnError: false, steps: [emptyStep()] })
+  const emptyStage = () => ({ name: '', approval: false, continueOnError: false, parallel: false, steps: [emptyStep()] })
 
   const dialogVisible = ref(false)
   const saving = ref(false)
@@ -236,6 +237,7 @@
         name: s.name,
         approval: !!s.approval,
         continueOnError: !!s.continueOnError,
+        parallel: !!s.parallel,
         steps: (s.steps || []).map((t) => ({ ...t }))
       }))
       Object.assign(form, { ...row, stages: stages.length ? stages : [emptyStage()] })

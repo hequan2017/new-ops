@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,6 +52,7 @@ type snapshotStage struct {
 	Name            string         `json:"name"`
 	Approval        bool           `json:"approval"`
 	ContinueOnError bool           `json:"continueOnError"`
+	Parallel        bool           `json:"parallel"`
 	Steps           []snapshotStep `json:"steps"`
 }
 
@@ -87,6 +89,7 @@ func (s *PipelineBuildService) CreateBuild(pipelineID uint, params map[string]st
 			Name:            st.Name,
 			Approval:        st.Approval,
 			ContinueOnError: st.ContinueOnError,
+			Parallel:        st.Parallel,
 			Steps:           make([]snapshotStep, 0, len(st.Steps)),
 		}
 		for _, sp := range st.Steps {
@@ -181,16 +184,12 @@ func (s *PipelineBuildService) run(buildID uint) {
 		}
 		s.appendLog(buildID, st.Name, "", model.LogSystem,
 			fmt.Sprintf("开始阶段 %d/%d「%s」", si+1, len(snap.Stages), st.Name))
-		for _, sp := range st.Steps {
-			if err := s.runStep(ctx, buildID, st.Name, sp); err != nil {
-				s.appendLog(buildID, st.Name, sp.Name, model.LogSystem, fmt.Sprintf("步骤失败: %v", err))
-				if st.ContinueOnError {
-					s.appendLog(buildID, st.Name, "", model.LogSystem, "阶段配置失败继续，跳过该错误")
-					continue
-				}
-				failed = true
-				break
+		if err := s.runStageSteps(ctx, buildID, &st); err != nil {
+			if ctx.Err() != nil {
+				return // 用户取消：CancelBuild 已收档为已取消
 			}
+			failed = true
+			break
 		}
 	}
 	if failed {
@@ -198,6 +197,82 @@ func (s *PipelineBuildService) run(buildID uint) {
 		return
 	}
 	s.finish(buildID, model.BuildSuccess)
+}
+
+// maxParallelSteps 阶段内步骤并发上限
+const maxParallelSteps = 10
+
+// runStageSteps 执行阶段内步骤：Parallel 时并发（信号量上限，首败快速中断兄弟步骤），
+// 否则串行。continueOnError=true 时吞掉失败（记日志）返回 nil。
+func (s *PipelineBuildService) runStageSteps(ctx context.Context, buildID uint, st *snapshotStage) error {
+	run1 := func(sp snapshotStep) error {
+		if err := s.runStep(ctx, buildID, st.Name, sp); err != nil {
+			s.appendLog(buildID, st.Name, sp.Name, model.LogSystem, fmt.Sprintf("步骤失败: %v", err))
+			return err
+		}
+		return nil
+	}
+	if !st.Parallel || len(st.Steps) <= 1 {
+		for _, sp := range st.Steps {
+			if err := run1(sp); err != nil {
+				if st.ContinueOnError {
+					s.appendLog(buildID, st.Name, "", model.LogSystem, "阶段配置失败继续，跳过该错误")
+					continue
+				}
+				return err
+			}
+		}
+		return nil
+	}
+	s.appendLog(buildID, st.Name, "", model.LogSystem,
+		fmt.Sprintf("阶段「%s」步骤并发执行（%d 步，上限 %d）", st.Name, len(st.Steps), maxParallelSteps))
+	stepCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	errCh := make(chan error, len(st.Steps))
+	sem := make(chan struct{}, maxParallelSteps)
+	var wg sync.WaitGroup
+	for _, sp := range st.Steps {
+		wg.Add(1)
+		go func(sp snapshotStep) {
+			defer wg.Done()
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-stepCtx.Done():
+				errCh <- stepCtx.Err()
+				return
+			}
+			if err := run1(sp); err != nil {
+				errCh <- err
+				if !st.ContinueOnError {
+					cancel() // 快速失败：中断兄弟步骤
+				}
+				return
+			}
+			errCh <- nil
+		}(sp)
+	}
+	wg.Wait()
+	close(errCh)
+	var firstErr error
+	for e := range errCh {
+		if e != nil && !errors.Is(e, context.Canceled) {
+			firstErr = e // 兄弟步骤因快速失败被取消的错误不计
+		}
+	}
+	if firstErr != nil {
+		if st.ContinueOnError {
+			s.appendLog(buildID, st.Name, "", model.LogSystem, "阶段配置失败继续，跳过并发步骤失败")
+			return nil
+		}
+		return firstErr
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err() // 上层取消（已由 CancelBuild 收档）
+	default:
+	}
+	return nil
 }
 
 // runStep 执行单步骤：shell（SSH 到绑定资产）或 http
