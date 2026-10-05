@@ -53,19 +53,18 @@ func (s *K8sClusterService) CreateCluster(c *model.K8sCluster, kubeconfig string
 	if err != nil {
 		return err
 	}
-	// 连接测试：Discovery ServerVersion（超时由 rest.Config 默认控制）
-	sv, err := cs.Discovery().ServerVersion()
-	if err != nil {
-		return fmt.Errorf("集群连接测试失败: %w", err)
+	// 连接测试：失败不阻断注册（网络波动常见），状态记为离线，可随时 TestCluster 重测
+	c.Server = server
+	c.Status = model.K8sStatusOffline
+	if sv, err := cs.Discovery().ServerVersion(); err == nil {
+		c.Version = sv.GitVersion
+		c.Status = model.K8sStatusOnline
 	}
 	cipher, err := crypto.Encrypt(kubeconfig)
 	if err != nil {
 		return err
 	}
 	c.KubeconfigCipher = cipher
-	c.Server = server
-	c.Version = sv.GitVersion
-	c.Status = model.K8sStatusOnline
 	return global.GVA_DB.Create(c).Error
 }
 
