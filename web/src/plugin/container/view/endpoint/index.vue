@@ -32,11 +32,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="notes" label="备注" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" width="230" fixed="right">
+        <el-table-column label="操作" width="290" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
             <el-button link type="success" :loading="checkingId === row.ID" @click="onCheck(row)">巡检</el-button>
             <el-button link type="primary" @click="openContainers(row)">容器</el-button>
+            <el-button link type="warning" @click="openEvents(row)">事件</el-button>
             <el-button link type="danger" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -186,6 +187,23 @@
         :container-id="shellCid"
       />
     </el-drawer>
+
+    <el-drawer v-model="eventVisible" :title="`容器事件 · ${eventEndpoint || '全部接入点'}`" size="60%">
+      <el-table :data="eventList" v-loading="eventLoading" stripe size="small">
+        <el-table-column label="时间" width="170">
+          <template #default="{ row }">{{ (row.occurredAt || '').replace('T', ' ').slice(0, 19) }}</template>
+        </el-table-column>
+        <el-table-column prop="action" label="动作" width="110">
+          <template #default="{ row }">
+            <el-tag :type="{ start: 'success', die: 'danger', destroy: 'danger', stop: 'info' }[row.action] || 'warning'" size="small">
+              {{ row.action }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="containerName" label="容器" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="containerId" label="ID" width="110" />
+      </el-table>
+    </el-drawer>
   </div>
 </template>
 
@@ -196,6 +214,7 @@
     createEndpoint, updateEndpoint, deleteEndpoint, getEndpointList, checkEndpoint
   } from '@/plugin/container/api/dockerEndpoint'
   import { getContainerList, containerAction, createContainer } from '@/plugin/container/api/container'
+  import { getEventList } from '@/plugin/container/api/dockerEvent'
   import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
   import ContainerLogs from '@/plugin/container/components/ContainerLogs.vue'
   import { getCredentialList } from '@/plugin/asset/api/credential'
@@ -398,6 +417,24 @@
     shellCid.value = row.id
     shellName.value = prettyName(row.names)
     logDrawerVisible.value = true
+  }
+
+  // ---------- 容器事件 ----------
+  const eventVisible = ref(false)
+  const eventEndpoint = ref('')
+  const eventList = ref([])
+  const eventLoading = ref(false)
+
+  const openEvents = async (row) => {
+    eventEndpoint.value = row.name
+    eventVisible.value = true
+    eventLoading.value = true
+    try {
+      const res = await getEventList({ endpointId: row.ID })
+      if (res.code === 0) eventList.value = res.data || []
+    } finally {
+      eventLoading.value = false
+    }
   }
 
   onMounted(() => {
