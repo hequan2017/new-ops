@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -94,11 +95,12 @@ func (s *EndpointService) PullEvents(ep *model.DockerEndpoint) {
 }
 
 // container_events_options 构造 Events 过滤（container 类型 + Since/Until）
+// Since/Until 用 unix 秒（daemon 对 RFC3339 纳秒格式回放解析不稳，官方 CLI 同用 unix 秒）
 func container_events_options(since, until time.Time) events.ListOptions {
 	return events.ListOptions{
 		Filters: filters.NewArgs(filters.Arg("type", "container")),
-		Since:   since.Format(time.RFC3339Nano),
-		Until:   until.Format(time.RFC3339Nano),
+		Since:   fmt.Sprintf("%d", since.Unix()),
+		Until:   fmt.Sprintf("%d", until.Unix()),
 	}
 }
 
