@@ -32,10 +32,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="notes" label="备注" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" width="190" fixed="right">
+        <el-table-column label="操作" width="230" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
             <el-button link type="success" :loading="checkingId === row.ID" @click="onCheck(row)">巡检</el-button>
+            <el-button link type="primary" @click="openContainers(row)">容器</el-button>
             <el-button link type="danger" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -69,6 +70,39 @@
         <el-button type="primary" @click="submitForm">确 定</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer v-model="ctVisible" :title="`容器 · ${ctEndpoint?.name || ''}`" size="70%">
+      <el-form inline>
+        <el-form-item>
+          <el-checkbox v-model="ctAll" @change="loadContainers">含已停止</el-checkbox>
+        </el-form-item>
+        <el-form-item>
+          <el-button :loading="ctLoading" @click="loadContainers">刷 新</el-button>
+        </el-form-item>
+      </el-form>
+      <el-table :data="ctList" v-loading="ctLoading" stripe size="small">
+        <el-table-column prop="id" label="ID" width="100" />
+        <el-table-column label="名称" min-width="140">
+          <template #default="{ row }">{{ prettyName(row.names) }}</template>
+        </el-table-column>
+        <el-table-column prop="image" label="镜像" min-width="160" show-overflow-tooltip />
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.state === 'running' ? 'success' : 'info'" size="small">{{ row.state }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="详情" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="ports" label="端口" min-width="140" show-overflow-tooltip />
+        <el-table-column label="操作" width="210" fixed="right">
+          <template #default="{ row }">
+            <el-button v-if="row.state !== 'running'" link type="success" @click="doAction(row, 'start')">启动</el-button>
+            <el-button v-if="row.state === 'running'" link type="warning" @click="doAction(row, 'stop')">停止</el-button>
+            <el-button v-if="row.state === 'running'" link type="primary" @click="doAction(row, 'restart')">重启</el-button>
+            <el-button link type="danger" @click="doRemove(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-drawer>
   </div>
 </template>
 
@@ -78,6 +112,7 @@
   import {
     createEndpoint, updateEndpoint, deleteEndpoint, getEndpointList, checkEndpoint
   } from '@/plugin/container/api/dockerEndpoint'
+  import { getContainerList, containerAction } from '@/plugin/container/api/container'
   import { getCredentialList } from '@/plugin/asset/api/credential'
 
   defineOptions({ name: 'containerEndpoint' })
@@ -155,6 +190,61 @@
       if (res.code === 0) {
         ElMessage.success('删除成功')
         getList()
+      }
+    })
+  }
+
+  // ---------- 容器抽屉 ----------
+  const ctVisible = ref(false)
+  const ctEndpoint = ref(null)
+  const ctList = ref([])
+  const ctLoading = ref(false)
+  const ctAll = ref(true)
+
+  const prettyName = (names) => (names && names.length ? names[0].replace(/^\//, '') : '—')
+
+  const openContainers = (row) => {
+    ctEndpoint.value = row
+    ctVisible.value = true
+    loadContainers()
+  }
+
+  const loadContainers = async () => {
+    if (!ctEndpoint.value) return
+    ctLoading.value = true
+    try {
+      const res = await getContainerList({ endpointId: ctEndpoint.value.ID, all: ctAll.value })
+      if (res.code === 0) ctList.value = res.data || []
+    } finally {
+      ctLoading.value = false
+    }
+  }
+
+  const doAction = async (row, action) => {
+    const res = await containerAction({
+      endpointId: ctEndpoint.value.ID,
+      id: row.id,
+      action
+    })
+    if (res.code === 0) {
+      ElMessage.success(`${action} 成功`)
+      loadContainers()
+    }
+  }
+
+  const doRemove = (row) => {
+    ElMessageBox.confirm(`确定删除容器 ${prettyName(row.names)} 吗？`, '危险操作', {
+      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+    }).then(async () => {
+      const res = await containerAction({
+        endpointId: ctEndpoint.value.ID,
+        id: row.id,
+        action: 'remove',
+        force: true
+      })
+      if (res.code === 0) {
+        ElMessage.success('已删除')
+        loadContainers()
       }
     })
   }
