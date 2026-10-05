@@ -94,5 +94,6 @@
   "/src/plugin/term/components/LogTail.vue": "LogTail",
   "/src/plugin/term/components/XtermShell.vue": "XtermShell",
   "/src/plugin/term/view/audit/index.vue": "TermAudit",
-  "/src/plugin/term/view/sftp/index.vue": "TermSftp"
+  "/src/plugin/term/view/sftp/index.vue": "TermSftp",
+  "/src/plugin/workflow/view/ticket/index.vue": "workflowTicket"
 }
