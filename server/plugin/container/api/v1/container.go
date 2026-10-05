@@ -87,3 +87,22 @@ func (a *containerApi) CreateContainer(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"id": id}, "创建成功", c)
 }
+
+// GetEventList 容器事件列表
+// @Tags DockerContainer
+// @Summary 容器事件列表（巡检循环区间拉取落库，倒序 200 条）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param endpointId query int false "接入点ID（空=全部）"
+// @Param action query string false "动作过滤（如 start/die）"
+// @Success 200 {object} response.Response{data=[]model.DockerEventLog} "获取成功"
+// @Router /container/event/list [get]
+func (a *containerApi) GetEventList(c *gin.Context) {
+	endpointID, _ := strconv.ParseUint(c.Query("endpointId"), 10, 64)
+	list, err := ctSvc.GetEventList(uint(endpointID), c.Query("action"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}

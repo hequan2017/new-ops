@@ -136,7 +136,7 @@ func (s *EndpointService) markStatus(id uint, status, version string) {
 	global.GVA_DB.Model(&model.DockerEndpoint{}).Where("id = ?", id).Updates(updates)
 }
 
-// CheckAll 30s 合并巡检入口：并发 5 遍历全部接入点
+// CheckAll 30s 合并巡检入口：并发 5 遍历全部接入点（Ping + 事件区间拉取）
 func (s *EndpointService) CheckAll() {
 	var list []model.DockerEndpoint
 	if err := global.GVA_DB.Find(&list).Error; err != nil {
@@ -151,9 +151,11 @@ func (s *EndpointService) CheckAll() {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			_, _, _ = s.PingEndpoint(&ep)
+			s.PullEvents(&ep)
 		}(list[i])
 	}
 	wg.Wait()
+	s.pruneEventLogs()
 }
 
 // StartInspectLoop 启动 30s 合并巡检循环（进程生命周期）

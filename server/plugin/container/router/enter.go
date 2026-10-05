@@ -27,6 +27,7 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		cc.GET("list", v1.ContainerApi.ListContainers)
 		cc.POST("action", v1.ContainerApi.ContainerAction)
 	}
+	Router.GET("container/event/list", v1.ContainerApi.GetEventList)
 	Public.GET("container/container/logws", v1.ContainerApi.LogsWS)
 	Public.GET("container/container/execws", v1.ContainerApi.ExecWS)
 }

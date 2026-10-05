@@ -32,6 +32,7 @@ func Api(ctx context.Context) {
 		{Path: "/container/container/action", Description: "容器生命周期动作", ApiGroup: "容器管理", Method: "POST"},
 		{Path: "/container/container/logws", Description: "容器日志流 WebSocket", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/container/execws", Description: "容器 exec 终端 WebSocket", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/event/list", Description: "容器事件列表", ApiGroup: "容器管理", Method: "GET"},
 	}
 	utils.RegisterApis(entities...)
 }

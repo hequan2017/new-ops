@@ -24,5 +24,6 @@ type DockerEndpoint struct {
 	Status          string     `json:"status" gorm:"comment:巡检状态;default:未知;index"`
 	DockerVersion   string     `json:"dockerVersion" gorm:"comment:Docker版本"`
 	LastCheckAt     *time.Time `json:"lastCheckAt" gorm:"comment:最近巡检时间"`
+	LastEventAt     *time.Time `json:"lastEventAt" gorm:"comment:事件拉取水位"`
 	Notes           string     `json:"notes" gorm:"type:text;comment:备注"`
 }

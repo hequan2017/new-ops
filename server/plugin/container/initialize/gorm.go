@@ -13,6 +13,7 @@ import (
 func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.DockerEndpoint),
+		new(model.DockerEventLog),
 	)
 	if err != nil {
 		global.GVA_LOG.Error("container 注册表失败: " + err.Error())
