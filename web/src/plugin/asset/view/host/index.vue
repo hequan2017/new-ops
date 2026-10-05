@@ -90,12 +90,13 @@
             <el-tag :type="statusTagType(row.status)">{{ row.status || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="190" fixed="right">
+        <el-table-column label="操作" width="230" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" icon="edit" @click="openDialog(row)">编辑</el-button>
             <el-button link type="success" icon="aim" @click="openCollect(row)">采集</el-button>
             <el-button link type="success" icon="platform" @click="openTerm(row)">终端</el-button>
             <el-button link type="warning" icon="document" @click="openLogTail(row)">日志</el-button>
+            <el-button link type="primary" icon="data-line" @click="openPerf(row)">监控</el-button>
             <el-button link type="warning" icon="clock" @click="openHistory(row)">历史</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
@@ -228,6 +229,10 @@
           :host-label="termHost"
         />
       </div>
+    </el-drawer>
+
+    <el-drawer v-model="perfVisible" :title="`性能监控 · ${perfHost}`" size="60%">
+      <PerfChart v-if="perfVisible" :asset-id="perfAssetId" :label="perfHost" />
     </el-drawer>
 
     <el-drawer v-model="logVisible" :title="`日志 tail · ${logHost}`" size="70%">
@@ -389,6 +394,7 @@
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import XtermShell from '@/plugin/term/components/XtermShell.vue'
   import LogTail from '@/plugin/term/components/LogTail.vue'
+  import PerfChart from '@/plugin/monitor/components/PerfChart.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { reactive, ref } from 'vue'
   import { discoverHosts, importDiscoveredHosts } from '@/plugin/asset/api/assetHost'
@@ -591,6 +597,16 @@
   }
 
   // 远程日志 tail
+  const perfVisible = ref(false)
+  const perfAssetId = ref(0)
+  const perfHost = ref('')
+
+  const openPerf = (row) => {
+    perfAssetId.value = row.ID
+    perfHost.value = `${row.hostname}（${row.ip}）`
+    perfVisible.value = true
+  }
+
   const logVisible = ref(false)
   const logConnected = ref(false)
   const logHostId = ref(0)

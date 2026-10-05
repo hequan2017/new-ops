@@ -88,6 +88,7 @@
   "/src/plugin/job/view/varGroup/index.vue": "jobVarGroup",
   "/src/plugin/k8s/components/ResourceBrowser.vue": "ResourceBrowser",
   "/src/plugin/k8s/view/cluster/index.vue": "K8sCluster",
+  "/src/plugin/monitor/components/PerfChart.vue": "PerfChart",
   "/src/plugin/pipeline/view/pipeline/index.vue": "pipelineList",
   "/src/plugin/term/components/LogTail.vue": "LogTail",
   "/src/plugin/term/components/XtermShell.vue": "XtermShell",
