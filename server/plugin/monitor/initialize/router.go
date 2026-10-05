@@ -21,6 +21,8 @@ import (
 func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.MonitorMetric),
+		new(model.MonitorAlertRule),
+		new(model.MonitorAlertEvent),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "monitor 注册表失败!")
