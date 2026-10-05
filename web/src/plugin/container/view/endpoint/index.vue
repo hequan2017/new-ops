@@ -32,13 +32,14 @@
           </template>
         </el-table-column>
         <el-table-column prop="notes" label="备注" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" width="350" fixed="right">
+        <el-table-column label="操作" width="400" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
             <el-button link type="success" :loading="checkingId === row.ID" @click="onCheck(row)">巡检</el-button>
             <el-button link type="primary" @click="openContainers(row)">容器</el-button>
             <el-button link type="warning" @click="openEvents(row)">事件</el-button>
             <el-button link type="success" @click="openImages(row)">镜像</el-button>
+            <el-button link type="warning" @click="openResources(row)">网络卷</el-button>
             <el-button link type="danger" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -104,9 +105,68 @@
             <el-button v-if="row.state === 'running'" link type="warning" @click="doAction(row, 'stop')">停止</el-button>
             <el-button v-if="row.state === 'running'" link type="primary" @click="doAction(row, 'restart')">重启</el-button>
             <el-button link type="danger" @click="doRemove(row)">删除</el-button>
+            <el-button link type="primary" @click="openStats(row)">统计</el-button>
           </template>
         </el-table-column>
       </el-table>
+    </el-drawer>
+
+    <el-drawer v-model="statsVisible" :title="`资源统计 · ${statsName}`" size="45%" append-to-body>
+      <el-descriptions :column="2" border v-if="statsData">
+        <el-descriptions-item label="CPU 使用">{{ statsData.cpuPercent }}%</el-descriptions-item>
+        <el-descriptions-item label="内存">{{ statsData.memUsedMb }} / {{ statsData.memLimitMb }} MB（{{ statsData.memPercent }}%）</el-descriptions-item>
+        <el-descriptions-item label="网络接收">{{ statsData.netRxMb }} MB</el-descriptions-item>
+        <el-descriptions-item label="网络发送">{{ statsData.netTxMb }} MB</el-descriptions-item>
+        <el-descriptions-item label="块读">{{ statsData.blockReadMb }} MB</el-descriptions-item>
+        <el-descriptions-item label="块写">{{ statsData.blockWriteMb }} MB</el-descriptions-item>
+        <el-descriptions-item label="进程数">{{ statsData.pids }}</el-descriptions-item>
+      </el-descriptions>
+      <el-empty v-else description="加载中" />
+    </el-drawer>
+
+    <el-drawer v-model="resVisible" :title="`网络与卷 · ${ctEndpoint?.name || ''}`" size="65%">
+      <el-tabs v-model="resTab">
+        <el-tab-pane label="网络" name="networks">
+          <el-form inline>
+            <el-form-item>
+              <el-input v-model="netForm.name" placeholder="网络名" style="width: 140px" />
+              <el-input v-model="netForm.subnet" placeholder="子网（选配）如 172.30.0.0/16" style="width: 220px; margin-left: 6px" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="doCreateNetwork">创建</el-button>
+              <el-button @click="loadNetworks">刷 新</el-button>
+            </el-form-item>
+          </el-form>
+          <el-table :data="networks" v-loading="netLoading" stripe size="small">
+            <el-table-column prop="name" label="名称" min-width="130" />
+            <el-table-column prop="driver" label="驱动" width="90" />
+            <el-table-column prop="subnet" label="子网" min-width="140" />
+            <el-table-column label="操作" width="80">
+              <template #default="{ row }">
+                <el-button v-if="!row.builtIn" link type="danger" @click="doRemoveNetwork(row)">删除</el-button>
+                <span v-else class="ops-text-muted">内置</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="卷" name="volumes">
+          <el-form inline>
+            <el-form-item>
+              <el-button :loading="volLoading" @click="loadVolumes">刷 新</el-button>
+            </el-form-item>
+          </el-form>
+          <el-table :data="volumes" v-loading="volLoading" stripe size="small">
+            <el-table-column prop="name" label="卷名" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="driver" label="驱动" width="100" />
+            <el-table-column prop="mountpoint" label="挂载点" min-width="220" show-overflow-tooltip />
+            <el-table-column label="操作" width="80">
+              <template #default="{ row }">
+                <el-button link type="danger" @click="doRemoveVolume(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
     </el-drawer>
 
     <el-dialog v-model="createVisible" title="创建容器" width="680px" append-to-body>
@@ -245,7 +305,8 @@
   import {
     createEndpoint, updateEndpoint, deleteEndpoint, getEndpointList, checkEndpoint
   } from '@/plugin/container/api/dockerEndpoint'
-  import { getContainerList, containerAction, createContainer, getImageList, pullImage, pullStatus, removeImage } from '@/plugin/container/api/container'
+  import { getContainerList, containerAction, createContainer, getImageList, pullImage, pullStatus, removeImage,
+    getNetworkList, createNetwork, removeNetwork, getVolumeList, removeVolume, getContainerStats } from '@/plugin/container/api/container'
   import { getEventList } from '@/plugin/container/api/dockerEvent'
   import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
   import ContainerLogs from '@/plugin/container/components/ContainerLogs.vue'
@@ -503,6 +564,93 @@
       if (res.code === 0) {
         ElMessage.success('已删除')
         loadImages()
+      }
+    })
+  }
+
+  // ---------- 容器统计 ----------
+  const statsVisible = ref(false)
+  const statsName = ref('')
+  const statsData = ref(null)
+
+  const openStats = async (row) => {
+    statsName.value = prettyName(row.names)
+    statsData.value = null
+    statsVisible.value = true
+    const res = await getContainerStats({ endpointId: ctEndpoint.value.ID, id: row.id })
+    if (res.code === 0) statsData.value = res.data
+  }
+
+  // ---------- 网络与卷 ----------
+  const resVisible = ref(false)
+  const resTab = ref('networks')
+  const networks = ref([])
+  const netLoading = ref(false)
+  const netForm = reactive({ name: '', subnet: '' })
+  const volumes = ref([])
+  const volLoading = ref(false)
+
+  const openResources = (row) => {
+    ctEndpoint.value = row
+    resVisible.value = true
+    loadNetworks()
+    loadVolumes()
+  }
+
+  const loadNetworks = async () => {
+    netLoading.value = true
+    try {
+      const res = await getNetworkList({ endpointId: ctEndpoint.value.ID })
+      if (res.code === 0) networks.value = res.data || []
+    } finally {
+      netLoading.value = false
+    }
+  }
+
+  const doCreateNetwork = async () => {
+    if (!netForm.name.trim()) {
+      ElMessage.warning('请输入网络名')
+      return
+    }
+    const res = await createNetwork({ endpointId: ctEndpoint.value.ID, name: netForm.name, subnet: netForm.subnet || undefined })
+    if (res.code === 0) {
+      ElMessage.success('网络已创建')
+      netForm.name = ''
+      netForm.subnet = ''
+      loadNetworks()
+    }
+  }
+
+  const doRemoveNetwork = (row) => {
+    ElMessageBox.confirm(`确定删除网络「${row.name}」吗？`, '提示', {
+      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+    }).then(async () => {
+      const res = await removeNetwork({ endpointId: ctEndpoint.value.ID, name: row.name })
+      if (res.code === 0) {
+        ElMessage.success('已删除')
+        loadNetworks()
+      }
+    })
+  }
+
+  const loadVolumes = async () => {
+    volLoading.value = true
+    try {
+      const res = await getVolumeList({ endpointId: ctEndpoint.value.ID })
+      if (res.code === 0) volumes.value = res.data || []
+    } finally {
+      volLoading.value = false
+    }
+  }
+
+  const doRemoveVolume = (row) => {
+    ElMessageBox.confirm(`确定删除卷「${row.name}」吗？被容器占用的卷将被 daemon 拒绝。`, '提示', {
+      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+    }).then(async () => {
+      const res = await removeVolume({ endpointId: ctEndpoint.value.ID, name: row.name })
+      if (res.code === 0) {
+        ElMessage.success('已删除')
+        loadVolumes()
       }
     })
   }

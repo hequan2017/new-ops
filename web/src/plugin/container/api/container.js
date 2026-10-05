@@ -17,3 +17,15 @@ export const pullImage = (params) => service({ url: '/container/image/pull', met
 export const pullStatus = (params) => service({ url: '/container/image/pull-status', method: 'get', params })
 // 删除镜像
 export const removeImage = (params) => service({ url: '/container/image', method: 'delete', params })
+
+// 网络列表/创建/删除
+export const getNetworkList = (params) => service({ url: '/container/network/list', method: 'get', params })
+export const createNetwork = (data) => service({ url: '/container/network', method: 'post', data })
+export const removeNetwork = (params) => service({ url: '/container/network', method: 'delete', params })
+
+// 卷列表/删除
+export const getVolumeList = (params) => service({ url: '/container/volume/list', method: 'get', params })
+export const removeVolume = (params) => service({ url: '/container/volume', method: 'delete', params })
+
+// 容器即时统计
+export const getContainerStats = (params) => service({ url: '/container/container/stats', method: 'get', params })
