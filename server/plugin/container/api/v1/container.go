@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
+	"github.com/hequan2017/new-ops/server/plugin/container/service"
 )
 
 // ListContainers 容器列表
@@ -62,4 +63,27 @@ func (a *containerApi) ContainerAction(c *gin.Context) {
 		return
 	}
 	response.OkWithMessage("操作成功", c)
+}
+
+// CreateContainer 创建容器
+// @Tags DockerContainer
+// @Summary 创建容器（端口/挂载/环境变量/资源限制/重启策略）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body service.CreateContainerReq true "创建参数"
+// @Success 200 {object} response.Response{data=object} "创建成功（容器ID）"
+// @Router /container/container [post]
+func (a *containerApi) CreateContainer(c *gin.Context) {
+	var req service.CreateContainerReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	id, err := ctSvc.CreateContainer(req.EndpointID, req)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"id": id}, "创建成功", c)
 }

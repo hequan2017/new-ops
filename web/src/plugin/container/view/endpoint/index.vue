@@ -78,6 +78,7 @@
         </el-form-item>
         <el-form-item>
           <el-button :loading="ctLoading" @click="loadContainers">刷 新</el-button>
+          <el-button type="primary" @click="createVisible = true">创建容器</el-button>
         </el-form-item>
       </el-form>
       <el-table :data="ctList" v-loading="ctLoading" stripe size="small">
@@ -103,6 +104,69 @@
         </el-table-column>
       </el-table>
     </el-drawer>
+
+    <el-dialog v-model="createVisible" title="创建容器" width="680px" append-to-body>
+      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="90px">
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="容器名">
+              <el-input v-model="createForm.name" placeholder="留空自动分配" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="镜像" prop="image">
+              <el-input v-model="createForm.image" placeholder="如 nginx:alpine" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="端口映射">
+              <el-input v-model="portsText" type="textarea" :rows="2" placeholder="每行一条：8080:80/tcp" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="环境变量">
+              <el-input v-model="envsText" type="textarea" :rows="2" placeholder="每行一条：KEY=value" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="挂载">
+              <el-input v-model="mountsText" type="textarea" :rows="2" placeholder="每行一条：/host:/ct:rw" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="CPU核">
+              <el-input-number v-model="createForm.cpuCores" :min="0" :step="0.5" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="内存MB">
+              <el-input-number v-model="createForm.memoryMb" :min="0" :step="128" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="重启策略">
+              <el-select v-model="createForm.restartPolicy" style="width: 100%">
+                <el-option v-for="p in ['no', 'always', 'unless-stopped', 'on-failure']" :key="p" :label="p" :value="p" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="启动命令">
+              <el-input v-model="cmdText" placeholder="空格分隔，如 sleep 3600（可选）" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label-width="90px">
+              <el-checkbox v-model="createForm.startNow">创建后立即启动</el-checkbox>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+      <template #footer>
+        <el-button @click="createVisible = false">取 消</el-button>
+        <el-button type="primary" :loading="creating" @click="submitCreate">创 建</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -112,7 +176,7 @@
   import {
     createEndpoint, updateEndpoint, deleteEndpoint, getEndpointList, checkEndpoint
   } from '@/plugin/container/api/dockerEndpoint'
-  import { getContainerList, containerAction } from '@/plugin/container/api/container'
+  import { getContainerList, containerAction, createContainer } from '@/plugin/container/api/container'
   import { getCredentialList } from '@/plugin/asset/api/credential'
 
   defineOptions({ name: 'containerEndpoint' })
@@ -245,6 +309,55 @@
       if (res.code === 0) {
         ElMessage.success('已删除')
         loadContainers()
+      }
+    })
+  }
+
+  // ---------- 创建容器 ----------
+  const createVisible = ref(false)
+  const creating = ref(false)
+  const createFormRef = ref(null)
+  const createForm = reactive({
+    name: '',
+    image: '',
+    cpuCores: 0,
+    memoryMb: 0,
+    restartPolicy: 'no',
+    startNow: true
+  })
+  const portsText = ref('')
+  const envsText = ref('')
+  const mountsText = ref('')
+  const cmdText = ref('')
+  const createRules = { image: [{ required: true, message: '请输入镜像', trigger: 'blur' }] }
+
+  const lines = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean)
+
+  const submitCreate = () => {
+    createFormRef.value.validate(async (valid) => {
+      if (!valid) return
+      creating.value = true
+      try {
+        const res = await createContainer({
+          endpointId: ctEndpoint.value.ID,
+          name: createForm.name,
+          image: createForm.image,
+          command: cmdText.value ? cmdText.value.split(/\s+/) : [],
+          ports: lines(portsText.value),
+          envs: lines(envsText.value),
+          mounts: lines(mountsText.value),
+          cpuCores: createForm.cpuCores,
+          memoryMb: createForm.memoryMb,
+          restartPolicy: createForm.restartPolicy,
+          startNow: createForm.startNow
+        })
+        if (res.code === 0) {
+          ElMessage.success(`已创建：${res.data.id}`)
+          createVisible.value = false
+          loadContainers()
+        }
+      } finally {
+        creating.value = false
       }
     })
   }

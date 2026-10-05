@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
 
 	"github.com/hequan2017/new-ops/server/plugin/container/model"
 )
@@ -124,6 +125,112 @@ func (s *EndpointService) ensureEndpointAlive(endpointID uint) error {
 		return newCtErr(ErrCodeEpConnectFailed, fmt.Sprintf("接入点 %s 当前离线，请先巡检", ep.Name))
 	}
 	return nil
+}
+
+// CreateContainerReq 创建容器参数
+type CreateContainerReq struct {
+	EndpointID    uint     `json:"endpointId" binding:"required"`
+	Name          string   `json:"name"`          // 容器名（空则 Docker 自动分配）
+	Image         string   `json:"image"`         // 镜像（必填）
+	Command       []string `json:"command"`       // 覆盖入口命令
+	Ports         []string `json:"ports"`         // "8080:80/tcp" 形式
+	Envs          []string `json:"envs"`          // "K=V" 形式
+	Mounts        []string `json:"mounts"`        // "/host:/ct:rw" 形式（Binds）
+	CPUCores      float64  `json:"cpuCores"`      // CPU 核数上限（0 不限）
+	MemoryMB      int64    `json:"memoryMb"`      // 内存上限 MB（0 不限）
+	RestartPolicy string   `json:"restartPolicy"` // no/always/unless-stopped/on-failure
+	StartNow      bool     `json:"startNow"`
+}
+
+// ParsePortBinding 解析 "8080:80/tcp" → (hostPort, containerPort+proto)（纯逻辑，可单测）
+func ParsePortBinding(s string) (hostPort, portProto string, err error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", "", fmt.Errorf("端口映射为空")
+	}
+	proto := "tcp"
+	pair := s
+	if i := strings.LastIndex(s, "/"); i >= 0 {
+		proto = s[i+1:]
+		pair = s[:i]
+	}
+	parts := strings.SplitN(pair, ":", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("端口映射格式应为 host:ct[/proto]: %s", s)
+	}
+	return parts[0], parts[1] + "/" + proto, nil
+}
+
+// CreateContainer 创建容器（端口/环境/挂载/资源限制/重启策略）
+func (s *EndpointService) CreateContainer(endpointID uint, req CreateContainerReq) (string, error) {
+	if err := s.ensureEndpointAlive(endpointID); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(req.Image) == "" {
+		return "", newCtErr(ErrCodeEpAddrInvalid, "镜像不能为空")
+	}
+	ep, err := s.GetEndpoint(endpointID)
+	if err != nil {
+		return "", err
+	}
+	cl, err := s.NewDockerClient(ep)
+	if err != nil {
+		return "", err
+	}
+	defer cl.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	config := &container.Config{
+		Image: req.Image,
+		Env:   req.Envs,
+		Cmd:   req.Command,
+	}
+	hostCfg := &container.HostConfig{
+		Binds: req.Mounts,
+	}
+	// 端口映射：ParsePortBinding 产出 "80/tcp" 形式，nat.Port 直接作键
+	exposed := nat.PortSet{}
+	bindings := nat.PortMap{}
+	for _, p := range req.Ports {
+		host, portProto, perr := ParsePortBinding(p)
+		if perr != nil {
+			return "", newCtErr(ErrCodeEpAddrInvalid, perr.Error())
+		}
+		natPort := nat.Port(portProto)
+		exposed[natPort] = struct{}{}
+		bindings[natPort] = append(bindings[natPort], nat.PortBinding{HostPort: host})
+	}
+	if len(exposed) > 0 {
+		config.ExposedPorts = exposed
+		hostCfg.PortBindings = bindings
+	}
+	// 资源限制
+	if req.CPUCores > 0 {
+		hostCfg.NanoCPUs = int64(req.CPUCores * 1e9)
+	}
+	if req.MemoryMB > 0 {
+		hostCfg.Memory = req.MemoryMB * 1024 * 1024
+	}
+	// 重启策略
+	switch req.RestartPolicy {
+	case "", "no":
+		hostCfg.RestartPolicy = container.RestartPolicy{Name: "no"}
+	case "always", "unless-stopped", "on-failure":
+		hostCfg.RestartPolicy = container.RestartPolicy{Name: container.RestartPolicyMode(req.RestartPolicy)}
+	default:
+		return "", newCtErr(ErrCodeEpAddrInvalid, fmt.Sprintf("未知重启策略: %s", req.RestartPolicy))
+	}
+	created, err := cl.ContainerCreate(ctx, config, hostCfg, nil, nil, req.Name)
+	if err != nil {
+		return "", fmt.Errorf("创建容器失败: %w", err)
+	}
+	if req.StartNow {
+		if err := cl.ContainerStart(ctx, created.ID, container.StartOptions{}); err != nil {
+			return created.ID, fmt.Errorf("容器已创建但启动失败: %w", err)
+		}
+	}
+	return created.ID, nil
 }
 
 // shortenID 容器 ID 截断 12 位展示

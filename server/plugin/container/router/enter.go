@@ -23,6 +23,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	}
 	cc := Router.Group("container/container")
 	{
+		cc.POST("", v1.ContainerApi.CreateContainer)
 		cc.GET("list", v1.ContainerApi.ListContainers)
 		cc.POST("action", v1.ContainerApi.ContainerAction)
 	}

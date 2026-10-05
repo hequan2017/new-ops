@@ -24,6 +24,7 @@ func Casbin(ctx context.Context) {
 		{"/container/endpoint", "DELETE"},
 		{"/container/endpoint/list", "GET"},
 		{"/container/endpoint/check", "POST"},
+		{"/container/container", "POST"},
 		{"/container/container/list", "GET"},
 		{"/container/container/action", "POST"},
 	}
