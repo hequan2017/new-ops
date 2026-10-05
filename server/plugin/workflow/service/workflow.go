@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hequan2017/new-ops/server/global"
+	pipelineBuild "github.com/hequan2017/new-ops/server/plugin/pipeline/service"
 	"github.com/hequan2017/new-ops/server/plugin/workflow/model"
 	"gorm.io/gorm"
 )
@@ -212,16 +213,18 @@ func (s *WorkflowService) SubmitAction(instanceID uint, action, comment, operato
 		}
 	}
 	updates := map[string]any{"state": to}
+	finishedNow := false
 	if toFinal {
 		now := time.Now()
 		if toRejected {
 			updates["status"] = model.InstanceRejected
 		} else {
 			updates["status"] = model.InstanceFinished
+			finishedNow = true
 		}
 		updates["finished_at"] = &now
 	}
-	return &ins, global.GVA_DB.Transaction(func(tx *gorm.DB) error {
+	err = global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.WfInstance{}).Where("id = ?", instanceID).Updates(updates).Error; err != nil {
 			return err
 		}
@@ -229,6 +232,52 @@ func (s *WorkflowService) SubmitAction(instanceID uint, action, comment, operato
 			InstanceID: instanceID, FromState: ins.State, Action: action,
 			ToState: to, Operator: operator, Comment: comment,
 		}).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	// 发版闭环：审批完成（非驳回）的 release 工单自动触发流水线（M3 末项）
+	if finishedNow && ins.BizType == BizTypeRelease {
+		s.fireReleaseHook(&ins, operator)
+	}
+	return &ins, nil
+}
+
+// BizTypeRelease 发版工单业务类型约定
+const BizTypeRelease = "release"
+
+// ReleaseHookResult 发版钩子结果（测试与日志共用）
+type ReleaseHookResult struct {
+	Triggered bool
+	BuildNo   int
+	Err       error
+}
+
+// fireReleaseHook 解析工单参数触发流水线构建，结果落流转记录
+// params 约定：{"pipelineId":1,"params":{"k":"v"}}
+func (s *WorkflowService) fireReleaseHook(ins *model.WfInstance, operator string) {
+	var p struct {
+		PipelineID uint              `json:"pipelineId"`
+		Params     map[string]string `json:"params"`
+	}
+	if err := json.Unmarshal([]byte(ins.Params), &p); err != nil || p.PipelineID == 0 {
+		s.appendHookLog(ins.ID, "发版钩子未触发：参数缺少 pipelineId")
+		return
+	}
+	buildSvc := new(pipelineBuild.PipelineBuildService)
+	build, err := buildSvc.CreateBuild(p.PipelineID, p.Params, "工单#"+fmt.Sprintf("%d", ins.ID), ins.UserID)
+	if err != nil {
+		s.appendHookLog(ins.ID, "发版钩子触发失败: "+err.Error())
+		return
+	}
+	s.appendHookLog(ins.ID, fmt.Sprintf("发版钩子已触发流水线「%s」构建 #%d", build.PipelineName, build.BuildNo))
+}
+
+// appendHookLog 钩子结果记录（action=hook）
+func (s *WorkflowService) appendHookLog(instanceID uint, msg string) {
+	global.GVA_DB.Create(&model.WfActionLog{
+		InstanceID: instanceID, Action: "hook",
+		ToState: "pipeline", Operator: "system", Comment: msg,
 	})
 }
 
