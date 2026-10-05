@@ -406,7 +406,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 - [ ] 状态一致性：操作后 inspect 回写（DockerGPU 模式）+ docker events 事件订阅实时同步
 
 **C2（M8）**
-- [ ] 镜像管理：列表/拉取（进度流）/删除/tag/导入导出，与 gpu 镜像库联动
+- [ ] 镜像管理（进行中：场42 交付列表/异步拉取（内存状态表+轮询，重复拉取拦截，10min 限时）/删除 force+前端镜像抽屉（拉取轮询自动刷新）；真机 alpine 拉取 6s 完成-列表-删除宿主确认；剩余：tag/导入导出、gpu 联动）
 - [ ] 网络与卷：network 创建（子网/IPAM）、volume 列表与清理、端口转发规则管理（TCP/UDP、启停开关，docker-gpu-manage）
 - [ ] 资源统计：docker stats（CPU/内存/网络/块 IO）接入 monitor 图表化
 - [ ] Compose：compose 文件上传与校验、up/down/ps
@@ -563,3 +563,4 @@ web/src/plugin/asset/
 | 2026-10-05 | 39 | M6 场39（告警引擎）：metric 阈值（>/< 连续 N 次纯函数单测）+port TCP 探活+静默去重+恢复关闭+钉钉文本推送（仅 http(s)）；评估挂采集轮末尾；五接口+前端规则/事件双页签；真机：mem<99 触发、端口不可达触发、二轮静默不重复、非法指标拦截；修复告警两表漏注册 AutoMigrate 与摘要重复主机名。**monitor 三项全部完成（M6 monitor 部分 ✓，dbops 待 goInception 环境）** | 下一场：M7 workflow 工单引擎开工（状态机定义/实例/审批 API+页面）或配合 k8s K2 |
 | 2026-10-05 | 40 | M7 开工（场40，workflow 工单引擎）：三表+状态机引擎（ValidateDefinition 4 组单测/NextState 推导、审批节点动作受限、终态自动收档、cancel 撤回）+八接口+种子+前端工单中心（发起/审批/驳回/撤回+流转时间线+定义管理）；真机全链：定义→发起→submit→approve 归档、三类非法操作（迁移外动作/审批节点非审批动作/结束后操作）全部拦截，T2 驻 submitted 拒 reject 证明迁移表约束生效。**M7 workflow 首项勾选** | 下一场：工单发版闭环（审批通过→事件钩子触发流水线，补 M3 末项）；org 钉钉登录待企业配置 |
 | 2026-10-05 | 41 | M3 末项收官（场41，工单发版闭环）：release 工单审批完成 fireReleaseHook → pipeline CreateBuild（params {pipelineId,params}、触发结果落 hook 流转行、驳回不触发、钩子失败不阻断收档）；真机：工单 #3 approve→构建 #1 自动产生 operator=工单#3 状态成功。**M3 六项全部完成 ✓✓**；org/aiops 待企业配置与 LLM 密钥 | 下一场：C2 镜像管理（列表/拉取/删除）或 k8s K2 配合；M5 GPU 待显卡环境 |
+| 2026-10-05 | 42 | C2 提前（场42，镜像管理）：ListImages 实时/PullImage 异步（内存状态表+重复拦截）/RemoveImage force+四接口+种子+前端镜像抽屉（2s 轮询完成自动刷新）；真机：alpine 拉取 拉取中→成功 6s、列表出现 8MB、删除宿主无残留。附带：并行会话 k8s workload 半成品随本场上车（编译通过）；tag/导入导出/gpu 联动留后续 | 下一场：C2 网络与卷/资源统计，或 k8s K2 收尾配合；下会话从 git log 最新进度接续 |
