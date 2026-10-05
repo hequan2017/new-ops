@@ -22,17 +22,19 @@ type wsCtl struct {
 	Rows int    `json:"rows"`
 }
 
-// readControl 读一个文本帧解析为控制命令（非控制 JSON 返回空 type）
-func readControl(ws *websocket.Conn) (wsCtl, error) {
-	_, data, err := ws.ReadMessage()
+// readControl 读一帧：控制 JSON 解析返回 ctl，其余数据帧原样带回（用户输入）
+func readControl(ws *websocket.Conn) (ctl wsCtl, data []byte, err error) {
+	msgType, payload, err := ws.ReadMessage()
 	if err != nil {
-		return wsCtl{}, err
+		return wsCtl{}, nil, err
 	}
-	var ctl wsCtl
-	if len(data) > 0 && data[0] == '{' {
-		_ = json.Unmarshal(data, &ctl)
+	if msgType == websocket.TextMessage && len(payload) > 0 && payload[0] == '{' {
+		_ = json.Unmarshal(payload, &ctl)
+		if ctl.Type != "" {
+			return ctl, payload, nil
+		}
 	}
-	return ctl, nil
+	return wsCtl{}, payload, nil
 }
 
 // LogsWS 容器日志流桥接（docker logs -f → WS；阻塞直到任一端断开）
@@ -106,9 +108,9 @@ func (s *EndpointService) LogsWS(ws *websocket.Conn, endpointID uint, containerI
 			}
 		}
 	}()
-	// 读循环仅做关闭/心跳，数据由写侧推送
+	// 读循环仅做关闭/心跳（日志流无输入侧）
 	for {
-		ctl, err := readControl(ws)
+		ctl, _, err := readControl(ws)
 		if err != nil {
 			break
 		}
@@ -182,7 +184,7 @@ func (s *EndpointService) ExecWS(ws *websocket.Conn, endpointID uint, containerI
 		}
 	}()
 	for {
-		ctl, err := readControl(ws)
+		ctl, data, err := readControl(ws)
 		if err != nil {
 			break
 		}
@@ -199,7 +201,10 @@ func (s *EndpointService) ExecWS(ws *websocket.Conn, endpointID uint, containerI
 		case "close":
 			cancel()
 		default:
-			// 非控制 JSON 的文本帧不该出现在此端点（输入走二进制帧），忽略
+			// 数据帧：用户输入转发到 exec 连接
+			if len(data) > 0 {
+				_, _ = attach.Conn.Write(data)
+			}
 		}
 	}
 	<-done
