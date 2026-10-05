@@ -39,11 +39,16 @@ func Api(ctx context.Context) {
 	entities := []sysModel.SysApi{
 		{Path: "/monitor/metric/list", Description: "主机指标序列查询", ApiGroup: "监控告警", Method: "GET"},
 		{Path: "/monitor/metric/collect", Description: "手动触发全量采集", ApiGroup: "监控告警", Method: "POST"},
+		{Path: "/monitor/alert/rule", Description: "创建告警规则", ApiGroup: "监控告警", Method: "POST"},
+		{Path: "/monitor/alert/rule", Description: "更新告警规则", ApiGroup: "监控告警", Method: "PUT"},
+		{Path: "/monitor/alert/rule", Description: "删除告警规则", ApiGroup: "监控告警", Method: "DELETE"},
+		{Path: "/monitor/alert/rule/list", Description: "告警规则列表", ApiGroup: "监控告警", Method: "GET"},
+		{Path: "/monitor/alert/event/list", Description: "告警事件列表", ApiGroup: "监控告警", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
 
-// Menu 注册监控菜单（图表入口在主机页「监控」抽屉，此处留母菜单占位）
+// Menu 注册监控菜单（图表入口在主机页「监控」抽屉）
 func Menu(ctx context.Context) {
 	entities := []sysModel.SysBaseMenu{
 		{
@@ -53,6 +58,14 @@ func Menu(ctx context.Context) {
 			Component: "view/routerHolder.vue",
 			Sort:      7,
 			Meta:      sysModel.Meta{Title: "监控告警", Icon: "odometer"},
+		},
+		{
+			Path:      "monitorAlert",
+			Name:      "monitorAlert",
+			Hidden:    false,
+			Component: "plugin/monitor/view/alert/index.vue",
+			Sort:      1,
+			Meta:      sysModel.Meta{Title: "告警规则", Icon: "bell"},
 		},
 	}
 	pluginUtils.RegisterMenus(entities...)
@@ -67,6 +80,11 @@ func Casbin(ctx context.Context) {
 	for _, p := range []struct{ Path, Method string }{
 		{"/monitor/metric/list", "GET"},
 		{"/monitor/metric/collect", "POST"},
+		{"/monitor/alert/rule", "POST"},
+		{"/monitor/alert/rule", "PUT"},
+		{"/monitor/alert/rule", "DELETE"},
+		{"/monitor/alert/rule/list", "GET"},
+		{"/monitor/alert/event/list", "POST"},
 	} {
 		roles := []string{"888"}
 		if p.Method == "GET" {

@@ -159,6 +159,7 @@ func (s *MonitorService) CollectAll() {
 	}
 	wg.Wait()
 	s.PruneOld()
+	s.EvalAllRules() // 采集完成后统一评估告警规则（指标+端口探活）
 }
 
 // round2 保留两位小数
