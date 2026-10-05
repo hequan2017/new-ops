@@ -94,8 +94,10 @@
         </el-table-column>
         <el-table-column prop="status" label="详情" min-width="120" show-overflow-tooltip />
         <el-table-column prop="ports" label="端口" min-width="140" show-overflow-tooltip />
-        <el-table-column label="操作" width="210" fixed="right">
+        <el-table-column label="操作" width="290" fixed="right">
           <template #default="{ row }">
+            <el-button link type="primary" @click="openContainerLogs(row)">日志</el-button>
+            <el-button v-if="row.state === 'running'" link type="success" @click="openContainerShell(row)">终端</el-button>
             <el-button v-if="row.state !== 'running'" link type="success" @click="doAction(row, 'start')">启动</el-button>
             <el-button v-if="row.state === 'running'" link type="warning" @click="doAction(row, 'stop')">停止</el-button>
             <el-button v-if="row.state === 'running'" link type="primary" @click="doAction(row, 'restart')">重启</el-button>
@@ -163,10 +165,27 @@
         </el-row>
       </el-form>
       <template #footer>
-        <el-button @click="createVisible = false">取 消</el-button>
+        <el-button @click="dialogVisible = false">取 消</el-button>
         <el-button type="primary" :loading="creating" @click="submitCreate">创 建</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer v-model="shellVisible" :title="`终端 · ${shellName}`" size="70%" append-to-body>
+      <ContainerShell
+        v-if="shellVisible"
+        :endpoint-id="ctEndpoint?.ID || 0"
+        :container-id="shellCid"
+        :label="shellName"
+      />
+    </el-drawer>
+
+    <el-drawer v-model="logDrawerVisible" :title="`日志 · ${shellName}`" size="70%" append-to-body>
+      <ContainerLogs
+        v-if="logDrawerVisible"
+        :endpoint-id="ctEndpoint?.ID || 0"
+        :container-id="shellCid"
+      />
+    </el-drawer>
   </div>
 </template>
 
@@ -177,6 +196,8 @@
     createEndpoint, updateEndpoint, deleteEndpoint, getEndpointList, checkEndpoint
   } from '@/plugin/container/api/dockerEndpoint'
   import { getContainerList, containerAction, createContainer } from '@/plugin/container/api/container'
+  import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
+  import ContainerLogs from '@/plugin/container/components/ContainerLogs.vue'
   import { getCredentialList } from '@/plugin/asset/api/credential'
 
   defineOptions({ name: 'containerEndpoint' })
@@ -360,6 +381,23 @@
         creating.value = false
       }
     })
+  }
+
+  // ---------- 容器终端/日志 ----------
+  const shellVisible = ref(false)
+  const logDrawerVisible = ref(false)
+  const shellCid = ref('')
+  const shellName = ref('')
+
+  const openContainerShell = (row) => {
+    shellCid.value = row.id
+    shellName.value = prettyName(row.names)
+    shellVisible.value = true
+  }
+  const openContainerLogs = (row) => {
+    shellCid.value = row.id
+    shellName.value = prettyName(row.names)
+    logDrawerVisible.value = true
   }
 
   onMounted(() => {

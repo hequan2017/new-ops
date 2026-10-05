@@ -79,6 +79,8 @@
   "/src/plugin/auto/view/autoCodeAdmin/index.vue": "Index",
   "/src/plugin/auto/view/autoPkg/autoPkg.vue": "AutoPkg",
   "/src/plugin/auto/view/skills/index.vue": "Index",
+  "/src/plugin/container/components/ContainerLogs.vue": "ContainerLogs",
+  "/src/plugin/container/components/ContainerShell.vue": "ContainerShell",
   "/src/plugin/container/view/endpoint/index.vue": "containerEndpoint",
   "/src/plugin/email/view/index.vue": "Email",
   "/src/plugin/job/view/batchExec/index.vue": "jobBatchExec",
