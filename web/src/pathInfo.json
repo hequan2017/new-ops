@@ -84,6 +84,7 @@
   "/src/plugin/job/view/batchExec/index.vue": "jobBatchExec",
   "/src/plugin/job/view/script/index.vue": "jobScript",
   "/src/plugin/job/view/varGroup/index.vue": "jobVarGroup",
+  "/src/plugin/k8s/view/cluster/index.vue": "K8sCluster",
   "/src/plugin/pipeline/view/pipeline/index.vue": "pipelineList",
   "/src/plugin/term/components/LogTail.vue": "LogTail",
   "/src/plugin/term/components/XtermShell.vue": "XtermShell",
