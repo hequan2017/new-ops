@@ -37,6 +37,12 @@ func Api(ctx context.Context) {
 		{Path: "/container/image/pull", Description: "拉取镜像", ApiGroup: "容器管理", Method: "POST"},
 		{Path: "/container/image/pull-status", Description: "拉取状态查询", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/image", Description: "删除镜像", ApiGroup: "容器管理", Method: "DELETE"},
+		{Path: "/container/network/list", Description: "网络列表", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/network", Description: "创建网络", ApiGroup: "容器管理", Method: "POST"},
+		{Path: "/container/network", Description: "删除网络", ApiGroup: "容器管理", Method: "DELETE"},
+		{Path: "/container/volume/list", Description: "卷列表", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/volume", Description: "删除卷", ApiGroup: "容器管理", Method: "DELETE"},
+		{Path: "/container/container/stats", Description: "容器资源统计", ApiGroup: "容器管理", Method: "GET"},
 	}
 	utils.RegisterApis(entities...)
 }

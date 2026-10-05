@@ -32,6 +32,12 @@ func Casbin(ctx context.Context) {
 		{"/container/image/pull", "POST"},
 		{"/container/image/pull-status", "GET"},
 		{"/container/image", "DELETE"},
+		{"/container/network/list", "GET"},
+		{"/container/network", "POST"},
+		{"/container/network", "DELETE"},
+		{"/container/volume/list", "GET"},
+		{"/container/volume", "DELETE"},
+		{"/container/container/stats", "GET"},
 	}
 	for _, p := range policies {
 		roles := []string{"888"}

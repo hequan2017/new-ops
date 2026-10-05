@@ -35,6 +35,18 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		img.GET("pull-status", v1.ContainerApi.PullStatus)
 		img.DELETE("", v1.ContainerApi.RemoveImage)
 	}
+	nw := Router.Group("container/network")
+	{
+		nw.GET("list", v1.ContainerApi.ListNetworks)
+		nw.POST("", v1.ContainerApi.CreateNetwork)
+		nw.DELETE("", v1.ContainerApi.RemoveNetwork)
+	}
+	vol := Router.Group("container/volume")
+	{
+		vol.GET("list", v1.ContainerApi.ListVolumes)
+		vol.DELETE("", v1.ContainerApi.RemoveVolume)
+	}
+	Router.GET("container/container/stats", v1.ContainerApi.ContainerStats)
 	Public.GET("container/container/logws", v1.ContainerApi.LogsWS)
 	Public.GET("container/container/execws", v1.ContainerApi.ExecWS)
 }
