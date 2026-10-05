@@ -32,12 +32,13 @@
           </template>
         </el-table-column>
         <el-table-column prop="notes" label="备注" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" width="290" fixed="right">
+        <el-table-column label="操作" width="350" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
             <el-button link type="success" :loading="checkingId === row.ID" @click="onCheck(row)">巡检</el-button>
             <el-button link type="primary" @click="openContainers(row)">容器</el-button>
             <el-button link type="warning" @click="openEvents(row)">事件</el-button>
+            <el-button link type="success" @click="openImages(row)">镜像</el-button>
             <el-button link type="danger" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -188,6 +189,37 @@
       />
     </el-drawer>
 
+    <el-drawer v-model="imgVisible" :title="`镜像 · ${ctEndpoint?.name || ''}`" size="65%">
+      <el-form inline>
+        <el-form-item>
+          <el-input v-model="pullRef" placeholder="镜像引用，如 alpine:latest" style="width: 240px" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :disabled="!pullRef" @click="doPull">拉取</el-button>
+          <el-button :loading="imgLoading" @click="loadImages">刷 新</el-button>
+        </el-form-item>
+      </el-form>
+      <el-table :data="imgList" v-loading="imgLoading" stripe size="small">
+        <el-table-column label="标签" min-width="220">
+          <template #default="{ row }">
+            <el-tag v-for="t in row.tags.length ? row.tags : ['<none>']" :key="t" size="small" style="margin-right: 4px">{{ t }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="id" label="ID" width="130" />
+        <el-table-column label="大小" width="100">
+          <template #default="{ row }">{{ row.sizeMb }} MB</template>
+        </el-table-column>
+        <el-table-column label="创建时间" width="170">
+          <template #default="{ row }">{{ new Date(row.createdAt * 1000).toLocaleString() }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="danger" @click="doRemoveImage(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-drawer>
+
     <el-drawer v-model="eventVisible" :title="`容器事件 · ${eventEndpoint || '全部接入点'}`" size="60%">
       <el-table :data="eventList" v-loading="eventLoading" stripe size="small">
         <el-table-column label="时间" width="170">
@@ -213,7 +245,7 @@
   import {
     createEndpoint, updateEndpoint, deleteEndpoint, getEndpointList, checkEndpoint
   } from '@/plugin/container/api/dockerEndpoint'
-  import { getContainerList, containerAction, createContainer } from '@/plugin/container/api/container'
+  import { getContainerList, containerAction, createContainer, getImageList, pullImage, pullStatus, removeImage } from '@/plugin/container/api/container'
   import { getEventList } from '@/plugin/container/api/dockerEvent'
   import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
   import ContainerLogs from '@/plugin/container/components/ContainerLogs.vue'
@@ -417,6 +449,62 @@
     shellCid.value = row.id
     shellName.value = prettyName(row.names)
     logDrawerVisible.value = true
+  }
+
+  // ---------- 镜像抽屉 ----------
+  const imgVisible = ref(false)
+  const imgList = ref([])
+  const imgLoading = ref(false)
+  const pullRef = ref('')
+  let pullTimer = null
+
+  const openImages = (row) => {
+    ctEndpoint.value = row
+    imgVisible.value = true
+    loadImages()
+  }
+
+  const loadImages = async () => {
+    if (!ctEndpoint.value) return
+    imgLoading.value = true
+    try {
+      const res = await getImageList({ endpointId: ctEndpoint.value.ID })
+      if (res.code === 0) imgList.value = res.data || []
+    } finally {
+      imgLoading.value = false
+    }
+  }
+
+  const doPull = async () => {
+    const ref = pullRef.value.trim()
+    if (!ref) return
+    const res = await pullImage({ endpointId: ctEndpoint.value.ID, ref })
+    if (res.code === 0) {
+      ElMessage.success('已开始拉取，完成后自动刷新')
+      if (pullTimer) clearInterval(pullTimer)
+      pullTimer = setInterval(async () => {
+        const st = await pullStatus({ endpointId: ctEndpoint.value.ID, ref })
+        if (st.code === 0 && String(st.data || '').startsWith('成功')) {
+          clearInterval(pullTimer)
+          pullTimer = null
+          ElMessage.success(`拉取完成：${ref}`)
+          loadImages()
+        }
+      }, 2000)
+    }
+  }
+
+  const doRemoveImage = (row) => {
+    const ref = row.tags.length ? row.tags[0] : row.id
+    ElMessageBox.confirm(`确定删除镜像 ${ref} 吗？（force，容器占用将解除）`, '危险操作', {
+      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+    }).then(async () => {
+      const res = await removeImage({ endpointId: ctEndpoint.value.ID, ref })
+      if (res.code === 0) {
+        ElMessage.success('已删除')
+        loadImages()
+      }
+    })
   }
 
   // ---------- 容器事件 ----------

@@ -8,3 +8,12 @@ export const containerAction = (params) => service({ url: '/container/container/
 
 // 创建容器（端口/挂载/环境变量/资源限制）
 export const createContainer = (data) => service({ url: '/container/container', method: 'post', data, timeout: 90000 })
+
+// 镜像列表
+export const getImageList = (params) => service({ url: '/container/image/list', method: 'get', params })
+// 拉取镜像（异步）
+export const pullImage = (params) => service({ url: '/container/image/pull', method: 'post', params })
+// 拉取状态
+export const pullStatus = (params) => service({ url: '/container/image/pull-status', method: 'get', params })
+// 删除镜像
+export const removeImage = (params) => service({ url: '/container/image', method: 'delete', params })
