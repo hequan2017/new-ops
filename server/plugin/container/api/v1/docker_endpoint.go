@@ -13,6 +13,9 @@ import (
 
 var ContainerApi = new(containerApi)
 
+// ctSvc 容器实时服务实例
+var ctSvc = &service.Service.Endpoint
+
 type containerApi struct{}
 
 // CreateEndpoint 创建接入点

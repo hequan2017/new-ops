@@ -21,4 +21,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ep.GET("list", v1.ContainerApi.GetEndpointList)
 		ep.POST("check", v1.ContainerApi.CheckEndpoint)
 	}
+	cc := Router.Group("container/container")
+	{
+		cc.GET("list", v1.ContainerApi.ListContainers)
+		cc.POST("action", v1.ContainerApi.ContainerAction)
+	}
 }

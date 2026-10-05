@@ -26,6 +26,8 @@ func Api(ctx context.Context) {
 		{Path: "/container/endpoint", Description: "删除接入点", ApiGroup: "容器管理", Method: "DELETE"},
 		{Path: "/container/endpoint/list", Description: "接入点列表", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/endpoint/check", Description: "手动巡检", ApiGroup: "容器管理", Method: "POST"},
+		{Path: "/container/container/list", Description: "容器列表", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/container/action", Description: "容器生命周期动作", ApiGroup: "容器管理", Method: "POST"},
 	}
 	utils.RegisterApis(entities...)
 }
