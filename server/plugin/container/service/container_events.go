@@ -5,7 +5,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -22,15 +24,18 @@ const eventPullWindow = 1 * time.Hour
 // eventRetention 事件留存时长（过期由巡检顺带清理）
 const eventRetention = 7 * 24 * time.Hour
 
-// PullEvents 拉取接入点 [LastEventAt, now] 的容器事件落库，并推进水位
+// eventPullTimeout 单接入点单轮事件拉取限时
+const eventPullTimeout = 8 * time.Second
+
+// PullEvents 拉取接入点 [LastEventAt, now] 的容器事件落库，并推进水位。
+// v28 SDK 语义：daemon 发完 until 窗口数据后关流，SDK 把 io.EOF 发到 errCh 且不关 msgCh
+// ——EOF 视为正常收尾（落库+推水位）；ctx 超时视为异常（已收事件仍落库但不推水位，下轮重拉容忍重复）。
 func (s *EndpointService) PullEvents(ep *model.DockerEndpoint) {
 	cl, err := s.NewDockerClient(ep)
 	if err != nil {
 		return
 	}
 	defer cl.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
 	since := time.Now().Add(-eventPullWindow)
 	if ep.LastEventAt != nil && ep.LastEventAt.After(since) {
@@ -38,18 +43,22 @@ func (s *EndpointService) PullEvents(ep *model.DockerEndpoint) {
 	}
 	until := time.Now()
 	opts := container_events_options(since, until)
-	msgCh, errCh := cl.Events(ctx, opts)
 
-	var lastAt time.Time
-	batch := make([]model.DockerEventLog, 0, 32)
-	decodeDone := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
-		defer close(decodeDone)
-		for {
+		defer close(done)
+		ctx, cancel := context.WithTimeout(context.Background(), eventPullTimeout)
+		defer cancel()
+		msgCh, errCh := cl.Events(ctx, opts)
+		batch := make([]model.DockerEventLog, 0, 32)
+		lastAt := since
+		normalEnd := false
+		for !normalEnd {
 			select {
 			case ev, ok := <-msgCh:
 				if !ok {
-					return
+					normalEnd = true
+					break
 				}
 				if ev.Type != events.ContainerEventType {
 					continue
@@ -69,31 +78,28 @@ func (s *EndpointService) PullEvents(ep *model.DockerEndpoint) {
 					storeEventBatch(ep.ID, batch)
 					batch = batch[:0]
 				}
+			case e := <-errCh:
+				if errors.Is(e, io.EOF) {
+					normalEnd = true // daemon 关流的正常收尾
+					break
+				}
+				global.GVA_LOG.Error(fmt.Sprintf("events 拉取错误（ep=%d）: %v", ep.ID, e))
+				normalEnd = true
 			case <-ctx.Done():
-				return
+				global.GVA_LOG.Warn(fmt.Sprintf("events 拉取超时（ep=%d since=%d）", ep.ID, since.Unix()))
+			}
+			if ctx.Err() != nil && !normalEnd {
+				break
 			}
 		}
-	}()
-	select {
-	case <-decodeDone: // Until 指定时服务端发完自动关闭
-	case <-ctx.Done():
-		global.GVA_LOG.Warn(fmt.Sprintf("events 拉取 ctx 结束（ep=%d since=%s）: %v", ep.ID, since.Unix(), ctx.Err()))
-	}
-	select {
-	case e := <-errCh:
-		if e != nil {
-			global.GVA_LOG.Error(fmt.Sprintf("events 错误通道（ep=%d）: %v", ep.ID, e))
-			return
-		}
-	default:
-	}
-	global.GVA_LOG.Info(fmt.Sprintf("events 拉取完成（ep=%d since=%d until=%d）: %d 条", ep.ID, since.Unix(), until.Unix(), len(batch)))
-	if len(batch) > 0 {
 		storeEventBatch(ep.ID, batch)
-	}
-	// 水位推进到本轮拉取起点+窗口内最近事件；无事件也推进水位（避免每轮重复拉同窗）
-	global.GVA_DB.Model(&model.DockerEndpoint{}).Where("id = ?", ep.ID).
-		Update("last_event_at", until)
+		if normalEnd {
+			// 正常收尾推水位到 until（超时不推，下轮区间重拉容忍少量重复）
+			global.GVA_DB.Model(&model.DockerEndpoint{}).Where("id = ?", ep.ID).
+				Update("last_event_at", until)
+		}
+	}()
+	<-done
 }
 
 // container_events_options 构造 Events 过滤（container 类型 + Since/Until）
