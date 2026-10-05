@@ -77,15 +77,17 @@ func (s *EndpointService) PullEvents(ep *model.DockerEndpoint) {
 	select {
 	case <-decodeDone: // Until 指定时服务端发完自动关闭
 	case <-ctx.Done():
+		global.GVA_LOG.Warn(fmt.Sprintf("events 拉取 ctx 结束（ep=%d since=%s）: %v", ep.ID, since.Unix(), ctx.Err()))
 	}
-	// 错误通道仅在异常时产生（离线/超时），水位不动下轮补拉
 	select {
 	case e := <-errCh:
 		if e != nil {
+			global.GVA_LOG.Error(fmt.Sprintf("events 错误通道（ep=%d）: %v", ep.ID, e))
 			return
 		}
 	default:
 	}
+	global.GVA_LOG.Info(fmt.Sprintf("events 拉取完成（ep=%d since=%d until=%d）: %d 条", ep.ID, since.Unix(), until.Unix(), len(batch)))
 	if len(batch) > 0 {
 		storeEventBatch(ep.ID, batch)
 	}
