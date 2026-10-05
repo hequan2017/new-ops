@@ -307,7 +307,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 ### M4 任务清单（container C1 + k8s K1/K2，细节见第六节 6.2/6.3）
 
 - [ ] container：endpoint CRUD + TLS 凭据入保险库 + 30s 巡检（进行中：场32 交付——docker_endpoint 模型、NewDockerClient（unix 直连/TCP+TLS，v28 WithTLSClientConfig 直收 PEM，凭据保险库 docker_tls 解密 JSON{ca,cert,key}）、PingEndpoint+StartInspectLoop 30s 合并巡检（并发5）、五接口+种子+前端接入点页（35s 轻刷新）；Docker SDK v28.0.4 登记 3.5（go-connections 钉 v0.5.0 修 Windows 编译）；真机：unix socket 巡检在线 API 1.54、离线节点状态回写、重名拦截；剩余：容器生命周期与创建参数）
-- [ ] container：日志流 + exec 终端（WebSocket 桥接）；inspect 回写 + docker events 订阅
+- [ ] container：日志流 + exec 终端（WebSocket 桥接）（进行中：场36 交付双 WS 通道——LogsWS（docker logs -f，TTY 判断+stdcopy 去复用，tail 200-5000）/ ExecWS（exec create /bin/sh TTY → hijack ⇄ WS，resize 经 ContainerExecResize），public 组 query token 自验与 term 同模式，通道约定一致（二进制数据帧+JSON 控制帧）；前端 ContainerShell（xterm 心跳/自适应）/ContainerLogs（跟随/截断）组件+抽屉按钮；真机：日志流跟随收到连续 tick、exec echo 双向打通（修复 readControl 丢弃用户输入真 bug）；剩余：inspect 回写 + docker events 订阅）
 - [ ] k8s：集群注册（kubeconfig 加密）+ 连接测试 + 连接池；集群总览（metrics-server 用量）；Node 管理（cordon/drain）
 - [ ] k8s：工作负载（列表/YAML/扩缩容/滚动重启）；Pod（列表/详情/日志/WebShell/删除）；ConfigMap/Secret(脱敏)/PVC/Service/Ingress/Event
 - [ ] 两套真实环境联调 + 管理员/普通用户两级数据隔离验证
@@ -557,3 +557,4 @@ web/src/plugin/asset/
 | 2026-10-05 | 34 | M4 场34（创建容器，C1 收尾）：POST /container/container——ParsePortBinding 纯函数 + nat.PortSet/PortMap 端口映射 + NanoCPUs/Memory 资源限制 + RestartPolicy 四档 + StartNow；前端创建弹窗（多行端口/环境/挂载、CPU/内存、启动命令、立即启动）；真机验证：inspect 核对 mem=128M/cpu=1e9/rp=always/env 全对、端口占用错误正常回传"容器已创建但启动失败"、换空闲端口 create+start 成功 running 且端口映射正确。**C1 生命周期与创建参数项完成** | 下一场：容器日志流 + exec 终端（WS 桥接）+ inspect 回写/docker events 订阅 |
 | 2026-10-05 | 35 | SFTP 递归删除回归通过（断点关闭）⚠️ 并复盘确认：历次"404 部署窗口"均为验证脚本 HTTP method 推断错误（gin 对方法不匹配返回 404），服务与部署从未异常；已建立按路由表精确映射的验证脚本规范 | 下一场：M4 k8s K1（集群注册/总览）或 container C1 剩余（日志流/exec 终端），以并行会话最新进度为准 |
 | 2026-10-05 | 35 | M4 K1 起步：k8s 插件集群注册全链——client-go v0.33.3（3.5 登记）、K8sCluster 模型（kubeconfig AES-GCM 密文 json:'-'）、注册（解析+连接测试+加密落库，测试失败记离线不阻断）/删除/列表/TestCluster 四接口、K8s 管理菜单+集群页、casbin 888 全部+9528 只读；真机验证：不可达集群离线注册成功、密文不回显、TestCluster 报 dial 不可达、9528 列表放行。待办：9528 create 的 casbin_rule 残留巡检（脚本实测走到 handler）；集群删除验证脚本 method 笔误待复跑 | 下一场：集群列表补充 ServerVersion 实时刷新；K2 工作负载（与并行会话协调分工）|
+| 2026-10-05 | 36 | M4 场36（C1 收官双 WS 通道）：LogsWS（docker logs -f，TTY 判断+stdcopy 去复用，tail 200-5000）/ ExecWS（exec /bin/sh TTY → hijack ⇄ WS，resize 经 ContainerExecResize）挂 public 组 query token 自验；前端 ContainerShell（xterm 心跳自适应）/ContainerLogs（跟随截断）+容器抽屉「日志/终端」按钮；修复 readControl 丢弃用户输入真 bug（exec 无回显真机暴露，重构为 (ctl,data) 双返回）；真机：日志流跟随连续 tick、exec echo 双向打通。**C1 仅剩 inspect 回写+events 订阅** | 下一场：docker events 订阅+inspect 回写；K2 工作负载由并行会话推进 |
