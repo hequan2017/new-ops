@@ -7,6 +7,7 @@ var Api = new(api)
 
 type api struct {
 	K8sCluster k8sCluster
+	K8sResource k8sResource
 }
 
 var k8sClusterService = service.Service.K8sClusterService

@@ -28,6 +28,13 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		cc.POST("action", v1.ContainerApi.ContainerAction)
 	}
 	Router.GET("container/event/list", v1.ContainerApi.GetEventList)
+	img := Router.Group("container/image")
+	{
+		img.GET("list", v1.ContainerApi.ListImages)
+		img.POST("pull", v1.ContainerApi.PullImage)
+		img.GET("pull-status", v1.ContainerApi.PullStatus)
+		img.DELETE("", v1.ContainerApi.RemoveImage)
+	}
 	Public.GET("container/container/logws", v1.ContainerApi.LogsWS)
 	Public.GET("container/container/execws", v1.ContainerApi.ExecWS)
 }

@@ -106,3 +106,87 @@ func (a *containerApi) GetEventList(c *gin.Context) {
 	}
 	response.OkWithDetailed(list, "获取成功", c)
 }
+
+// ListImages 镜像列表
+// @Tags DockerImage
+// @Summary 接入点镜像列表（实时）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param endpointId query int true "接入点ID"
+// @Success 200 {object} response.Response{data=[]service.ImageView} "获取成功"
+// @Router /container/image/list [get]
+func (a *containerApi) ListImages(c *gin.Context) {
+	endpointID, err := strconv.ParseUint(c.Query("endpointId"), 10, 64)
+	if err != nil || endpointID == 0 {
+		response.FailWithMessage("endpointId 无效", c)
+		return
+	}
+	list, err := ctSvc.ListImages(uint(endpointID))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// PullImage 拉取镜像（异步）
+// @Tags DockerImage
+// @Summary 拉取镜像（后台任务，状态经 pull-status 查询）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param endpointId query int true "接入点ID"
+// @Param ref query string true "镜像引用（如 nginx:alpine）"
+// @Success 200 {object} response.Response{msg=string} "已开始拉取"
+// @Router /container/image/pull [post]
+func (a *containerApi) PullImage(c *gin.Context) {
+	endpointID, err := strconv.ParseUint(c.Query("endpointId"), 10, 64)
+	if err != nil || endpointID == 0 {
+		response.FailWithMessage("endpointId 无效", c)
+		return
+	}
+	if err := ctSvc.PullImage(uint(endpointID), c.Query("ref")); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("已开始拉取", c)
+}
+
+// PullStatus 拉取状态
+// @Tags DockerImage
+// @Summary 拉取任务状态查询
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param endpointId query int true "接入点ID"
+// @Param ref query string true "镜像引用"
+// @Success 200 {object} response.Response{data=string} "获取成功"
+// @Router /container/image/pull-status [get]
+func (a *containerApi) PullStatus(c *gin.Context) {
+	endpointID, err := strconv.ParseUint(c.Query("endpointId"), 10, 64)
+	if err != nil || endpointID == 0 {
+		response.FailWithMessage("endpointId 无效", c)
+		return
+	}
+	response.OkWithDetailed(ctSvc.GetPullStatus(uint(endpointID), c.Query("ref")), "获取成功", c)
+}
+
+// RemoveImage 删除镜像
+// @Tags DockerImage
+// @Summary 删除镜像（force）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param endpointId query int true "接入点ID"
+// @Param ref query string true "镜像引用或ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /container/image [delete]
+func (a *containerApi) RemoveImage(c *gin.Context) {
+	endpointID, err := strconv.ParseUint(c.Query("endpointId"), 10, 64)
+	if err != nil || endpointID == 0 {
+		response.FailWithMessage("endpointId 无效", c)
+		return
+	}
+	if err := ctSvc.RemoveImage(uint(endpointID), c.Query("ref")); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
