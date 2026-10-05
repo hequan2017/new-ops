@@ -327,7 +327,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 ### M7 任务清单（workflow + org + aiops）
 
-- [ ] workflow：状态机定义/实例/审批任务 API 与页面；发版、SQL、资源申请三类模板
+- [x] workflow：状态机定义/实例/审批任务 API 与页面（场40 交付：三表 wf_definition（states/transitions JSON+起始）/wf_instance（定义名快照+业务参数）/wf_action_log；引擎 ValidateDefinition（引用闭合/重名/起始，4 组单测）+NextState 迁移推导、审批节点动作受限（approve/reject）、终态自动收档（完成/驳回）、cancel 撤回、迁移表外动作拦截；八接口+菜单/API/casbin 种子（普通用户仅自己工单）；前端工单中心（发起/通过/驳回/撤回+流转时间线、定义管理 JSON 模板）；真机全链：定义→发起→submit→approve 归档已完成、非法迁移/审批动作/结束后操作三类拦截全部生效。模板三类留作业务侧预设定义，随发版闭环场次补）
 - [ ] org：钉钉扫码登录（JWT 打通）、部门/用户定时同步、机器人告警复用
 - [ ] aiops：MCP Server 工具注册（基于 GVA mcp/ 骨架）、AI 诊断网关（统一 LLM 调用、密钥管理、prompt 模板）
 
@@ -561,3 +561,4 @@ web/src/plugin/asset/
 | 2026-10-05 | 37 | M4 场37（events 落库，**C1 全部完成**）：docker_event_log 表+30s 巡检区间拉取（水位 last_event_at、离线补拉、窗口上限 1h、7 天留存）+事件列表接口+前端事件抽屉；排障三连：RFC3339Nano→unix 秒→真根因 **v28 SDK 在 daemon 关流时经 errCh 发 io.EOF 且不关 msgCh，原消费把 EOF 当错误丢弃已收事件且不推水位**（本地 SSH 隧道最小复现+远端空窗对照定位）；连带发现并行会话 k8s 前端半成品曾致部署 build 失败（修复版一度未上机）——去重 deleteK8sCluster 修复；真机：ops-ev5 容器 6 生命周期事件全捕获。⚠️ 教训：部署输出勿 grep 过滤（曾掩盖 build 失败） | 下一场：monitor 插件开工（SSH 性能采集+指标留存+图表）或配合 K2；C2 镜像/网络/卷在 M8 |
 | 2026-10-05 | 38 | M6 开工（场38，monitor SSH 性能采集）：monitor_metric 表+单命令组合采样（1s：loadavg/cpu delta/mem/df，解析纯函数 3 组单测）+CollectAll 并发 5（复用 asset SSH 通道）+@every 5m 底座 timer+查询/手动采集两接口+种子；前端 PerfChart（ECharts 四折线双 Y 轴/时段切换/立即采集）挂主机页「监控」抽屉；真机：disk 25% 与宿主 df 一致、load/mem 合理、CPU 0% 为空闲机真实值。**monitor 首项勾选（网络指标留待告警场次顺带）** | 下一场：告警规则引擎+钉钉推送+端口探活（monitor 第二项）；dbops 需 goInception 二进制待环境 |
 | 2026-10-05 | 39 | M6 场39（告警引擎）：metric 阈值（>/< 连续 N 次纯函数单测）+port TCP 探活+静默去重+恢复关闭+钉钉文本推送（仅 http(s)）；评估挂采集轮末尾；五接口+前端规则/事件双页签；真机：mem<99 触发、端口不可达触发、二轮静默不重复、非法指标拦截；修复告警两表漏注册 AutoMigrate 与摘要重复主机名。**monitor 三项全部完成（M6 monitor 部分 ✓，dbops 待 goInception 环境）** | 下一场：M7 workflow 工单引擎开工（状态机定义/实例/审批 API+页面）或配合 k8s K2 |
+| 2026-10-05 | 40 | M7 开工（场40，workflow 工单引擎）：三表+状态机引擎（ValidateDefinition 4 组单测/NextState 推导、审批节点动作受限、终态自动收档、cancel 撤回）+八接口+种子+前端工单中心（发起/审批/驳回/撤回+流转时间线+定义管理）；真机全链：定义→发起→submit→approve 归档、三类非法操作（迁移外动作/审批节点非审批动作/结束后操作）全部拦截，T2 驻 submitted 拒 reject 证明迁移表约束生效。**M7 workflow 首项勾选** | 下一场：工单发版闭环（审批通过→事件钩子触发流水线，补 M3 末项）；org 钉钉登录待企业配置 |
