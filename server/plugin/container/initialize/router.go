@@ -12,10 +12,11 @@ import (
 	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 )
 
-// Router 注册容器管理路由（private 组，casbin 鉴权）
+// Router 注册容器管理路由：private 组 casbin 鉴权 + public 组 WS 流（query token 自验）
 func Router(engine *gin.Engine) {
 	private := engine.Group(global.GVA_CONFIG.System.RouterPrefix).Group("")
-	router.RouterGroupApp.Init(private)
+	public := engine.Group(global.GVA_CONFIG.System.RouterPrefix).Group("")
+	router.RouterGroupApp.Init(private, public)
 }
 
 // Api 注册容器管理 API 记录
@@ -29,6 +30,8 @@ func Api(ctx context.Context) {
 		{Path: "/container/container", Description: "创建容器", ApiGroup: "容器管理", Method: "POST"},
 		{Path: "/container/container/list", Description: "容器列表", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/container/action", Description: "容器生命周期动作", ApiGroup: "容器管理", Method: "POST"},
+		{Path: "/container/container/logws", Description: "容器日志流 WebSocket", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/container/execws", Description: "容器 exec 终端 WebSocket", ApiGroup: "容器管理", Method: "GET"},
 	}
 	utils.RegisterApis(entities...)
 }
