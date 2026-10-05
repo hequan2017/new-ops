@@ -323,7 +323,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 - [ ] dbops：MySQL 实例/账号纳管（密文）；SQL 上线工单（goInception 审核/执行/备份、soar 优化建议、多环境）
 - [x] monitor：SSH 采集任务（CPU/内存/磁盘/网络）+ 指标留存与自动清理 + ECharts 图表页（场38 交付：monitor_metric 表（asset+name+ts 复合索引、30 天留存随轮清理）、单命令组合采样 1s 完成（loadavg/cpu 两次 /proc/stat delta 含除零保护/meminfo/df，解析纯函数 3 组单测）、CollectAll 并发 5 全量采集（绑凭据非报废主机，复用 asset SSH 通道指纹校验）、@every 5m 注册底座 timer、/monitor/metric/{list,collect}+种子（888/9528 只读）；前端 PerfChart（ECharts 时间轴四折线双 Y 轴、1h/6h/24h/7d、立即采集）挂主机页「监控」抽屉；真机：disk 25% 与宿主 df 精准一致、load/mem 合理、CPU 0% 为 88 核空闲机真实值；网络指标待补）
-- [ ] monitor：告警规则引擎（阈值/持续时间/静默窗口）+ 钉钉机器人推送 + 端口探活
+- [x] monitor：告警规则引擎（阈值/持续时间/静默窗口）+ 钉钉机器人推送 + 端口探活（场39：monitor_alert_rule（metric 阈值>/< 连续 N 次、port TCP 探活、静默默认 30min、钉钉 webhook 选配）+ event（触发/恢复/通知状态）；评估挂采集轮末尾统一执行、evaluateMetric 纯函数单测、触发静默去重、恢复自动关闭未决事件、pushDingTalk 仅 http(s) 5s 超时；五接口+前端规则/事件双页签；真机：mem<99 触发含当前值、端口不可达触发、二轮采集静默不重复、非法指标名拦截；修复告警两表漏注册迁移与摘要重复主机名两处）
 
 ### M7 任务清单（workflow + org + aiops）
 
@@ -560,3 +560,4 @@ web/src/plugin/asset/
 | 2026-10-05 | 36 | M4 场36（C1 收官双 WS 通道）：LogsWS（docker logs -f，TTY 判断+stdcopy 去复用，tail 200-5000）/ ExecWS（exec /bin/sh TTY → hijack ⇄ WS，resize 经 ContainerExecResize）挂 public 组 query token 自验；前端 ContainerShell（xterm 心跳自适应）/ContainerLogs（跟随截断）+容器抽屉「日志/终端」按钮；修复 readControl 丢弃用户输入真 bug（exec 无回显真机暴露，重构为 (ctl,data) 双返回）；真机：日志流跟随连续 tick、exec echo 双向打通。**C1 仅剩 inspect 回写+events 订阅** | 下一场：docker events 订阅+inspect 回写；K2 工作负载由并行会话推进 |
 | 2026-10-05 | 37 | M4 场37（events 落库，**C1 全部完成**）：docker_event_log 表+30s 巡检区间拉取（水位 last_event_at、离线补拉、窗口上限 1h、7 天留存）+事件列表接口+前端事件抽屉；排障三连：RFC3339Nano→unix 秒→真根因 **v28 SDK 在 daemon 关流时经 errCh 发 io.EOF 且不关 msgCh，原消费把 EOF 当错误丢弃已收事件且不推水位**（本地 SSH 隧道最小复现+远端空窗对照定位）；连带发现并行会话 k8s 前端半成品曾致部署 build 失败（修复版一度未上机）——去重 deleteK8sCluster 修复；真机：ops-ev5 容器 6 生命周期事件全捕获。⚠️ 教训：部署输出勿 grep 过滤（曾掩盖 build 失败） | 下一场：monitor 插件开工（SSH 性能采集+指标留存+图表）或配合 K2；C2 镜像/网络/卷在 M8 |
 | 2026-10-05 | 38 | M6 开工（场38，monitor SSH 性能采集）：monitor_metric 表+单命令组合采样（1s：loadavg/cpu delta/mem/df，解析纯函数 3 组单测）+CollectAll 并发 5（复用 asset SSH 通道）+@every 5m 底座 timer+查询/手动采集两接口+种子；前端 PerfChart（ECharts 四折线双 Y 轴/时段切换/立即采集）挂主机页「监控」抽屉；真机：disk 25% 与宿主 df 一致、load/mem 合理、CPU 0% 为空闲机真实值。**monitor 首项勾选（网络指标留待告警场次顺带）** | 下一场：告警规则引擎+钉钉推送+端口探活（monitor 第二项）；dbops 需 goInception 二进制待环境 |
+| 2026-10-05 | 39 | M6 场39（告警引擎）：metric 阈值（>/< 连续 N 次纯函数单测）+port TCP 探活+静默去重+恢复关闭+钉钉文本推送（仅 http(s)）；评估挂采集轮末尾；五接口+前端规则/事件双页签；真机：mem<99 触发、端口不可达触发、二轮静默不重复、非法指标拦截；修复告警两表漏注册 AutoMigrate 与摘要重复主机名。**monitor 三项全部完成（M6 monitor 部分 ✓，dbops 待 goInception 环境）** | 下一场：M7 workflow 工单引擎开工（状态机定义/实例/审批 API+页面）或配合 k8s K2 |
