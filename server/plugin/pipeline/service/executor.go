@@ -205,8 +205,8 @@ const maxParallelSteps = 10
 // runStageSteps 执行阶段内步骤：Parallel 时并发（信号量上限，首败快速中断兄弟步骤），
 // 否则串行。continueOnError=true 时吞掉失败（记日志）返回 nil。
 func (s *PipelineBuildService) runStageSteps(ctx context.Context, buildID uint, st *snapshotStage) error {
-	run1 := func(sp snapshotStep) error {
-		if err := s.runStep(ctx, buildID, st.Name, sp); err != nil {
+	run1 := func(stepCtx context.Context, sp snapshotStep) error {
+		if err := s.runStep(stepCtx, buildID, st.Name, sp); err != nil {
 			s.appendLog(buildID, st.Name, sp.Name, model.LogSystem, fmt.Sprintf("步骤失败: %v", err))
 			return err
 		}
@@ -214,7 +214,7 @@ func (s *PipelineBuildService) runStageSteps(ctx context.Context, buildID uint, 
 	}
 	if !st.Parallel || len(st.Steps) <= 1 {
 		for _, sp := range st.Steps {
-			if err := run1(sp); err != nil {
+			if err := run1(ctx, sp); err != nil {
 				if st.ContinueOnError {
 					s.appendLog(buildID, st.Name, "", model.LogSystem, "阶段配置失败继续，跳过该错误")
 					continue
@@ -242,7 +242,7 @@ func (s *PipelineBuildService) runStageSteps(ctx context.Context, buildID uint, 
 				errCh <- stepCtx.Err()
 				return
 			}
-			if err := run1(sp); err != nil {
+			if err := run1(stepCtx, sp); err != nil {
 				errCh <- err
 				if !st.ContinueOnError {
 					cancel() // 快速失败：中断兄弟步骤
