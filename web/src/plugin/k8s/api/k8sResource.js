@@ -21,3 +21,12 @@ export const getK8sClusterNodeList = (params) => {
 export const getK8sClusterPodLogs = (params) => {
   return service({ url: '/k8s/pod/logs', method: 'get', params })
 }
+export const getK8sServiceList = (params) => {
+  return service({ url: '/k8s/service/list', method: 'get', params })
+}
+export const getK8sConfigMapList = (params) => {
+  return service({ url: '/k8s/configmap/list', method: 'get', params })
+}
+export const getK8sSecretList = (params) => {
+  return service({ url: '/k8s/secret/list', method: 'get', params })
+}

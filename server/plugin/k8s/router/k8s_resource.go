@@ -17,5 +17,8 @@ func (r *K8sResourceRouter) InitK8sResourceRouter(Router *gin.RouterGroup) {
 		res.GET("pod/logs", v1.Api.K8sResource.GetPodLogs)
 		res.GET("deployment/list", v1.Api.K8sResource.ListDeployments)
 		res.GET("node/list", v1.Api.K8sResource.ListNodes)
+		res.GET("service/list", v1.Api.K8sResource.ListServices)
+		res.GET("configmap/list", v1.Api.K8sResource.ListConfigMaps)
+		res.GET("secret/list", v1.Api.K8sResource.ListSecrets)
 	}
 }

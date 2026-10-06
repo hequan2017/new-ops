@@ -43,6 +43,33 @@
           <el-table-column prop="age" label="年龄" width="90" />
         </el-table>
       </el-tab-pane>
+      <el-tab-pane label="Services" name="services">
+        <el-table :data="services" size="small" v-loading="loading">
+          <el-table-column prop="name" label="名称" min-width="160" />
+          <el-table-column prop="namespace" label="命名空间" min-width="110" />
+          <el-table-column prop="type" label="类型" width="100" />
+          <el-table-column prop="clusterIp" label="ClusterIP" min-width="130" />
+          <el-table-column prop="ports" label="端口" min-width="140" />
+          <el-table-column prop="age" label="年龄" width="90" />
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="ConfigMaps" name="configmaps">
+        <el-table :data="configMaps" size="small" v-loading="loading">
+          <el-table-column prop="name" label="名称" min-width="160" />
+          <el-table-column prop="namespace" label="命名空间" min-width="110" />
+          <el-table-column prop="dataKeys" label="数据键" min-width="180" />
+          <el-table-column prop="age" label="年龄" width="90" />
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="Secrets" name="secrets">
+        <el-table :data="secrets" size="small" v-loading="loading">
+          <el-table-column prop="name" label="名称" min-width="160" />
+          <el-table-column prop="namespace" label="命名空间" min-width="110" />
+          <el-table-column prop="type" label="类型" min-width="140" />
+          <el-table-column prop="dataKeys" label="数据键" min-width="180" />
+          <el-table-column prop="age" label="年龄" width="90" />
+        </el-table>
+      </el-tab-pane>
     </el-tabs>
 
     <el-drawer v-model="logsVisible" :title="`日志 · ${logsPod}`" size="60%" append-to-body>
@@ -54,7 +81,8 @@
 <script setup>
   import {
     getK8sClusterList, getK8sClusterPodList, getK8sClusterPodLogs,
-    getK8sClusterDeploymentList, getK8sClusterNodeList
+    getK8sClusterDeploymentList, getK8sClusterNodeList,
+    getK8sServiceList, getK8sConfigMapList, getK8sSecretList
   } from '@/plugin/k8s/api/k8sResource'
   import { ref, watch } from 'vue'
 
@@ -69,6 +97,9 @@
   const pods = ref([])
   const deployments = ref([])
   const nodes = ref([])
+  const services = ref([])
+  const configMaps = ref([])
+  const secrets = ref([])
   const logsVisible = ref(false)
   const logsPod = ref('')
   const logsText = ref('')
@@ -76,14 +107,20 @@
   const loadAll = async () => {
     loading.value = true
     try {
-      const [p, d, n] = await Promise.all([
+      const [p, d, n, sv, cm, sec] = await Promise.all([
         getK8sClusterPodList({ clusterId: props.clusterId }),
         getK8sClusterDeploymentList({ clusterId: props.clusterId }),
-        getK8sClusterNodeList({ clusterId: props.clusterId })
+        getK8sClusterNodeList({ clusterId: props.clusterId }),
+        getK8sServiceList({ clusterId: props.clusterId }),
+        getK8sConfigMapList({ clusterId: props.clusterId }),
+        getK8sSecretList({ clusterId: props.clusterId })
       ])
       pods.value = p.code === 0 ? p.data : []
       deployments.value = d.code === 0 ? d.data : []
       nodes.value = n.code === 0 ? n.data : []
+      services.value = sv.code === 0 ? sv.data : []
+      configMaps.value = cm.code === 0 ? cm.data : []
+      secrets.value = sec.code === 0 ? sec.data : []
     } finally {
       loading.value = false
     }
