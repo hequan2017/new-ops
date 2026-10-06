@@ -19,22 +19,44 @@ var dbSvc = new(service.DbopsService)
 
 type dbopsApi struct{}
 
+// instanceReq 实例请求体（密码仅请求方向，响应永不回显）
+type instanceReq struct {
+	ID       uint   `json:"ID"`
+	Name     string `json:"name" binding:"required"`
+	Host     string `json:"host" binding:"required"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Database string `json:"database"`
+	Notes    string `json:"notes"`
+}
+
+func (r *instanceReq) toModel() *dbModel.DbopsInstance {
+	m := &dbModel.DbopsInstance{
+		Name: r.Name, Host: r.Host, Port: r.Port,
+		Username: r.Username, PasswordEnc: r.Password,
+		Database: r.Database, Notes: r.Notes,
+	}
+	m.ID = r.ID
+	return m
+}
+
 // CreateInstance 创建实例
 // @Tags DbopsInstance
 // @Summary 创建 MySQL 实例（密码 AES-GCM 加密落库）
 // @Security ApiKeyAuth
 // @Accept application/json
 // @Produce application/json
-// @Param data body dbModel.DbopsInstance true "名称/主机/端口/账号/密码"
+// @Param data body instanceReq true "名称/主机/端口/账号/密码"
 // @Success 200 {object} response.Response{msg=string} "创建成功"
 // @Router /dbops/instance [post]
 func (a *dbopsApi) CreateInstance(c *gin.Context) {
-	var inst dbModel.DbopsInstance
-	if err := c.ShouldBindJSON(&inst); err != nil {
+	var req instanceReq
+	if err := c.ShouldBindJSON(&req); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	if err := dbSvc.CreateInstance(&inst); err != nil {
+	if err := dbSvc.CreateInstance(req.toModel()); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -47,16 +69,16 @@ func (a *dbopsApi) CreateInstance(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Accept application/json
 // @Produce application/json
-// @Param data body dbModel.DbopsInstance true "含ID"
+// @Param data body instanceReq true "含ID"
 // @Success 200 {object} response.Response{msg=string} "更新成功"
 // @Router /dbops/instance [put]
 func (a *dbopsApi) UpdateInstance(c *gin.Context) {
-	var inst dbModel.DbopsInstance
-	if err := c.ShouldBindJSON(&inst); err != nil {
+	var req instanceReq
+	if err := c.ShouldBindJSON(&req); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	if err := dbSvc.UpdateInstance(&inst); err != nil {
+	if err := dbSvc.UpdateInstance(req.toModel()); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
