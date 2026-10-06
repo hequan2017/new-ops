@@ -37,9 +37,10 @@
         <el-table-column prop="remark" label="备注" min-width="140">
           <template #default="{ row }">{{ row.remark || '-' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" icon="link" :loading="testingId === row.ID" @click="onTest(row)">连接测试</el-button>
+            <el-button link type="success" icon="grid" @click="openBrowser(row)">资源浏览</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -68,6 +69,12 @@
         <el-button type="primary" @click="submitForm">注册并测试</el-button>
       </template>
     </el-dialog>
+
+    <ResourceBrowser
+      v-model:visible="browserVisible"
+      :cluster-id="browserClusterId"
+      :cluster-name="browserName"
+    />
   </div>
 </template>
 
@@ -78,6 +85,7 @@
     getK8sClusterList,
     testK8sCluster
   } from '@/plugin/k8s/api/k8sCluster'
+  import ResourceBrowser from '@/plugin/k8s/components/ResourceBrowser.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { onMounted, reactive, ref } from 'vue'
 
@@ -98,6 +106,15 @@
   const getList = async () => {
     const res = await getK8sClusterList(keyword.value || undefined)
     if (res.code === 0) list.value = res.data || []
+  }
+
+  // 资源浏览抽屉
+  const browserVisible = ref(false)
+  const browserClusterId = ref(0)
+  const browserName = ref('')
+  const openBrowser = (row) => {
+    browserClusterId.value = row.ID
+    browserName.value = row.name
   }
 
   const openDialog = () => {
