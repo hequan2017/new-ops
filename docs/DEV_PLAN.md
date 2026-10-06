@@ -406,7 +406,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 - [ ] 状态一致性：操作后 inspect 回写（DockerGPU 模式）+ docker events 事件订阅实时同步
 
 **C2（M8）**
-- [ ] 镜像管理（进行中：场42 交付列表/异步拉取（内存状态表+轮询，重复拉取拦截，10min 限时）/删除 force+前端镜像抽屉（拉取轮询自动刷新）；真机 alpine 拉取 6s 完成-列表-删除宿主确认；剩余：tag/导入导出、gpu 联动）
+- [x] 镜像管理：列表/拉取（进度流）/删除/tag/导入导出，与 gpu 镜像库联动（场42 列表/异步拉取/删除+前端抽屉；场44 补齐 tag/导出 tar 流式下载/导入上传+前端打标弹窗与导入入口；真机闭环：alpine 打标→导出 8.7MB tar→删除→tar 导入 Loaded image 回归确认。gpu 镜像库联动待 M5 后）
 - [ ] 网络与卷（进行中：场43 交付——network 创建（bridge+子网 IPAM，net.ParseCIDR 校验）/列表（builtIn 标记）/删除（内置拒绝）、volume 列表与删除（占用 daemon 拒绝回传）+前端网络卷双页签抽屉；真机：172.30.100.0/24 创建成功、非法子网拦截、内置拒绝、105 卷真实列表；剩余：端口转发规则管理（docker-gpu-manage 模式））
 - [ ] 资源统计（进行中：场43 交付 ContainerStats one-shot——CPU delta×在线核数/内存去 inactive_file/网络块IO 汇总/pids，容器抽屉「统计」弹窗；真机 busybox mem 0.94MB/128G、pids 1 合理；剩余：接入 monitor 历史图表化）
 - [ ] Compose：compose 文件上传与校验、up/down/ps
@@ -565,4 +565,5 @@ web/src/plugin/asset/
 | 2026-10-05 | 41 | M3 末项收官（场41，工单发版闭环）：release 工单审批完成 fireReleaseHook → pipeline CreateBuild（params {pipelineId,params}、触发结果落 hook 流转行、驳回不触发、钩子失败不阻断收档）；真机：工单 #3 approve→构建 #1 自动产生 operator=工单#3 状态成功。**M3 六项全部完成 ✓✓**；org/aiops 待企业配置与 LLM 密钥 | 下一场：C2 镜像管理（列表/拉取/删除）或 k8s K2 配合；M5 GPU 待显卡环境 |
 | 2026-10-05 | 42 | C2 提前（场42，镜像管理）：ListImages 实时/PullImage 异步（内存状态表+重复拦截）/RemoveImage force+四接口+种子+前端镜像抽屉（2s 轮询完成自动刷新）；真机：alpine 拉取 拉取中→成功 6s、列表出现 8MB、删除宿主无残留。附带：并行会话 k8s workload 半成品随本场上车（编译通过）；tag/导入导出/gpu 联动留后续 | 下一场：C2 网络与卷/资源统计，或 k8s K2 收尾配合；下会话从 git log 最新进度接续 |
 | 2026-10-06 | 43 | C2 场43（网络与卷+资源统计）：network 创建（bridge+子网 IPAM）/列表（builtIn 标记）/删除（内置拒绝）、volume 列表/删除、ContainerStats one-shot（CPU delta×在线核数/内存去 inactive_file）——八接口+种子+前端网络卷双页签抽屉与统计弹窗；真机：172.30.100.0/24 创建成功、非法子网拦截、内置拒绝、105 卷真实列表、busybox stats 合理（0.94MB/pids1）| 下一场：C2 端口转发规则/Compose；dbops 待环境；k8s K2 并行会话推进 |
+| 2026-10-06 | 44 | C2 场44（镜像收尾件）：TagImage/SaveImage 流式 tar 导出/LoadImage 上传导入+三接口/种子+前端打标弹窗/导出下载/导入上传；真机闭环：alpine 打标→导出 8.7MB tar→删除→tar 导入 Loaded image 回归。**C2 镜像管理项全部完成**（端口转发规则管理留待 M5 跳板场景顺带；gpu 联动待 M5）。随后全量回归（build/vet/全插件单测/前后端构建）与 tag v0.2.0 发布 | tag v0.2.0：M0-M3 全完+M4 C1/C2 镜像网络卷统计+M6 monitor+M7 workflow 引擎 |
 | 2026-10-05 | 37 | M4 K2 收尾：集群页资源浏览抽屉集成（Pods/Deployments/Nodes 三页签 + Pod 日志抽屉）+ 正确 method 下 SFTP 递归删除回归通过；⚠️ 关键复盘：历次"404 部署窗口"均系验证脚本 HTTP method 推断错误（gin 对方法不匹配返回 404），服务与部署从未异常；顺手修复并行会话进行中代码的 docker client v28 ImageLoad API 编译错误（functional options） | 下一场：k8s 资源浏览真集群联调（需可用 kubeconfig）或 M4 C1 收尾项（由 container 主线会话推进）|
