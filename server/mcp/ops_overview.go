@@ -8,15 +8,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// opsGet 调上游 GET 并解析 data 段（envelope {code,data,msg}）
-func opsGet[T any](ctx context.Context, endpoint string, query url.Values) (T, error) {
+// opsPost 调上游 POST 并解析 data 段（envelope {code,data,msg}；列表接口均为 POST 分页）
+func opsPost[T any](ctx context.Context, endpoint string, body any) (T, error) {
 	var out T
-	env, err := getUpstream[json.RawMessage](ctx, endpoint, query)
+	env, err := postUpstream[json.RawMessage](ctx, endpoint, body)
 	if err != nil {
 		return out, err
 	}
@@ -54,8 +53,8 @@ func (t *OpsAssetOverview) Handle(ctx context.Context, _ mcp.CallToolRequest) (*
 		List  []opsHostRow `json:"list"`
 		Total int64        `json:"total"`
 	}
-	data, err := opsGet[pageResult](ctx, "/asset/host/list", url.Values{
-		"page": []string{"1"}, "pageSize": []string{"20"},
+	data, err := opsPost[pageResult](ctx, "/asset/host/list", map[string]any{
+		"page": 1, "pageSize": 20,
 	})
 	if err != nil {
 		return mcp.NewToolResultError("查询失败: " + err.Error()), nil
@@ -88,7 +87,7 @@ func (t *OpsAlertRecent) Handle(ctx context.Context, _ mcp.CallToolRequest) (*mc
 	type pageResult struct {
 		List []opsAlertRow `json:"list"`
 	}
-	data, err := opsGet[pageResult](ctx, "/monitor/alert/event/list", url.Values{})
+	data, err := opsPost[pageResult](ctx, "/monitor/alert/event/list", map[string]any{"page": 1, "pageSize": 10})
 	if err != nil {
 		return mcp.NewToolResultError("查询失败: " + err.Error()), nil
 	}
@@ -133,7 +132,7 @@ func (t *OpsTicketStatus) Handle(ctx context.Context, _ mcp.CallToolRequest) (*m
 	type pageResult struct {
 		List []opsTicketRow `json:"list"`
 	}
-	data, err := opsGet[pageResult](ctx, "/workflow/instance/list", url.Values{})
+	data, err := opsPost[pageResult](ctx, "/workflow/instance/list", map[string]any{"page": 1, "pageSize": 10})
 	if err != nil {
 		return mcp.NewToolResultError("查询失败: " + err.Error()), nil
 	}
