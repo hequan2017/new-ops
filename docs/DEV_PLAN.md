@@ -329,7 +329,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 - [x] workflow：状态机定义/实例/审批任务 API 与页面（场40 交付：三表 wf_definition（states/transitions JSON+起始）/wf_instance（定义名快照+业务参数）/wf_action_log；引擎 ValidateDefinition（引用闭合/重名/起始，4 组单测）+NextState 迁移推导、审批节点动作受限（approve/reject）、终态自动收档（完成/驳回）、cancel 撤回、迁移表外动作拦截；八接口+菜单/API/casbin 种子（普通用户仅自己工单）；前端工单中心（发起/通过/驳回/撤回+流转时间线、定义管理 JSON 模板）；真机全链：定义→发起→submit→approve 归档已完成、非法迁移/审批动作/结束后操作三类拦截全部生效。模板三类留作业务侧预设定义，随发版闭环场次补）
 - [ ] org：钉钉扫码登录（JWT 打通）、部门/用户定时同步、机器人告警复用
-- [ ] aiops：MCP Server 工具注册（基于 GVA mcp/ 骨架）、AI 诊断网关（统一 LLM 调用、密钥管理、prompt 模板）
+- [ ] aiops（进行中：场49 交付 MCP 运维只读工具三件——ops_asset_overview / ops_alert_recent / ops_ticket_status，基于 GVA mcp 骨架（StreamableHTTP :8889 standalone，cmd/mcp），init 自动注册；数据经骨架上游代理调主 server API（鉴权透传，standalone 无 DB 勿直查）；真机 MCP 协议全验：initialize→tools/list（3 新工具在列）→tools/call 返回真实数据（5 资产/2 告警/3 工单）；坑：列表接口均为分页 POST，GET 调用命中 gin 404（'404 page not found' 中 404 先解析为 JSON 数字，报错表现为 'p' after top-level value）；剩余：AI 诊断网关（统一 LLM 调用、密钥管理、prompt 模板）——待 LLM API 密钥）
 
 ### 开发会话执行协议（每场 2 小时，完成即提交）
 
@@ -569,3 +569,4 @@ web/src/plugin/asset/
 | 2026-10-05 | 37 | M4 K2 收尾：集群页资源浏览抽屉集成（Pods/Deployments/Nodes 三页签 + Pod 日志抽屉）+ 正确 method 下 SFTP 递归删除回归通过；⚠️ 关键复盘：历次"404 部署窗口"均系验证脚本 HTTP method 推断错误（gin 对方法不匹配返回 404），服务与部署从未异常；顺手修复并行会话进行中代码的 docker client v28 ImageLoad API 编译错误（functional options） | 下一场：k8s 资源浏览真集群联调（需可用 kubeconfig）或 M4 C1 收尾项（由 container 主线会话推进）|
 | 2026-10-06 | 47 | k8s K2 补充：Services/ConfigMaps/Secrets 只读列表（后端三接口+路由+种子+资源浏览三页签；Secret 值永不回显仅列键名）；自动注入真机回归通过（批次6 每主机 Command=echo baize-auto-inject-done，注入闭环）；正确 method 下历次 404 全部复现排除——验证脚本规范已立 | 下一场：k8s 资源浏览真集群联调（待用户提供 kubeconfig）或继续 K2 写操作（Scale/滚动重启）|
 | 2026-10-06 | 48 | M6 dbops 可做部分（场48）：MySQL 实例纳管（密码 AES-GCM 密文复用 asset/crypto、独立请求体防回显、TCP 探活回写、未结束工单拒删）+ SQL 工单（创建/取消/分页、审核接口 goInception 未配置明确报 1708 不动状态、接入点已留）——九接口+实例/工单双页+种子（错误码 1701-1708）；真机：密文不泄露、3306 探活离线、工单流转、审核未配置报错全过 | 下一场：aiops MCP 工具注册（M7 末项可做部分）或 M5 GPU 骨架（防超卖纯逻辑）；goInception/MySQL/钉钉/LLM 环境就绪后接对应断点 |
+| 2026-10-06 | 49 | M7 aiops 可做部分（场49）：MCP 运维只读工具三件（ops_asset_overview/ops_alert_recent/ops_ticket_status）注册进 GVA mcp 骨架（StreamableHTTP standalone，init 自动注册；数据经骨架上游代理调主 server API、鉴权透传，standalone 无 DB 禁直查）；真机 MCP 协议全验：initialize→tools/list→tools/call 三工具均返回真实数据（5 资产/2 告警/3 工单）；排障：列表接口均为 POST，GET 命中 gin 404（'404' 先解析为 JSON 数字致 'p' after top-level value 假象）——与并行会话"404=method 推断错误"复盘互证 | 下一场：M5 GPU 骨架（防超卖纯逻辑+单测，无环境也可交付）；LLM 密钥就绪后接 AI 诊断网关 |
