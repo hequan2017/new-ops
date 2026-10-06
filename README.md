@@ -1,6 +1,6 @@
 # 白泽 BaiZe · 统一运维开发平台（new-ops）
 
-> **v0.2.0**（2026-10-06）—— M0-M3 全部完成，M4 容器管理主体（C1 全部 + C2 镜像/网络/卷/资源统计）、M6 监控告警三项、M7 工单引擎已交付；全部功能经真实环境端到端验证。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
+> **v0.2.0+**（2026-10-06）—— M0-M3 全部完成，M4 容器管理主体（C1 全部 + C2 镜像/网络/卷/资源统计），M6 监控告警三项 + 数据库工单可做部分（实例纳管/SQL 工单），M7 工单引擎 + **MCP 运维工具**（AI 助手可直查资产/告警/工单）；全部功能经真实环境端到端验证。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
 >
 > **命名由来**：白泽是中国上古神话中的瑞兽，通晓天下万物之情——愿这套平台也能"通晓"你的全部基础设施。仓库/工程名沿用 `new-ops`。
 >
@@ -48,7 +48,7 @@
 ┌──────────┴──────────────────────────────────────────────┴───────────────────────────┐
 │  server : Gin + GORM + Casbin + Zap + 定时任务(robfig/cron) + MCP Server 骨架         │
 │  plugin/asset  plugin/term  plugin/job  plugin/pipeline  plugin/container             │
-│  plugin/k8s    plugin/monitor  plugin/workflow  （gpu/dbops/org/aiops 骨架就绪）        │
+│  plugin/k8s    plugin/monitor  plugin/workflow  plugin/dbops   （gpu/org 骨架就绪）    │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
 │  执行通道：SSH 直连/ProxyJump 级联 │ Docker API(unix/TCP+TLS) │ K8s API(kubeconfig)   │
 │  外部依赖：阿里云 OpenAPI(RPC V1 自实现签名) │ 钉钉机器人 webhook │ goInception(规划)   │
@@ -121,7 +121,8 @@
 ### k8s 集群管理（M4 K1/K2 🚧 进行中）
 
 - ✅ 集群注册：kubeconfig **AES-256-GCM 加密落库**（接口不回显）、连接测试（失败不阻断、状态记离线）
-- 🚧 工作负载浏览：Pods / Deployments / Nodes 列表 + Pod 日志（开发中，见开发日志）
+- ✅ 资源浏览：Pods / Deployments / Nodes / Services / ConfigMaps / Secrets 只读列表 + Pod 日志（Secret 值永不回显，仅列键名）
+- 🚧 写操作（扩缩容/滚动重启）与真集群联调进行中；其余 K2 能力见开发日志
 
 ### monitor 监控告警（M6 ✅ 三项全部）
 
@@ -139,6 +140,24 @@
 | 流转 | 审批节点动作受限（approve/reject）、终态自动收档（完成/驳回）、cancel 撤回、迁移表外动作拦截；流转记录时间线 |
 | **发版闭环** | `bizType=release` 工单审批完成自动触发流水线构建（params `{pipelineId, params}`），结果落 hook 流转行；驳回不触发 |
 | 工单中心 | 发起/通过/驳回/撤回 + 定义管理（JSON 模板）；普通用户仅见自己发起的工单 |
+
+### dbops 数据库工单（M6 🔨 可做部分已交付）
+
+| 功能 | 说明 |
+|---|---|
+| 实例纳管 | MySQL 实例 CRUD：主机/端口/账号/**密码 AES-256-GCM 密文**（复用 asset/crypto 信封加密；独立请求体保证响应永不回显）；TCP 探活回写在线状态 |
+| SQL 上线工单 | 创建（待审核）/取消/分页（普通用户仅本人）；有未结束工单的实例拒绝删除 |
+| 审核引擎预留 | goInception 接入点已留——引擎未配置时审核接口明确报错（错误码 1708）且工单状态不变；审核/执行/备份与 soar 优化建议待 goInception + MySQL 环境 |
+
+### aiops MCP 运维工具（M7 🔨 可做部分已交付）
+
+| 功能 | 说明 |
+|---|---|
+| MCP Server | 复用 GVA 骨架（mark3labs/mcp-go，StreamableHTTP），独立进程 `go run ./cmd/mcp`（默认 :8889，`/mcp` 端点，`/health` 探活） |
+| 运维只读工具 | `ops_asset_overview`（资产概览）/ `ops_alert_recent`（最近告警）/ `ops_ticket_status`（工单状态）——AI 助手经 MCP 协议即可直查平台三域概况 |
+| 鉴权与数据 | 工具经骨架上游代理调用主 server API，调用者身份经 auth_header 透传（沿用平台 JWT + Casbin 权限）；standalone 进程无 DB 连接，不绕过权限体系 |
+| 启动 | `cd server && go run ./cmd/mcp -config ./cmd/mcp/config.yaml`；上游地址/鉴权头/超时在 mcp 段配置 |
+| AI 诊断网关 | 统一 LLM 调用/密钥管理/prompt 模板——待 LLM API 密钥后接入 |
 
 ### 基座能力（gin-vue-admin 自带 ✅）
 
@@ -195,7 +214,9 @@ cd web && npm install && npm run serve
 5. **流水线**编排阶段（shell 步骤选目标主机 / http 步骤），试 webhook/cron 触发与审批 gate；
 6. **工单中心**建定义发起 release 工单，审批通过看流水线自动构建；
 7. **容器管理**接入点（`unix:///var/run/docker.sock`）→ 容器/镜像/网络/卷/统计/事件/终端；
-8. **告警规则**配阈值或端口探活 + 钉钉 webhook，主机页「监控」看趋势图。
+8. **告警规则**配阈值或端口探活 + 钉钉 webhook，主机页「监控」看趋势图；
+9. **数据库工单**注册 MySQL 实例（密码加密落库、TCP 探活），提 SQL 工单（审核引擎待 goInception 环境）；
+10. **MCP 运维工具**：`cd server && go run ./cmd/mcp` 后，把 `http://127.0.0.1:8889/mcp` 接入你的 AI 助手，即可对话式查询资产概览 / 最近告警 / 工单状态。
 
 ---
 
@@ -234,7 +255,9 @@ new-ops/
 │   │   ├── k8s/                   # 集群注册 + 资源浏览（M4 🚧）
 │   │   ├── monitor/               # 性能采集/告警引擎/钉钉（M6 ✅）
 │   │   ├── workflow/              # 工单引擎 + 发版闭环（M7 ✅）
-│   │   └── gpu/dbops/org/aiops/   # 骨架就绪（依赖环境/配置）
+│   │   ├── dbops/                 # MySQL 纳管/SQL 工单（M6 🔨 审核引擎待环境）
+│   │   ├── mcp/(骨架) + cmd/mcp   # MCP Server 独立进程 + aiops 运维工具（M7 🔨）
+│   │   └── gpu/org/               # 骨架就绪（依赖环境/配置）
 │   └── ...                        # GVA 底座（零修改）
 ├── web/src/plugin/                # 各插件前端视图（与 server/plugin 同名对应）
 ├── docs/
@@ -272,8 +295,8 @@ server/plugin/<name>/
 | M3 | 流水线：三层模型/执行器（快照+状态机+审批+并发）/SSE/三通道触发/发版闭环 | ✅ |
 | M4 | 容器 C1 全部 + C2 镜像/网络/卷/stats；k8s K1/K2 进行中 | 🔨 |
 | M5 | GPU 算力：节点/规格/实例/防超卖/HAMi | ⏳ 待显卡环境 |
-| M6 | monitor 三项 ✅；dbops（goInception SQL 工单） | ⏳ 待环境 |
-| M7 | workflow 工单引擎 ✅；org 钉钉登录 | ⏳ 待企业配置 |
+| M6 | monitor 三项 ✅；dbops 实例纳管 + SQL 工单骨架 ✅（goInception 审核/执行待环境） | 🔨 |
+| M7 | workflow 工单引擎 ✅；aiops MCP 运维工具 ✅（AI 诊断网关待 LLM 密钥）；org 钉钉登录 | 🔨 |
 | M8 | Compose/端口转发、Helm、三级 RBAC、AI 诊断 | 📋 |
 | M9 | 轻量 Go Agent：反向长连接/采集上报/第二执行通道 | 📋 |
 
