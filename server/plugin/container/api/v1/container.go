@@ -3,6 +3,7 @@ package api
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -189,4 +190,86 @@ func (a *containerApi) RemoveImage(c *gin.Context) {
 		return
 	}
 	response.OkWithMessage("删除成功", c)
+}
+
+// TagImage 镜像打标签
+// @Tags DockerImage
+// @Summary 为已有镜像打新标签
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param endpointId query int true "接入点ID"
+// @Param source query string true "源引用"
+// @Param target query string true "目标引用"
+// @Success 200 {object} response.Response{msg=string} "打标成功"
+// @Router /container/image/tag [post]
+func (a *containerApi) TagImage(c *gin.Context) {
+	endpointID, err := strconv.ParseUint(c.Query("endpointId"), 10, 64)
+	if err != nil || endpointID == 0 {
+		response.FailWithMessage("endpointId 无效", c)
+		return
+	}
+	if err := ctSvc.TagImage(uint(endpointID), c.Query("source"), c.Query("target")); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("打标成功", c)
+}
+
+// ExportImage 导出镜像 tar
+// @Tags DockerImage
+// @Summary 导出镜像为 tar（流式下载）
+// @Security ApiKeyAuth
+// @Produce application/octet-stream
+// @Param endpointId query int true "接入点ID"
+// @Param ref query string true "镜像引用（多个逗号分隔）"
+// @Success 200 {file} file "tar 流"
+// @Router /container/image/export [get]
+func (a *containerApi) ExportImage(c *gin.Context) {
+	endpointID, err := strconv.ParseUint(c.Query("endpointId"), 10, 64)
+	if err != nil || endpointID == 0 {
+		response.FailWithMessage("endpointId 无效", c)
+		return
+	}
+	refs := strings.Split(c.Query("ref"), ",")
+	c.Header("Content-Type", "application/x-tar")
+	c.Header("Content-Disposition", "attachment; filename=image-export.tar")
+	if err := ctSvc.SaveImage(uint(endpointID), refs, c.Writer); err != nil {
+		// 流已开始时无法改状态码，仅记录
+		c.Writer.WriteString("\nEXPORT-ERROR: " + err.Error())
+	}
+}
+
+// ImportImage 导入镜像 tar
+// @Tags DockerImage
+// @Summary 从上传的 tar 导入镜像
+// @Security ApiKeyAuth
+// @Accept multipart/form-data
+// @Produce application/json
+// @Param endpointId formData int true "接入点ID"
+// @Param file formData file true "镜像 tar"
+// @Success 200 {object} response.Response{msg=string} "导入成功"
+// @Router /container/image/import [post]
+func (a *containerApi) ImportImage(c *gin.Context) {
+	endpointID, err := strconv.ParseUint(c.PostForm("endpointId"), 10, 64)
+	if err != nil || endpointID == 0 {
+		response.FailWithMessage("endpointId 无效", c)
+		return
+	}
+	fh, err := c.FormFile("file")
+	if err != nil {
+		response.FailWithMessage("请选择镜像 tar 文件", c)
+		return
+	}
+	src, err := fh.Open()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	defer src.Close()
+	out, err := ctSvc.LoadImage(uint(endpointID), src)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("导入完成: "+out, c)
 }

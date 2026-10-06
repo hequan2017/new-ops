@@ -34,6 +34,9 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		img.POST("pull", v1.ContainerApi.PullImage)
 		img.GET("pull-status", v1.ContainerApi.PullStatus)
 		img.DELETE("", v1.ContainerApi.RemoveImage)
+		img.POST("tag", v1.ContainerApi.TagImage)
+		img.GET("export", v1.ContainerApi.ExportImage)
+		img.POST("import", v1.ContainerApi.ImportImage)
 	}
 	nw := Router.Group("container/network")
 	{
