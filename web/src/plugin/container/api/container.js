@@ -17,6 +17,14 @@ export const pullImage = (params) => service({ url: '/container/image/pull', met
 export const pullStatus = (params) => service({ url: '/container/image/pull-status', method: 'get', params })
 // 删除镜像
 export const removeImage = (params) => service({ url: '/container/image', method: 'delete', params })
+// 镜像打标签
+export const tagImage = (params) => service({ url: '/container/image/tag', method: 'post', params })
+// 导出镜像 tar（blob 下载）
+export const exportImage = (params) =>
+  service({ url: '/container/image/export', method: 'get', params, responseType: 'blob', timeout: 600000 })
+// 导入镜像 tar
+export const importImage = (data) =>
+  service({ url: '/container/image/import', method: 'post', data, headers: { 'Content-Type': 'multipart/form-data' }, timeout: 600000 })
 
 // 网络列表/创建/删除
 export const getNetworkList = (params) => service({ url: '/container/network/list', method: 'get', params })

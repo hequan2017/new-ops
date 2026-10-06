@@ -257,6 +257,9 @@
         <el-form-item>
           <el-button type="primary" :disabled="!pullRef" @click="doPull">拉取</el-button>
           <el-button :loading="imgLoading" @click="loadImages">刷 新</el-button>
+          <el-upload :show-file-list="false" accept=".tar" :http-request="onImportImage">
+            <el-button type="success" plain>导入 tar</el-button>
+          </el-upload>
         </el-form-item>
       </el-form>
       <el-table :data="imgList" v-loading="imgLoading" stripe size="small">
@@ -272,13 +275,28 @@
         <el-table-column label="创建时间" width="170">
           <template #default="{ row }">{{ new Date(row.createdAt * 1000).toLocaleString() }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
+            <el-button link type="primary" @click="openTag(row)">打标</el-button>
+            <el-button link @click="doExport(row)">导出</el-button>
             <el-button link type="danger" @click="doRemoveImage(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-drawer>
+
+    <el-dialog v-model="tagVisible" title="镜像打标签" width="480px" append-to-body>
+      <el-form label-width="80px">
+        <el-form-item label="源引用">{{ tagSource }}</el-form-item>
+        <el-form-item label="新标签">
+          <el-input v-model="tagTarget" placeholder="如 registry.local/app:v2" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="tagVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitTag">确 定</el-button>
+      </template>
+    </el-dialog>
 
     <el-drawer v-model="eventVisible" :title="`容器事件 · ${eventEndpoint || '全部接入点'}`" size="60%">
       <el-table :data="eventList" v-loading="eventLoading" stripe size="small">
@@ -306,6 +324,7 @@
     createEndpoint, updateEndpoint, deleteEndpoint, getEndpointList, checkEndpoint
   } from '@/plugin/container/api/dockerEndpoint'
   import { getContainerList, containerAction, createContainer, getImageList, pullImage, pullStatus, removeImage,
+    tagImage, exportImage, importImage,
     getNetworkList, createNetwork, removeNetwork, getVolumeList, removeVolume, getContainerStats } from '@/plugin/container/api/container'
   import { getEventList } from '@/plugin/container/api/dockerEvent'
   import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
@@ -566,6 +585,54 @@
         loadImages()
       }
     })
+  }
+
+  // 打标签
+  const tagVisible = ref(false)
+  const tagSource = ref('')
+  const tagTarget = ref('')
+
+  const openTag = (row) => {
+    tagSource.value = row.tags.length ? row.tags[0] : row.id
+    tagTarget.value = ''
+    tagVisible.value = true
+  }
+
+  const submitTag = async () => {
+    if (!tagTarget.value.trim()) {
+      ElMessage.warning('请输入新标签')
+      return
+    }
+    const res = await tagImage({ endpointId: ctEndpoint.value.ID, source: tagSource.value, target: tagTarget.value })
+    if (res.code === 0) {
+      ElMessage.success('已打标')
+      tagVisible.value = false
+      loadImages()
+    }
+  }
+
+  // 导出（blob 下载）
+  const doExport = async (row) => {
+    const ref = row.tags.length ? row.tags[0] : row.id
+    const res = await exportImage({ endpointId: ctEndpoint.value.ID, ref })
+    const url = URL.createObjectURL(new Blob([res.data || res]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = ref.replace(/[/:]/g, '_') + '.tar'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // 导入
+  const onImportImage = async (opt) => {
+    const fd = new FormData()
+    fd.append('endpointId', ctEndpoint.value.ID)
+    fd.append('file', opt.file)
+    const res = await importImage(fd)
+    if (res.code === 0) {
+      ElMessage.success(res.msg)
+      loadImages()
+    }
   }
 
   // ---------- 容器统计 ----------
