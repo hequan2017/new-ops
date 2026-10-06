@@ -321,7 +321,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 ### M6 任务清单（dbops + monitor）
 
-- [ ] dbops：MySQL 实例/账号纳管（密文）；SQL 上线工单（goInception 审核/执行/备份、soar 优化建议、多环境）
+- [ ] dbops（进行中：场45 交付可做部分——dbops_instance（密码 AES-GCM 密文复用 asset/crypto，独立请求体保证响应永不回显）/dbops_order 两表、实例 CRUD+TCP 探活回写（SQL 层检测待 mysql 驱动引入）、SQL 工单创建/取消/分页（普通用户仅本人）、审核接口 goInception 未配置明确报 1708 不动状态（接入点已留）；九接口+实例/工单双页+种子（错误码 1701-1708）；真机：密文不泄露（SecretNotLeaked）、3306 探活离线回写、工单流转、审核未配置报错；剩余：goInception 审核/执行/备份、soar 优化建议、多环境——待 goInception 二进制与 MySQL 环境）
 - [x] monitor：SSH 采集任务（CPU/内存/磁盘/网络）+ 指标留存与自动清理 + ECharts 图表页（场38 交付：monitor_metric 表（asset+name+ts 复合索引、30 天留存随轮清理）、单命令组合采样 1s 完成（loadavg/cpu 两次 /proc/stat delta 含除零保护/meminfo/df，解析纯函数 3 组单测）、CollectAll 并发 5 全量采集（绑凭据非报废主机，复用 asset SSH 通道指纹校验）、@every 5m 注册底座 timer、/monitor/metric/{list,collect}+种子（888/9528 只读）；前端 PerfChart（ECharts 时间轴四折线双 Y 轴、1h/6h/24h/7d、立即采集）挂主机页「监控」抽屉；真机：disk 25% 与宿主 df 精准一致、load/mem 合理、CPU 0% 为 88 核空闲机真实值；网络指标待补）
 - [x] monitor：告警规则引擎（阈值/持续时间/静默窗口）+ 钉钉机器人推送 + 端口探活（场39：monitor_alert_rule（metric 阈值>/< 连续 N 次、port TCP 探活、静默默认 30min、钉钉 webhook 选配）+ event（触发/恢复/通知状态）；评估挂采集轮末尾统一执行、evaluateMetric 纯函数单测、触发静默去重、恢复自动关闭未决事件、pushDingTalk 仅 http(s) 5s 超时；五接口+前端规则/事件双页签；真机：mem<99 触发含当前值、端口不可达触发、二轮采集静默不重复、非法指标名拦截；修复告警两表漏注册迁移与摘要重复主机名两处）
 
@@ -568,3 +568,4 @@ web/src/plugin/asset/
 | 2026-10-06 | 44 | C2 场44（镜像收尾件）：TagImage/SaveImage 流式 tar 导出/LoadImage 上传导入+三接口/种子+前端打标弹窗/导出下载/导入上传；真机闭环：alpine 打标→导出 8.7MB tar→删除→tar 导入 Loaded image 回归。**C2 镜像管理项全部完成**（端口转发规则管理留待 M5 跳板场景顺带；gpu 联动待 M5）。随后全量回归（build/vet/全插件单测/前后端构建）与 tag v0.2.0 发布 | tag v0.2.0：M0-M3 全完+M4 C1/C2 镜像网络卷统计+M6 monitor+M7 workflow 引擎 |
 | 2026-10-05 | 37 | M4 K2 收尾：集群页资源浏览抽屉集成（Pods/Deployments/Nodes 三页签 + Pod 日志抽屉）+ 正确 method 下 SFTP 递归删除回归通过；⚠️ 关键复盘：历次"404 部署窗口"均系验证脚本 HTTP method 推断错误（gin 对方法不匹配返回 404），服务与部署从未异常；顺手修复并行会话进行中代码的 docker client v28 ImageLoad API 编译错误（functional options） | 下一场：k8s 资源浏览真集群联调（需可用 kubeconfig）或 M4 C1 收尾项（由 container 主线会话推进）|
 | 2026-10-06 | 47 | k8s K2 补充：Services/ConfigMaps/Secrets 只读列表（后端三接口+路由+种子+资源浏览三页签；Secret 值永不回显仅列键名）；自动注入真机回归通过（批次6 每主机 Command=echo baize-auto-inject-done，注入闭环）；正确 method 下历次 404 全部复现排除——验证脚本规范已立 | 下一场：k8s 资源浏览真集群联调（待用户提供 kubeconfig）或继续 K2 写操作（Scale/滚动重启）|
+| 2026-10-06 | 48 | M6 dbops 可做部分（场48）：MySQL 实例纳管（密码 AES-GCM 密文复用 asset/crypto、独立请求体防回显、TCP 探活回写、未结束工单拒删）+ SQL 工单（创建/取消/分页、审核接口 goInception 未配置明确报 1708 不动状态、接入点已留）——九接口+实例/工单双页+种子（错误码 1701-1708）；真机：密文不泄露、3306 探活离线、工单流转、审核未配置报错全过 | 下一场：aiops MCP 工具注册（M7 末项可做部分）或 M5 GPU 骨架（防超卖纯逻辑）；goInception/MySQL/钉钉/LLM 环境就绪后接对应断点 |
