@@ -82,6 +82,8 @@
   "/src/plugin/container/components/ContainerLogs.vue": "ContainerLogs",
   "/src/plugin/container/components/ContainerShell.vue": "ContainerShell",
   "/src/plugin/container/view/endpoint/index.vue": "containerEndpoint",
+  "/src/plugin/dbops/view/instance/index.vue": "dbopsInstance",
+  "/src/plugin/dbops/view/order/index.vue": "dbopsOrder",
   "/src/plugin/email/view/index.vue": "Email",
   "/src/plugin/job/view/batchExec/index.vue": "jobBatchExec",
   "/src/plugin/job/view/script/index.vue": "jobScript",
