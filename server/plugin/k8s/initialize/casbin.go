@@ -44,6 +44,8 @@ func Casbin() {
 		{"/k8s/pvc/list", "GET"},
 		{"/k8s/ingress/list", "GET"},
 		{"/k8s/event/list", "GET"},
+		{"/k8s/helm/list", "GET"},
+		{"/k8s/helm/history", "GET"},
 	}
 	apply := func(role string, rules []struct {
 		Path   string
@@ -76,6 +78,9 @@ func Casbin() {
 		{"/k8s/pod/delete", "POST"},
 		{"/k8s/workload/diff", "POST"},
 		{"/k8s/workload/apply", "POST"},
+		{"/k8s/helm/install", "POST"},
+		{"/k8s/helm/uninstall", "POST"},
+		{"/k8s/helm/rollback", "POST"},
 		// 终端为写级能力：execws 握手 casbin 自验（仅 888）
 		{"/k8s/pod/execws", "GET"},
 	}

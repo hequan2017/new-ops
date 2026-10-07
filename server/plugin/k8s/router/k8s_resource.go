@@ -66,3 +66,18 @@ func (r *K8sWriteRouter) InitK8sWriteRouter(Router *gin.RouterGroup) {
 		yamlGroup.POST("apply", v1.Api.K8sYaml.ApplyWorkloadYAML)
 	}
 }
+
+// K8sHelmRouter Helm release 管理路由
+type K8sHelmRouter struct{}
+
+// InitK8sHelmRouter Helm 路由（list/history 只读；install/uninstall/rollback 写级 888）
+func (r *K8sHelmRouter) InitK8sHelmRouter(Router *gin.RouterGroup) {
+	helm := Router.Group("k8s/helm")
+	{
+		helm.GET("list", v1.Api.K8sHelm.ListHelmReleases)
+		helm.GET("history", v1.Api.K8sHelm.GetHelmHistory)
+		helm.POST("install", v1.Api.K8sHelm.InstallHelmRelease)
+		helm.POST("uninstall", v1.Api.K8sHelm.UninstallHelmRelease)
+		helm.POST("rollback", v1.Api.K8sHelm.RollbackHelmRelease)
+	}
+}
