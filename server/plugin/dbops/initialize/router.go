@@ -9,6 +9,7 @@ import (
 
 	"github.com/hequan2017/new-ops/server/global"
 	sysModel "github.com/hequan2017/new-ops/server/model/system"
+	"github.com/hequan2017/new-ops/server/middleware"
 	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 	srvUtils "github.com/hequan2017/new-ops/server/utils"
 	"github.com/hequan2017/new-ops/server/plugin/dbops/model"
@@ -28,9 +29,10 @@ func Gorm(ctx context.Context) {
 	}
 }
 
-// Router 注册 dbops 路由（private 组，casbin 鉴权）
+// Router 注册 dbops 路由（private 组显式挂 JWT+casbin——插件自建组不继承底座中间件）
 func Router(engine *gin.Engine) {
 	private := engine.Group(global.GVA_CONFIG.System.RouterPrefix).Group("")
+	private.Use(middleware.JWTAuth()).Use(middleware.CasbinHandler())
 	router.RouterGroupApp.Init(private)
 }
 
