@@ -25,6 +25,23 @@ func (r *K8sResourceRouter) InitK8sResourceRouter(Router *gin.RouterGroup) {
 
 type K8sWriteRouter struct{}
 
+// K8sNodeRouter Node 管理与集群总览路由
+type K8sNodeRouter struct{}
+
+// InitK8sNodeRouter Node 管理与集群总览路由
+func (r *K8sNodeRouter) InitK8sNodeRouter(Router *gin.RouterGroup) {
+	node := Router.Group("k8s")
+	{
+		node.GET("cluster/overview", v1.Api.K8sNode.GetClusterOverview)
+		node.GET("node/detail", v1.Api.K8sNode.GetNodeDetail)
+	}
+	writeGroup := Router.Group("k8s/node")
+	{
+		writeGroup.POST("cordon", v1.Api.K8sNode.CordonNode)
+		writeGroup.POST("drain", v1.Api.K8sNode.DrainNode)
+	}
+}
+
 // InitK8sWriteRouter 写操作路由（private 组；casbin 策略仅 888）
 func (r *K8sWriteRouter) InitK8sWriteRouter(Router *gin.RouterGroup) {
 	writeGroup := Router.Group("k8s/deployment")

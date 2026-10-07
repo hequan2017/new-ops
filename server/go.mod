@@ -61,7 +61,10 @@ require (
 	gorm.io/driver/sqlserver v1.6.3
 	gorm.io/gen v0.3.26
 	gorm.io/gorm v1.31.1
+	k8s.io/api v0.37.1
+	k8s.io/apimachinery v0.37.1
 	k8s.io/client-go v0.37.1
+	k8s.io/metrics v0.33.3
 )
 
 require (
@@ -246,8 +249,6 @@ require (
 	gorm.io/hints v1.1.2 // indirect
 	gorm.io/plugin/dbresolver v1.6.2 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
-	k8s.io/api v0.37.1 // indirect
-	k8s.io/apimachinery v0.37.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect

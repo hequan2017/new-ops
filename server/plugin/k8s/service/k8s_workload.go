@@ -137,18 +137,12 @@ func (s *K8sClusterService) ListNodes(clusterID uint) ([]NodeInfo, error) {
 		return nil, fmt.Errorf("Node 列表获取失败: %w", err)
 	}
 	out := make([]NodeInfo, 0, len(list.Items))
-	for _, n := range list.Items {
-		status := "Ready"
-		for _, c := range n.Status.Conditions {
-			if c.Type == "Ready" && c.Status != "True" {
-				status = "NotReady"
-			}
-		}
+	for i := range list.Items {
 		out = append(out, NodeInfo{
-			Name: n.Name, Status: status,
-			Version:  n.Status.NodeInfo.KubeletVersion,
-			Internal: internalIP(n.Status.Addresses),
-			Age:      translateTimestamp(n.CreationTimestamp.Time),
+			Name: list.Items[i].Name, Status: summarizeNodeStatus(&list.Items[i]),
+			Version:  list.Items[i].Status.NodeInfo.KubeletVersion,
+			Internal: internalIP(list.Items[i].Status.Addresses),
+			Age:      translateTimestamp(list.Items[i].CreationTimestamp.Time),
 		})
 	}
 	return out, nil

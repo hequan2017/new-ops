@@ -6,6 +6,7 @@ const (
 	ErrCodeClusterDuplicate    = 1502
 	ErrCodeKubeconfigInvalid   = 1503
 	ErrCodeClusterNotFound     = 1504
+	ErrCodeNodeNotFound        = 1505
 )
 
 // K8sError k8s 插件错误

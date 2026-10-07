@@ -28,6 +28,15 @@ func Casbin() {
 	}{
 		{"/k8s/cluster/list", "GET"},
 		{"/k8s/cluster/test", "GET"},
+		{"/k8s/cluster/overview", "GET"},
+		{"/k8s/pod/list", "GET"},
+		{"/k8s/pod/logs", "GET"},
+		{"/k8s/deployment/list", "GET"},
+		{"/k8s/node/list", "GET"},
+		{"/k8s/node/detail", "GET"},
+		{"/k8s/service/list", "GET"},
+		{"/k8s/configmap/list", "GET"},
+		{"/k8s/secret/list", "GET"},
 	}
 	apply := func(role string, rules []struct {
 		Path   string
@@ -45,13 +54,15 @@ func Casbin() {
 	}
 	apply("888", all)
 	apply("9528", readonly)
-	// 写操作仅 888（扩缩容/滚动重启）
+	// 写操作仅 888（扩缩容/滚动重启/节点隔离/节点驱逐）
 	writeOps := []struct {
 		Path   string
 		Method string
 	}{
 		{"/k8s/deployment/scale", "POST"},
 		{"/k8s/deployment/restart", "POST"},
+		{"/k8s/node/cordon", "POST"},
+		{"/k8s/node/drain", "POST"},
 	}
 	for _, p := range writeOps {
 		has, err := e.HasPolicy("888", p.Path, p.Method)

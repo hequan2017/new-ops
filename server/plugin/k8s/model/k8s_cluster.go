@@ -15,11 +15,11 @@ const (
 // K8sCluster 集群注册（kubeconfig AES-256-GCM 加密落库）
 type K8sCluster struct {
 	global.GVA_MODEL
-	Name              string `json:"name" gorm:"comment:集群名称;unique" binding:"required"`
-	Remark            string `json:"remark" gorm:"type:text;comment:备注"`
-	KubeconfigCipher  string `json:"-" gorm:"type:text;comment:kubeconfig密文(base64)"` // json:"-" 永不序列化
-	Server            string `json:"server" gorm:"comment:API Server地址"`
-	Version           string `json:"version" gorm:"comment:集群版本"`
-	NodeCount         int    `json:"nodeCount" gorm:"comment:节点数"`
-	Status            string `json:"status" gorm:"comment:状态;default:未知"`
+	Name             string `json:"name" gorm:"comment:集群名称;unique" binding:"required"`
+	Remark           string `json:"remark" gorm:"type:text;comment:备注"`
+	KubeconfigCipher string `json:"-" gorm:"type:text;comment:kubeconfig密文(base64)"` // json:"-" 永不序列化
+	Server           string `json:"server" gorm:"comment:API Server地址"`
+	Version          string `json:"version" gorm:"comment:集群版本"`
+	NodeCount        int    `json:"nodeCount" gorm:"comment:节点数"`
+	Status           string `json:"status" gorm:"comment:状态;default:未知"`
 }
