@@ -161,24 +161,26 @@
       </el-tab-pane>
       <el-tab-pane label="Helm" name="helm">
         <div class="ops-btn-list" style="margin-bottom: 8px">
-          <el-button type="primary" size="small" icon="plus" @click="helmInstallVisible = true">安装 release</el-button>
+          <el-button type="primary" size="small" icon="plus" @click="openHelmInstall">安装 release</el-button>
+          <el-button size="small" icon="folder" @click="openHelmRepos">仓库管理</el-button>
           <el-button size="small" icon="refresh" @click="loadHelm">刷新</el-button>
         </div>
         <el-table :data="helmReleases" size="small" v-loading="helmLoading">
-          <el-table-column prop="name" label="release" min-width="130" />
-          <el-table-column prop="namespace" label="命名空间" min-width="110" />
-          <el-table-column prop="chart" label="chart" min-width="170" />
-          <el-table-column prop="revision" label="版本" width="70" />
-          <el-table-column prop="status" label="状态" width="110">
+          <el-table-column prop="name" label="release" min-width="120" />
+          <el-table-column prop="namespace" label="命名空间" min-width="100" />
+          <el-table-column prop="chart" label="chart" min-width="160" />
+          <el-table-column prop="revision" label="版本" width="60" />
+          <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
               <el-tag :type="row.status === 'deployed' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'" size="small">
                 {{ row.status }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="updated" label="更新" width="90" />
-          <el-table-column label="操作" width="160" fixed="right">
+          <el-table-column prop="updated" label="更新" width="80" />
+          <el-table-column label="操作" width="230" fixed="right">
             <template #default="{ row }">
+              <el-button link type="primary" icon="view" @click="showHelmDetail(row)">详情</el-button>
               <el-button link type="primary" icon="clock" @click="showHelmHistory(row)">历史</el-button>
               <el-button link type="danger" icon="delete" @click="onHelmUninstall(row)">卸载</el-button>
             </template>
@@ -258,26 +260,78 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="helmInstallVisible" title="安装 Helm release" width="560px" append-to-body>
+    <el-dialog v-model="helmInstallVisible" title="安装/升级 Helm release" width="580px" append-to-body>
       <el-form label-width="90px">
+        <el-form-item label="chart 来源">
+          <el-radio-group v-model="helmInstallForm.mode">
+            <el-radio value="upload">上传 .tgz</el-radio>
+            <el-radio value="repo">仓库引用</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="命名空间" required>
           <el-input v-model="helmInstallForm.namespace" placeholder="如 default" />
         </el-form-item>
         <el-form-item label="release 名" required>
           <el-input v-model="helmInstallForm.releaseName" placeholder="如 my-app" />
         </el-form-item>
-        <el-form-item label="chart 包" required>
-          <input type="file" accept=".tgz" @change="(e) => (helmInstallForm.file = e.target.files[0])" />
-        </el-form-item>
+        <template v-if="helmInstallForm.mode === 'upload'">
+          <el-form-item label="chart 包" required>
+            <input type="file" accept=".tgz" @change="(e) => (helmInstallForm.file = e.target.files[0])" />
+          </el-form-item>
+        </template>
+        <template v-else>
+          <el-form-item label="仓库" required>
+            <el-select v-model="helmInstallForm.repoId" style="width: 100%" placeholder="选择已登记仓库">
+              <el-option v-for="r in helmRepos" :key="r.ID" :label="`${r.name}（${r.url}）`" :value="r.ID" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="chart 名" required>
+            <el-input v-model="helmInstallForm.chart" placeholder="如 nginx-ingress" />
+          </el-form-item>
+          <el-form-item label="版本">
+            <el-input v-model="helmInstallForm.version" placeholder="留空=最新" />
+          </el-form-item>
+        </template>
         <el-form-item label="values">
           <el-input v-model="helmInstallForm.values" type="textarea" :rows="6" placeholder="values YAML 覆盖（可选）" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="helmInstallVisible = false">取 消</el-button>
-        <el-button type="primary" :loading="helmInstalling" @click="submitHelmInstall">安 装</el-button>
+        <el-button type="primary" :loading="helmInstalling" @click="submitHelmInstall">安装/升级</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="helmRepoVisible" title="chart 仓库管理" width="640px" append-to-body>
+      <div class="ops-btn-list" style="margin-bottom: 8px">
+        <el-input v-model="helmRepoForm.name" placeholder="名称" style="width: 140px" />
+        <el-input v-model="helmRepoForm.url" placeholder="http(s)://repo/index.yaml" style="width: 280px" />
+        <el-button type="primary" icon="plus" @click="submitHelmRepo">登记</el-button>
+      </div>
+      <el-table :data="helmRepos" size="small" border>
+        <el-table-column prop="name" label="名称" width="130" />
+        <el-table-column prop="url" label="地址" min-width="260" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注" min-width="120" />
+        <el-table-column label="操作" width="80">
+          <template #default="{ row }">
+            <el-button link type="danger" icon="delete" @click="onDeleteHelmRepo(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <el-drawer v-model="helmDetailVisible" :title="`release 详情 · ${helmDetailName}`" size="60%" append-to-body>
+      <div v-loading="helmDetailLoading">
+        <el-descriptions v-if="helmDetail" :column="2" border size="small" style="margin-bottom: 10px">
+          <el-descriptions-item label="chart">{{ helmDetail.chart }}</el-descriptions-item>
+          <el-descriptions-item label="版本">{{ helmDetail.revision }}（{{ helmDetail.status }}）</el-descriptions-item>
+        </el-descriptions>
+        <h4>values（当前生效）</h4>
+        <pre class="logs-pre" style="max-height: 30vh">{{ helmDetail?.values || '（空）' }}</pre>
+        <h4>渲染 manifest</h4>
+        <pre class="logs-pre" style="max-height: 40vh">{{ helmDetail?.manifest || '（空）' }}</pre>
+      </div>
+    </el-drawer>
 
     <el-dialog v-model="helmHistoryVisible" :title="`历史 · ${helmHistoryName}`" width="560px" append-to-body>
       <el-table :data="helmHistory" size="small" border v-loading="helmHistoryLoading">
@@ -364,7 +418,8 @@
     previewK8sWorkloadYaml, applyK8sWorkloadYaml,
     getK8sPodDetail, deleteK8sPod,
     getK8sPvcList, getK8sIngressList, getK8sEventList,
-    getHelmList, getHelmHistory, installHelmRelease, uninstallHelmRelease, rollbackHelmRelease
+    getHelmList, getHelmHistory, installHelmRelease, uninstallHelmRelease, rollbackHelmRelease,
+    installHelmFromRepo, getHelmReleaseDetail, getHelmRepoList, createHelmRepo, deleteHelmRepo
   } from '@/plugin/k8s/api/k8sResource'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { ref, watch } from 'vue'
@@ -395,11 +450,79 @@
   const helmLoading = ref(false)
   const helmInstallVisible = ref(false)
   const helmInstalling = ref(false)
-  const helmInstallForm = ref({ namespace: 'default', releaseName: '', values: '', file: null })
+  const emptyHelmInstallForm = () => ({
+    mode: 'upload', namespace: 'default', releaseName: '', values: '',
+    file: null, repoId: null, chart: '', version: ''
+  })
+  const helmInstallForm = ref(emptyHelmInstallForm())
   const helmHistoryVisible = ref(false)
   const helmHistoryLoading = ref(false)
   const helmHistory = ref([])
   const helmHistoryName = ref('')
+  const helmRepoVisible = ref(false)
+  const helmRepos = ref([])
+  const helmRepoForm = ref({ name: '', url: '' })
+  const helmDetailVisible = ref(false)
+  const helmDetailLoading = ref(false)
+  const helmDetail = ref(null)
+  const helmDetailName = ref('')
+
+  const loadHelmRepos = async () => {
+    const res = await getHelmRepoList()
+    if (res.code === 0) helmRepos.value = res.data || []
+  }
+
+  const openHelmRepos = () => {
+    helmRepoVisible.value = true
+    loadHelmRepos()
+  }
+
+  const openHelmInstall = () => {
+    helmInstallForm.value = emptyHelmInstallForm()
+    helmInstallVisible.value = true
+    loadHelmRepos()
+  }
+
+  const submitHelmRepo = async () => {
+    if (!helmRepoForm.value.name || !helmRepoForm.value.url) {
+      ElMessage.warning('名称与地址必填')
+      return
+    }
+    const res = await createHelmRepo(helmRepoForm.value)
+    if (res.code === 0) {
+      ElMessage.success('登记成功')
+      helmRepoForm.value = { name: '', url: '' }
+      loadHelmRepos()
+    }
+  }
+
+  const onDeleteHelmRepo = (row) => {
+    ElMessageBox.confirm(`确定删除仓库「${row.name}」登记吗？`, '提示', {
+      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+    }).then(async () => {
+      const res = await deleteHelmRepo(row.ID)
+      if (res.code === 0) {
+        ElMessage.success('删除成功')
+        loadHelmRepos()
+      }
+    })
+  }
+
+  const showHelmDetail = async (row) => {
+    helmDetailName.value = `${row.namespace}/${row.name}`
+    helmDetailVisible.value = true
+    helmDetailLoading.value = true
+    helmDetail.value = null
+    try {
+      const res = await getHelmReleaseDetail({
+        clusterId: props.clusterId, namespace: row.namespace, name: row.name
+      })
+      if (res.code === 0) helmDetail.value = res.data
+      else ElMessage.error(res.msg || '详情获取失败')
+    } finally {
+      helmDetailLoading.value = false
+    }
+  }
 
   const loadHelm = async () => {
     helmLoading.value = true
@@ -413,22 +536,42 @@
 
   const submitHelmInstall = async () => {
     const f = helmInstallForm.value
-    if (!f.namespace || !f.releaseName || !f.file) {
-      ElMessage.warning('命名空间/release 名/chart 包必填')
+    if (!f.namespace || !f.releaseName) {
+      ElMessage.warning('命名空间/release 名必填')
       return
     }
     helmInstalling.value = true
     try {
-      const form = new FormData()
-      form.append('namespace', f.namespace)
-      form.append('releaseName', f.releaseName)
-      form.append('values', f.values || '')
-      form.append('chart', f.file)
-      const res = await installHelmRelease(props.clusterId, form)
+      let res
+      if (f.mode === 'upload') {
+        if (!f.file) {
+          ElMessage.warning('chart 包必填')
+          return
+        }
+        const form = new FormData()
+        form.append('namespace', f.namespace)
+        form.append('releaseName', f.releaseName)
+        form.append('values', f.values || '')
+        form.append('chart', f.file)
+        res = await installHelmRelease(props.clusterId, form)
+      } else {
+        if (!f.repoId || !f.chart) {
+          ElMessage.warning('仓库与 chart 名必填')
+          return
+        }
+        res = await installHelmFromRepo(props.clusterId, {
+          repoId: f.repoId,
+          namespace: f.namespace,
+          releaseName: f.releaseName,
+          chart: f.chart,
+          version: f.version || '',
+          values: f.values || ''
+        })
+      }
       if (res.code === 0) {
-        ElMessage.success(`安装成功：${res.data?.name || f.releaseName} rev.${res.data?.revision ?? 1}`)
+        ElMessage.success(`安装/升级成功：${res.data?.name || f.releaseName} rev.${res.data?.revision ?? '-'}`)
         helmInstallVisible.value = false
-        helmInstallForm.value = { namespace: 'default', releaseName: '', values: '', file: null }
+        helmInstallForm.value = emptyHelmInstallForm()
         loadHelm()
       }
     } finally {

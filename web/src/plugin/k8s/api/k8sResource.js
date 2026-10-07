@@ -145,3 +145,26 @@ export const rollbackHelmRelease = (clusterId, namespace, name, revision = 0) =>
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
+export const installHelmFromRepo = (clusterId, data) => {
+  const params = new URLSearchParams({ clusterId })
+  const form = new FormData()
+  Object.keys(data).forEach((k) => form.append(k, data[k]))
+  return service({
+    url: `/k8s/helm/install-repo?${params}`,
+    method: 'post',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+export const getHelmReleaseDetail = (params) => {
+  return service({ url: '/k8s/helm/detail', method: 'get', params })
+}
+export const getHelmRepoList = () => {
+  return service({ url: '/k8s/helm/repo/list', method: 'get' })
+}
+export const createHelmRepo = (data) => {
+  return service({ url: '/k8s/helm/repo', method: 'post', data })
+}
+export const deleteHelmRepo = (id) => {
+  return service({ url: '/k8s/helm/repo', method: 'delete', params: { id } })
+}
