@@ -86,6 +86,12 @@
         term.write(new Uint8Array(ev.data))
         return
       }
+      try {
+        const msg = JSON.parse(ev.data)
+        if (msg.type === 'pong') return
+      } catch (e) {
+        /* 非 JSON 输出按文本写 */
+      }
       term.write(ev.data)
     }
     ws.onclose = (ev) => {
