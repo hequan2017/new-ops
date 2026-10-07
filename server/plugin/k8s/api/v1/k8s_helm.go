@@ -25,7 +25,7 @@ func (h *k8sHelm) ListHelmReleases(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListHelmReleases(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListHelmScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -51,6 +51,10 @@ func (h *k8sHelm) GetHelmHistory(c *gin.Context) {
 	ns, name := c.Query("namespace"), c.Query("name")
 	if ns == "" || name == "" {
 		response.FailWithMessage("namespace/name 必填", c)
+		return
+	}
+	if err := k8sClusterService.GuardNamespace(clusterID, scopeUID(c), scopeAuth(c), ns); err != nil {
+		response.FailWithMessage(err.Error(), c)
 		return
 	}
 	list, err := k8sClusterService.GetHelmHistory(clusterID, ns, name)

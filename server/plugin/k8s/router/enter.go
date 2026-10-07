@@ -13,6 +13,7 @@ type RouterGroup struct {
 	K8sWriteRouter
 	K8sNodeRouter
 	K8sHelmRouter
+	K8sGrantRouter
 }
 
 var RouterGroupApp = new(RouterGroup)
@@ -24,5 +25,6 @@ func (rg *RouterGroup) Init(public, private *gin.RouterGroup) {
 	rg.K8sWriteRouter.InitK8sWriteRouter(private)
 	rg.K8sNodeRouter.InitK8sNodeRouter(private)
 	rg.K8sHelmRouter.InitK8sHelmRouter(private)
+	rg.K8sGrantRouter.InitK8sGrantRouter(private)
 	public.GET("k8s/pod/execws", v1.Api.K8sResource.PodExecWS)
 }

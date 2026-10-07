@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/model/common/response"
+	"github.com/hequan2017/new-ops/server/utils"
 )
 
 type k8sNode struct{}
@@ -33,7 +34,7 @@ func (n *k8sNode) GetClusterOverview(c *gin.Context) {
 	if !ok {
 		return
 	}
-	ov, err := k8sClusterService.GetClusterOverview(clusterID)
+	ov, err := k8sClusterService.ScopedOverview(clusterID, utils.GetUserID(c), utils.GetUserAuthorityId(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

@@ -12,6 +12,7 @@ const (
 	ErrCodeYAMLIdentityMismatch = 1510
 	ErrCodeYAMLEmpty            = 1511
 	ErrCodeRepoURLInvalid       = 1512
+	ErrCodeNsForbidden          = 1513
 )
 
 // K8sError k8s 插件错误

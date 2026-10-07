@@ -86,3 +86,17 @@ func (r *K8sHelmRouter) InitK8sHelmRouter(Router *gin.RouterGroup) {
 		helm.GET("detail", v1.Api.K8sHelm.GetHelmReleaseDetail)
 	}
 }
+
+// K8sGrantRouter 命名空间授权路由（三级 RBAC）
+type K8sGrantRouter struct{}
+
+// InitK8sGrantRouter 授权路由（ns 可见性 888+9528；授权管理写级仅 888）
+func (r *K8sGrantRouter) InitK8sGrantRouter(Router *gin.RouterGroup) {
+	grant := Router.Group("k8s/grant")
+	{
+		grant.GET("list", v1.Api.K8sGrant.ListNsGrants)
+		grant.POST("", v1.Api.K8sGrant.CreateNsGrant)
+		grant.DELETE("", v1.Api.K8sGrant.DeleteNsGrant)
+	}
+	Router.GET("k8s/cluster/ns-visibility", v1.Api.K8sGrant.ListNsVisibility)
+}

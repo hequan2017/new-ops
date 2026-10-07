@@ -47,6 +47,7 @@ func Casbin() {
 		{"/k8s/helm/list", "GET"},
 		{"/k8s/helm/history", "GET"},
 		{"/k8s/helm/repo/list", "GET"},
+		{"/k8s/cluster/ns-visibility", "GET"},
 	}
 	apply := func(role string, rules []struct {
 		Path   string
@@ -87,6 +88,10 @@ func Casbin() {
 		{"/k8s/helm/repo", "DELETE"},
 		// release 详情含渲染 manifest（敏感面）：仅 888
 		{"/k8s/helm/detail", "GET"},
+		// 命名空间授权管理：仅 888
+		{"/k8s/grant", "POST"},
+		{"/k8s/grant", "DELETE"},
+		{"/k8s/grant/list", "GET"},
 		// 终端为写级能力：execws 握手 casbin 自验（仅 888）
 		{"/k8s/pod/execws", "GET"},
 	}

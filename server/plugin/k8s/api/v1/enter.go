@@ -13,6 +13,7 @@ type api struct {
 	K8sNode     k8sNode
 	K8sYaml     k8sYaml
 	K8sHelm     k8sHelm
+	K8sGrant    k8sGrant
 }
 
 var k8sClusterService = service.Service.K8sClusterService

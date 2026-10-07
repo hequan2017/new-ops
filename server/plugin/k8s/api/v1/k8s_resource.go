@@ -1,4 +1,4 @@
-// Package api K2 资源浏览接口（只读，888 全部 / 9528 只读）
+// Package api K2 资源浏览接口（只读，888 全部 / 9528 只读；命名空间浏览面按三级 RBAC 过滤）
 package api
 
 import (
@@ -6,9 +6,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/model/common/response"
+	"github.com/hequan2017/new-ops/server/utils"
 )
 
 type k8sResource struct{}
+
+// scopeUID/scopeAuth 当前请求用户 id 与角色——命名空间过滤与守卫用
+func scopeUID(c *gin.Context) uint  { return utils.GetUserID(c) }
+func scopeAuth(c *gin.Context) uint { return utils.GetUserAuthorityId(c) }
 
 // parseUintQ uint query 解析
 func parseUintQ(c *gin.Context, name string) (uint, bool) {
@@ -34,7 +39,7 @@ func (t *k8sResource) ListPods(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListPods(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListPodsScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -65,6 +70,10 @@ func (t *k8sResource) GetPodLogs(c *gin.Context) {
 		response.FailWithMessage("namespace/pod 必填", c)
 		return
 	}
+	if err := k8sClusterService.GuardNamespace(clusterID, scopeUID(c), scopeAuth(c), ns); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
 	tail, _ := strconv.ParseInt(c.DefaultQuery("tailLines", "500"), 10, 64)
 	logs, err := k8sClusterService.GetPodLogs(clusterID, ns, pod, c.Query("container"), tail)
 	if err != nil {
@@ -88,7 +97,7 @@ func (t *k8sResource) ListDeployments(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListDeployments(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListDeploymentsScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -131,7 +140,7 @@ func (t *k8sResource) ListStatefulSets(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListStatefulSets(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListStatefulSetsScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -153,7 +162,7 @@ func (t *k8sResource) ListDaemonSets(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListDaemonSets(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListDaemonSetsScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -182,6 +191,10 @@ func (t *k8sResource) GetWorkloadYAML(c *gin.Context) {
 	kind := c.Query("kind")
 	if ns == "" || name == "" || kind == "" {
 		response.FailWithMessage("kind/namespace/name 必填", c)
+		return
+	}
+	if err := k8sClusterService.GuardNamespace(clusterID, scopeUID(c), scopeAuth(c), ns); err != nil {
+		response.FailWithMessage(err.Error(), c)
 		return
 	}
 	y, err := k8sClusterService.GetWorkloadYAML(clusterID, kind, ns, name)
@@ -213,6 +226,10 @@ func (t *k8sResource) GetPodDetail(c *gin.Context) {
 		response.FailWithMessage("namespace/name 必填", c)
 		return
 	}
+	if err := k8sClusterService.GuardNamespace(clusterID, scopeUID(c), scopeAuth(c), ns); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
 	d, err := k8sClusterService.GetPodDetail(clusterID, ns, name)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
@@ -235,7 +252,7 @@ func (t *k8sResource) ListPVCs(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListPVCs(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListPVCsScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -257,7 +274,7 @@ func (t *k8sResource) ListIngresses(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListIngresses(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListIngressesScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -279,7 +296,7 @@ func (t *k8sResource) ListEvents(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListEvents(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListEventsScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

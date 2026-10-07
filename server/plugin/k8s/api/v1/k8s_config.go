@@ -22,7 +22,7 @@ func (t *k8sResource) ListServices(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListServices(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListServicesScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -44,7 +44,7 @@ func (t *k8sResource) ListConfigMaps(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListConfigMaps(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListConfigMapsScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -66,7 +66,7 @@ func (t *k8sResource) ListSecrets(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := k8sClusterService.ListSecrets(clusterID, c.Query("namespace"))
+	list, err := k8sClusterService.ListSecretsScoped(clusterID, c.Query("namespace"), scopeUID(c), scopeAuth(c))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
