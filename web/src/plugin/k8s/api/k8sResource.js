@@ -103,3 +103,45 @@ export const getK8sIngressList = (params) => {
 export const getK8sEventList = (params) => {
   return service({ url: '/k8s/event/list', method: 'get', params })
 }
+
+// Helm release 管理（M8 K3）
+export const getHelmList = (params) => {
+  return service({ url: '/k8s/helm/list', method: 'get', params })
+}
+export const getHelmHistory = (params) => {
+  return service({ url: '/k8s/helm/history', method: 'get', params })
+}
+export const installHelmRelease = (clusterId, form) => {
+  const params = new URLSearchParams({ clusterId })
+  return service({
+    url: `/k8s/helm/install?${params}`,
+    method: 'post',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+export const uninstallHelmRelease = (clusterId, namespace, name) => {
+  const params = new URLSearchParams({ clusterId })
+  const form = new FormData()
+  form.append('namespace', namespace)
+  form.append('name', name)
+  return service({
+    url: `/k8s/helm/uninstall?${params}`,
+    method: 'post',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+export const rollbackHelmRelease = (clusterId, namespace, name, revision = 0) => {
+  const params = new URLSearchParams({ clusterId })
+  const form = new FormData()
+  form.append('namespace', namespace)
+  form.append('name', name)
+  form.append('revision', String(revision))
+  return service({
+    url: `/k8s/helm/rollback?${params}`,
+    method: 'post',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}

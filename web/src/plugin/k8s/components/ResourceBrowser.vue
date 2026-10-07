@@ -159,6 +159,32 @@
           <el-table-column prop="count" label="次数" width="70" />
         </el-table>
       </el-tab-pane>
+      <el-tab-pane label="Helm" name="helm">
+        <div class="ops-btn-list" style="margin-bottom: 8px">
+          <el-button type="primary" size="small" icon="plus" @click="helmInstallVisible = true">安装 release</el-button>
+          <el-button size="small" icon="refresh" @click="loadHelm">刷新</el-button>
+        </div>
+        <el-table :data="helmReleases" size="small" v-loading="helmLoading">
+          <el-table-column prop="name" label="release" min-width="130" />
+          <el-table-column prop="namespace" label="命名空间" min-width="110" />
+          <el-table-column prop="chart" label="chart" min-width="170" />
+          <el-table-column prop="revision" label="版本" width="70" />
+          <el-table-column prop="status" label="状态" width="110">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'deployed' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'" size="small">
+                {{ row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="updated" label="更新" width="90" />
+          <el-table-column label="操作" width="160" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" icon="clock" @click="showHelmHistory(row)">历史</el-button>
+              <el-button link type="danger" icon="delete" @click="onHelmUninstall(row)">卸载</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
     </el-tabs>
 
     <el-drawer v-model="logsVisible" :title="`日志 · ${logsPod}`" size="60%" append-to-body>
@@ -232,6 +258,41 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="helmInstallVisible" title="安装 Helm release" width="560px" append-to-body>
+      <el-form label-width="90px">
+        <el-form-item label="命名空间" required>
+          <el-input v-model="helmInstallForm.namespace" placeholder="如 default" />
+        </el-form-item>
+        <el-form-item label="release 名" required>
+          <el-input v-model="helmInstallForm.releaseName" placeholder="如 my-app" />
+        </el-form-item>
+        <el-form-item label="chart 包" required>
+          <input type="file" accept=".tgz" @change="(e) => (helmInstallForm.file = e.target.files[0])" />
+        </el-form-item>
+        <el-form-item label="values">
+          <el-input v-model="helmInstallForm.values" type="textarea" :rows="6" placeholder="values YAML 覆盖（可选）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="helmInstallVisible = false">取 消</el-button>
+        <el-button type="primary" :loading="helmInstalling" @click="submitHelmInstall">安 装</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="helmHistoryVisible" :title="`历史 · ${helmHistoryName}`" width="560px" append-to-body>
+      <el-table :data="helmHistory" size="small" border v-loading="helmHistoryLoading">
+        <el-table-column prop="revision" label="版本" width="70" />
+        <el-table-column prop="status" label="状态" width="110" />
+        <el-table-column prop="chart" label="chart" min-width="160" />
+        <el-table-column prop="updated" label="更新" width="90" />
+        <el-table-column label="操作" width="90">
+          <template #default="{ row }">
+            <el-button link type="warning" icon="refresh-left" @click="onHelmRollback(row)">回滚到此</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
     <el-drawer v-model="shellVisible" :title="`Pod 终端`" size="65%" append-to-body destroy-on-close>
       <PodShell
         v-if="shellVisible && shellTarget.clusterId"
@@ -302,7 +363,8 @@
     getK8sStatefulSetList, getK8sDaemonSetList, getK8sWorkloadYaml,
     previewK8sWorkloadYaml, applyK8sWorkloadYaml,
     getK8sPodDetail, deleteK8sPod,
-    getK8sPvcList, getK8sIngressList, getK8sEventList
+    getK8sPvcList, getK8sIngressList, getK8sEventList,
+    getHelmList, getHelmHistory, installHelmRelease, uninstallHelmRelease, rollbackHelmRelease
   } from '@/plugin/k8s/api/k8sResource'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { ref, watch } from 'vue'
@@ -327,6 +389,95 @@
   const pvcs = ref([])
   const ingresses = ref([])
   const events = ref([])
+
+  // Helm release 管理
+  const helmReleases = ref([])
+  const helmLoading = ref(false)
+  const helmInstallVisible = ref(false)
+  const helmInstalling = ref(false)
+  const helmInstallForm = ref({ namespace: 'default', releaseName: '', values: '', file: null })
+  const helmHistoryVisible = ref(false)
+  const helmHistoryLoading = ref(false)
+  const helmHistory = ref([])
+  const helmHistoryName = ref('')
+
+  const loadHelm = async () => {
+    helmLoading.value = true
+    try {
+      const res = await getHelmList({ clusterId: props.clusterId })
+      if (res.code === 0) helmReleases.value = res.data || []
+    } finally {
+      helmLoading.value = false
+    }
+  }
+
+  const submitHelmInstall = async () => {
+    const f = helmInstallForm.value
+    if (!f.namespace || !f.releaseName || !f.file) {
+      ElMessage.warning('命名空间/release 名/chart 包必填')
+      return
+    }
+    helmInstalling.value = true
+    try {
+      const form = new FormData()
+      form.append('namespace', f.namespace)
+      form.append('releaseName', f.releaseName)
+      form.append('values', f.values || '')
+      form.append('chart', f.file)
+      const res = await installHelmRelease(props.clusterId, form)
+      if (res.code === 0) {
+        ElMessage.success(`安装成功：${res.data?.name || f.releaseName} rev.${res.data?.revision ?? 1}`)
+        helmInstallVisible.value = false
+        helmInstallForm.value = { namespace: 'default', releaseName: '', values: '', file: null }
+        loadHelm()
+      }
+    } finally {
+      helmInstalling.value = false
+    }
+  }
+
+  const showHelmHistory = async (row) => {
+    helmHistoryName.value = `${row.namespace}/${row.name}`
+    helmHistoryVisible.value = true
+    helmHistoryLoading.value = true
+    helmHistory.value = []
+    try {
+      const res = await getHelmHistory({
+        clusterId: props.clusterId, namespace: row.namespace, name: row.name
+      })
+      if (res.code === 0) helmHistory.value = res.data || []
+    } finally {
+      helmHistoryLoading.value = false
+    }
+  }
+
+  const onHelmRollback = (row) => {
+    const target = helmHistoryName.value.split('/')
+    ElMessageBox.confirm(`确定回滚到版本 ${row.revision} 吗？`, '提示', {
+      confirmButtonText: '回滚', cancelButtonText: '取消', type: 'warning'
+    }).then(async () => {
+      const res = await rollbackHelmRelease(props.clusterId, target[0], target[1], row.revision)
+      if (res.code === 0) {
+        ElMessage.success('回滚成功')
+        helmHistoryVisible.value = false
+        loadHelm()
+      }
+    })
+  }
+
+  const onHelmUninstall = (row) => {
+    ElMessageBox.confirm(
+      `确定卸载 release「${row.namespace}/${row.name}」吗？其全部资源将被删除。`,
+      '危险操作',
+      { confirmButtonText: '卸载', cancelButtonText: '取消', type: 'error' }
+    ).then(async () => {
+      const res = await uninstallHelmRelease(props.clusterId, row.namespace, row.name)
+      if (res.code === 0) {
+        ElMessage.success('卸载成功')
+        loadHelm()
+      }
+    })
+  }
   const logsVisible = ref(false)
   const logsPod = ref('')
   const logsText = ref('')
@@ -358,6 +509,7 @@
       pvcs.value = pvc.code === 0 ? pvc.data : []
       ingresses.value = ing.code === 0 ? ing.data : []
       events.value = ev.code === 0 ? ev.data : []
+      loadHelm()
     } finally {
       loading.value = false
     }
