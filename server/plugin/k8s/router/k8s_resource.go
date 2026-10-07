@@ -15,11 +15,18 @@ func (r *K8sResourceRouter) InitK8sResourceRouter(Router *gin.RouterGroup) {
 	{
 		res.GET("pod/list", v1.Api.K8sResource.ListPods)
 		res.GET("pod/logs", v1.Api.K8sResource.GetPodLogs)
+		res.GET("pod/detail", v1.Api.K8sResource.GetPodDetail)
 		res.GET("deployment/list", v1.Api.K8sResource.ListDeployments)
+		res.GET("statefulset/list", v1.Api.K8sResource.ListStatefulSets)
+		res.GET("daemonset/list", v1.Api.K8sResource.ListDaemonSets)
+		res.GET("workload/yaml", v1.Api.K8sResource.GetWorkloadYAML)
 		res.GET("node/list", v1.Api.K8sResource.ListNodes)
 		res.GET("service/list", v1.Api.K8sResource.ListServices)
 		res.GET("configmap/list", v1.Api.K8sResource.ListConfigMaps)
 		res.GET("secret/list", v1.Api.K8sResource.ListSecrets)
+		res.GET("pvc/list", v1.Api.K8sResource.ListPVCs)
+		res.GET("ingress/list", v1.Api.K8sResource.ListIngresses)
+		res.GET("event/list", v1.Api.K8sResource.ListEvents)
 	}
 }
 
@@ -48,5 +55,9 @@ func (r *K8sWriteRouter) InitK8sWriteRouter(Router *gin.RouterGroup) {
 	{
 		writeGroup.POST("scale", v1.Api.K8sWrite.ScaleDeployment)
 		writeGroup.POST("restart", v1.Api.K8sWrite.RestartDeployment)
+	}
+	podGroup := Router.Group("k8s/pod")
+	{
+		podGroup.POST("delete", v1.Api.K8sWrite.DeletePod)
 	}
 }

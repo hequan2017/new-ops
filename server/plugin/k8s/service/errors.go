@@ -6,7 +6,9 @@ const (
 	ErrCodeClusterDuplicate    = 1502
 	ErrCodeKubeconfigInvalid   = 1503
 	ErrCodeClusterNotFound     = 1504
-	ErrCodeNodeNotFound        = 1505
+	// 1505-1507 见 k8s_write.go（ReplicasInvalid/NamespaceReq/WorkloadNotFound）
+	ErrCodeNodeNotFound    = 1508
+	ErrCodeKindUnsupported = 1509
 )
 
 // K8sError k8s 插件错误

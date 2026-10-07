@@ -91,3 +91,33 @@ func (w *k8sWrite) RestartDeployment(c *gin.Context) {
 	}
 	response.OkWithMessage("滚动重启已提交", c)
 }
+
+// DeletePod 删除 Pod
+// @Tags K8sWrite
+// @Summary 删除 Pod（写操作，仅 888）
+// @Security ApiKeyAuth
+// @Accept application/x-www-form-urlencoded
+// @Produce application/json
+// @Param clusterId query int true "集群ID"
+// @Param namespace formData string true "命名空间"
+// @Param name formData string true "Pod 名"
+// @Success 200 {object} response.Response{msg=string} "删除已提交"
+// @Router /k8s/pod/delete [post]
+func (w *k8sWrite) DeletePod(c *gin.Context) {
+	clusterID, err := strconv.ParseUint(c.Query("clusterId"), 10, 64)
+	if err != nil || clusterID == 0 {
+		response.FailWithMessage("clusterId 无效", c)
+		return
+	}
+	ns := c.PostForm("namespace")
+	name := c.PostForm("name")
+	if ns == "" || name == "" {
+		response.FailWithMessage("namespace/name 必填", c)
+		return
+	}
+	if err := k8sClusterService.DeletePod(uint(clusterID), ns, name); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("Pod 删除已提交（有控制器时将被重建）", c)
+}

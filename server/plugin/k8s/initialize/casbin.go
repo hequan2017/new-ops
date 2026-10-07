@@ -31,12 +31,19 @@ func Casbin() {
 		{"/k8s/cluster/overview", "GET"},
 		{"/k8s/pod/list", "GET"},
 		{"/k8s/pod/logs", "GET"},
+		{"/k8s/pod/detail", "GET"},
 		{"/k8s/deployment/list", "GET"},
+		{"/k8s/statefulset/list", "GET"},
+		{"/k8s/daemonset/list", "GET"},
+		{"/k8s/workload/yaml", "GET"},
 		{"/k8s/node/list", "GET"},
 		{"/k8s/node/detail", "GET"},
 		{"/k8s/service/list", "GET"},
 		{"/k8s/configmap/list", "GET"},
 		{"/k8s/secret/list", "GET"},
+		{"/k8s/pvc/list", "GET"},
+		{"/k8s/ingress/list", "GET"},
+		{"/k8s/event/list", "GET"},
 	}
 	apply := func(role string, rules []struct {
 		Path   string
@@ -54,7 +61,7 @@ func Casbin() {
 	}
 	apply("888", all)
 	apply("9528", readonly)
-	// 写操作仅 888（扩缩容/滚动重启/节点隔离/节点驱逐）
+	// 写操作仅 888（扩缩容/滚动重启/节点隔离/节点驱逐/删除 Pod）
 	writeOps := []struct {
 		Path   string
 		Method string
@@ -63,6 +70,7 @@ func Casbin() {
 		{"/k8s/deployment/restart", "POST"},
 		{"/k8s/node/cordon", "POST"},
 		{"/k8s/node/drain", "POST"},
+		{"/k8s/pod/delete", "POST"},
 	}
 	for _, p := range writeOps {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
