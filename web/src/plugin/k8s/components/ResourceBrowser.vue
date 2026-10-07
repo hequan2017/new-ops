@@ -39,14 +39,24 @@
       <el-tab-pane label="Nodes" name="nodes">
         <el-table :data="nodes" size="small" v-loading="loading">
           <el-table-column prop="name" label="名称" min-width="180" />
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column prop="status" label="状态" width="170">
             <template #default="{ row }">
-              <el-tag :type="row.status === 'Ready' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
+              <el-tag :type="row.status.startsWith('Ready') ? 'success' : 'danger'" size="small">
+                {{ row.status }}
+              </el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="version" label="版本" min-width="150" />
           <el-table-column prop="internal" label="InternalIP" min-width="130" />
           <el-table-column prop="age" label="年龄" width="90" />
+          <el-table-column label="操作" width="230" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" icon="view" @click="showNodeDetail(row)">详情</el-button>
+              <el-button v-if="!row.status.includes('SchedulingDisabled')" link type="warning" icon="lock" @click="onCordon(row, true)">隔离</el-button>
+              <el-button v-else link type="success" icon="unlock" @click="onCordon(row, false)">恢复</el-button>
+              <el-button link type="danger" icon="switch-button" @click="onDrain(row)">驱逐</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-tab-pane>
       <el-tab-pane label="Services" name="services">
@@ -81,6 +91,41 @@
     <el-drawer v-model="logsVisible" :title="`日志 · ${logsPod}`" size="60%" append-to-body>
       <pre class="logs-pre">{{ logsText || '（无日志）' }}</pre>
     </el-drawer>
+
+    <el-drawer v-model="nodeDetailVisible" :title="`节点详情 · ${nodeDetail?.name || ''}`" size="55%" append-to-body>
+      <div v-if="nodeDetail" v-loading="nodeDetailLoading">
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="名称">{{ nodeDetail.name }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="nodeDetail.status.startsWith('Ready') ? 'success' : 'danger'" size="small">{{ nodeDetail.status }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="角色">{{ nodeDetail.roles }}</el-descriptions-item>
+          <el-descriptions-item label="kubelet">{{ nodeDetail.kubelet }}</el-descriptions-item>
+          <el-descriptions-item label="InternalIP">{{ nodeDetail.internalIP }}</el-descriptions-item>
+          <el-descriptions-item label="架构">{{ nodeDetail.arch }}</el-descriptions-item>
+          <el-descriptions-item label="系统镜像" :span="2">{{ nodeDetail.osImage }}</el-descriptions-item>
+          <el-descriptions-item label="年龄">{{ nodeDetail.age }}</el-descriptions-item>
+        </el-descriptions>
+        <h4>可分配 / 容量</h4>
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="Allocatable">{{ nodeDetail.allocatable?.cpu }} CPU · {{ nodeDetail.allocatable?.memory }} 内存 · {{ nodeDetail.allocatable?.pods }} Pods</el-descriptions-item>
+          <el-descriptions-item label="Capacity">{{ nodeDetail.capacity?.cpu }} CPU · {{ nodeDetail.capacity?.memory }} 内存 · {{ nodeDetail.capacity?.pods }} Pods</el-descriptions-item>
+        </el-descriptions>
+        <h4>Conditions</h4>
+        <el-table :data="nodeDetail.conditions" size="small" border>
+          <el-table-column prop="type" label="类型" width="170" />
+          <el-table-column prop="status" label="状态" width="80" />
+          <el-table-column prop="reason" label="原因" width="150" />
+          <el-table-column prop="message" label="消息" min-width="200" show-overflow-tooltip />
+        </el-table>
+        <h4>Taints</h4>
+        <el-table :data="nodeDetail.taints" size="small" border>
+          <el-table-column prop="key" label="Key" min-width="180" />
+          <el-table-column prop="value" label="Value" min-width="120" />
+          <el-table-column prop="effect" label="Effect" min-width="140" />
+        </el-table>
+      </div>
+    </el-drawer>
   </el-drawer>
 </template>
 
@@ -88,8 +133,10 @@
   import {
     getK8sClusterList, getK8sClusterPodList, getK8sClusterPodLogs,
     getK8sClusterDeploymentList, getK8sClusterNodeList,
-    getK8sServiceList, getK8sConfigMapList, getK8sSecretList
+    getK8sServiceList, getK8sConfigMapList, getK8sSecretList,
+    getK8sNodeDetail, cordonK8sNode, drainK8sNode
   } from '@/plugin/k8s/api/k8sResource'
+  import { ElMessage, ElMessageBox } from 'element-plus'
   import { ref, watch } from 'vue'
 
   const visible = defineModel('visible', { type: Boolean })
@@ -140,6 +187,62 @@
     })
     logsText.value = res.code === 0 ? res.data : `获取失败：${res.msg}`
     logsVisible.value = true
+  }
+
+  // 节点详情 / 隔离 / 驱逐
+  const nodeDetailVisible = ref(false)
+  const nodeDetailLoading = ref(false)
+  const nodeDetail = ref(null)
+
+  const showNodeDetail = async (row) => {
+    nodeDetailVisible.value = true
+    nodeDetailLoading.value = true
+    nodeDetail.value = null
+    try {
+      const res = await getK8sNodeDetail({ clusterId: props.clusterId, name: row.name })
+      if (res.code === 0) {
+        nodeDetail.value = res.data
+      } else {
+        ElMessage.error(res.msg || '节点详情获取失败')
+        nodeDetailVisible.value = false
+      }
+    } finally {
+      nodeDetailLoading.value = false
+    }
+  }
+
+  const refreshNodes = async () => {
+    const n = await getK8sClusterNodeList({ clusterId: props.clusterId })
+    if (n.code === 0) nodes.value = n.data
+  }
+
+  const onCordon = (row, cordon) => {
+    ElMessageBox.confirm(
+      cordon ? `确定隔离节点「${row.name}」吗？隔离后新 Pod 不会调度到该节点。` : `确定恢复节点「${row.name}」调度吗？`,
+      '提示',
+      { confirmButtonText: cordon ? '隔离' : '恢复', cancelButtonText: '取消', type: 'warning' }
+    ).then(async () => {
+      const res = await cordonK8sNode(props.clusterId, row.name, cordon)
+      if (res.code === 0) {
+        ElMessage.success(res.msg || '操作成功')
+        refreshNodes()
+      }
+    })
+  }
+
+  const onDrain = (row) => {
+    ElMessageBox.confirm(
+      `确定驱逐节点「${row.name}」上的全部可驱逐 Pod 吗？将先隔离节点，再逐个提交 Eviction（DaemonSet 与静态 Pod 跳过）。`,
+      '危险操作',
+      { confirmButtonText: '驱逐', cancelButtonText: '取消', type: 'error' }
+    ).then(async () => {
+      const res = await drainK8sNode(props.clusterId, row.name)
+      if (res.code === 0) {
+        const d = res.data || {}
+        ElMessage.success(`驱逐已提交：成功 ${d.evicted?.length || 0}，跳过 ${d.skipped?.length || 0}，失败 ${d.failed?.length || 0}`)
+        refreshNodes()
+      }
+    })
   }
 
   watch(visible, (v) => {

@@ -30,3 +30,35 @@ export const getK8sConfigMapList = (params) => {
 export const getK8sSecretList = (params) => {
   return service({ url: '/k8s/secret/list', method: 'get', params })
 }
+
+// K8s 集群总览与 Node 管理
+export const getK8sClusterOverview = (params) => {
+  return service({ url: '/k8s/cluster/overview', method: 'get', params })
+}
+export const getK8sNodeDetail = (params) => {
+  return service({ url: '/k8s/node/detail', method: 'get', params })
+}
+export const cordonK8sNode = (clusterId, name, cordon) => {
+  const params = new URLSearchParams({ clusterId })
+  const form = new FormData()
+  form.append('name', name)
+  form.append('cordon', cordon ? 'true' : 'false')
+  return service({
+    url: `/k8s/node/cordon?${params}`,
+    method: 'post',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+export const drainK8sNode = (clusterId, name, gracePeriod = -1) => {
+  const params = new URLSearchParams({ clusterId })
+  const form = new FormData()
+  form.append('name', name)
+  form.append('gracePeriod', String(gracePeriod))
+  return service({
+    url: `/k8s/node/drain?${params}`,
+    method: 'post',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}

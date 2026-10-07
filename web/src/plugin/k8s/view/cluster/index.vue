@@ -37,10 +37,11 @@
         <el-table-column prop="remark" label="备注" min-width="140">
           <template #default="{ row }">{{ row.remark || '-' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="340" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" icon="link" :loading="testingId === row.ID" @click="onTest(row)">连接测试</el-button>
             <el-button link type="success" icon="grid" @click="openBrowser(row)">资源浏览</el-button>
+            <el-button link type="primary" icon="data-line" @click="openOverview(row)">总览</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -78,6 +79,8 @@
       @restart="onRestart"
     />
 
+    <OverviewDrawer v-model:visible="overviewVisible" :cluster-id="overviewClusterId" :cluster-name="overviewName" />
+
     <ScaleDialog ref="scaleDialogRef" @done="onScaleDone" />
   </div>
 </template>
@@ -90,6 +93,7 @@
     testK8sCluster
   } from '@/plugin/k8s/api/k8sCluster'
   import ResourceBrowser from '@/plugin/k8s/components/ResourceBrowser.vue'
+  import OverviewDrawer from '@/plugin/k8s/components/OverviewDrawer.vue'
   import ScaleDialog from '@/plugin/k8s/components/ScaleDialog.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { onMounted, reactive, ref } from 'vue'
@@ -127,6 +131,16 @@
   }
   const onRestart = (row) => {
     scaleDialogRef.value?.confirmRestart(row, browserClusterId.value)
+  }
+
+  // 集群总览抽屉
+  const overviewVisible = ref(false)
+  const overviewClusterId = ref(0)
+  const overviewName = ref('')
+  const openOverview = (row) => {
+    overviewClusterId.value = row.ID
+    overviewName.value = row.name
+    overviewVisible.value = true
   }
 
   const openDialog = () => {
