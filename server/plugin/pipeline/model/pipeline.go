@@ -34,12 +34,12 @@ type Pipeline struct {
 // PipelineStage 阶段（Sort 升序串行；Parallel 时阶段内步骤并发执行）
 type PipelineStage struct {
 	global.GVA_MODEL
-	PipelineID      uint   `json:"pipelineId" gorm:"comment:流水线ID;index"`
-	Name            string `json:"name" gorm:"comment:阶段名称" binding:"required"`
-	Sort            int    `json:"sort" gorm:"comment:顺序"`
-	Approval        bool   `json:"approval" gorm:"comment:人工审批gate"`
-	ContinueOnError bool   `json:"continueOnError" gorm:"comment:失败继续"`
-	Parallel        bool   `json:"parallel" gorm:"comment:步骤并发执行"`
+	PipelineID      uint           `json:"pipelineId" gorm:"comment:流水线ID;index"`
+	Name            string         `json:"name" gorm:"comment:阶段名称" binding:"required"`
+	Sort            int            `json:"sort" gorm:"comment:顺序"`
+	Approval        bool           `json:"approval" gorm:"comment:人工审批gate"`
+	ContinueOnError bool           `json:"continueOnError" gorm:"comment:失败继续"`
+	Parallel        bool           `json:"parallel" gorm:"comment:步骤并发执行"`
 	Steps           []PipelineStep `json:"steps" gorm:"foreignKey:StageID"`
 }
 

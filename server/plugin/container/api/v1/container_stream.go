@@ -3,12 +3,14 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	systemReq "github.com/hequan2017/new-ops/server/model/system/request"
 	"github.com/hequan2017/new-ops/server/plugin/container/service"
 	"github.com/hequan2017/new-ops/server/utils"
 )
@@ -20,15 +22,26 @@ var wsUpgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-// parseEndpointContainer 解析公共 query 参数
-func parseEndpointContainer(c *gin.Context) (uint, string, bool) {
+// enforceWsPolicy WS 握手 casbin 自验（query token 场景中间件不生效）
+func enforceWsPolicy(claims *systemReq.CustomClaims, path string) bool {
+	ok, _ := utils.GetCasbin().Enforce(fmt.Sprintf("%d", claims.AuthorityId), path, "GET")
+	return ok
+}
+
+// parseEndpointContainer 解析公共 query 参数（policyPath 为该端点的 casbin 策略路径）
+func parseEndpointContainer(c *gin.Context, policyPath string) (uint, string, bool) {
 	token := c.Query("token")
 	if token == "" {
 		c.String(http.StatusUnauthorized, "缺少 token")
 		return 0, "", false
 	}
-	if _, err := utils.NewJWT().ParseToken(token); err != nil {
+	claims, err := utils.NewJWT().ParseToken(token)
+	if err != nil {
 		c.String(http.StatusUnauthorized, "token 无效: "+err.Error())
+		return 0, "", false
+	}
+	if !enforceWsPolicy(claims, policyPath) {
+		c.String(http.StatusForbidden, "无该流端点使用权限")
 		return 0, "", false
 	}
 	endpointID, err := strconv.ParseUint(c.Query("endpointId"), 10, 64)
@@ -55,7 +68,7 @@ func parseEndpointContainer(c *gin.Context) (uint, string, bool) {
 // @Success 200 {string} string "升级为 WebSocket"
 // @Router /container/container/logws [get]
 func (a *containerApi) LogsWS(c *gin.Context) {
-	endpointID, cid, ok := parseEndpointContainer(c)
+	endpointID, cid, ok := parseEndpointContainer(c, "/container/container/logws")
 	if !ok {
 		return
 	}
@@ -80,7 +93,7 @@ func (a *containerApi) LogsWS(c *gin.Context) {
 // @Success 200 {string} string "升级为 WebSocket"
 // @Router /container/container/execws [get]
 func (a *containerApi) ExecWS(c *gin.Context) {
-	endpointID, cid, ok := parseEndpointContainer(c)
+	endpointID, cid, ok := parseEndpointContainer(c, "/container/container/execws")
 	if !ok {
 		return
 	}

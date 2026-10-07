@@ -96,8 +96,8 @@ func (t *termService) authForHop(host *assetModel.AssetHost, isTarget bool, targ
 	}
 	return assetSvc.SSHAuth{
 		Username:            username,
-		Password:           secret,
-		PrivateKey:         secret,
+		Password:            secret,
+		PrivateKey:          secret,
 		ExpectedFingerprint: host.SSHFP,
 	}, nil
 }

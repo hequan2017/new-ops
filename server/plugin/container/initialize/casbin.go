@@ -41,10 +41,14 @@ func Casbin(ctx context.Context) {
 		{"/container/volume/list", "GET"},
 		{"/container/volume", "DELETE"},
 		{"/container/container/stats", "GET"},
+		{"/container/container/logws", "GET"},
+		{"/container/container/execws", "GET"},
 	}
 	for _, p := range policies {
 		roles := []string{"888"}
-		if p.Path == "/container/endpoint/list" {
+		switch p.Path {
+		case "/container/endpoint/list", "/container/container/logws":
+			// 只读流：9528 可看日志
 			roles = append(roles, "9528")
 		}
 		for _, role := range roles {

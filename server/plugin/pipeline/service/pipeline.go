@@ -185,6 +185,7 @@ func (s *PipelineService) UpdatePipeline(p *model.Pipeline) error {
 		return nil
 	})
 }
+
 // replaceStages 写入阶段与步骤（Sort 按下标归一）
 func replaceStages(tx *gorm.DB, pipelineID uint, stages []model.PipelineStage) error {
 	for i := range stages {

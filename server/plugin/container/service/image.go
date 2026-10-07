@@ -24,8 +24,8 @@ type ImageView struct {
 
 // pullStatus 拉取任务状态（内存表：endpoint:ref → 状态）
 type pullStatus struct {
-	mu     sync.Mutex
-	tasks  map[string]string // key → 拉取中/成功/失败: 原因
+	mu    sync.Mutex
+	tasks map[string]string // key → 拉取中/成功/失败: 原因
 }
 
 var imagePulls = &pullStatus{tasks: map[string]string{}}

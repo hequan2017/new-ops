@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hequan2017/new-ops/server/global"
-	sysModel "github.com/hequan2017/new-ops/server/model/system"
 	"github.com/hequan2017/new-ops/server/middleware"
+	sysModel "github.com/hequan2017/new-ops/server/model/system"
 	"github.com/hequan2017/new-ops/server/plugin/container/router"
 	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 )

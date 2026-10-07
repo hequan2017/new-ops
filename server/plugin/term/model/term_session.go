@@ -22,19 +22,19 @@ const (
 // TermSession 终端会话（元数据）
 type TermSession struct {
 	global.GVA_MODEL
-	HostID      uint       `json:"hostId" gorm:"comment:主机ID;index"`
-	Hostname    string     `json:"hostname" gorm:"comment:主机名快照"`
-	IP          string     `json:"ip" gorm:"comment:目标IP"`
-	UserID      uint       `json:"userId" gorm:"comment:操作用户ID;index"`
-	Username    string     `json:"username" gorm:"comment:操作用户"`
-	CredentialID uint      `json:"credentialId" gorm:"comment:使用凭据ID"`
-	ClientIP    string     `json:"clientIp" gorm:"comment:客户端来源IP"`
-	Cols        int        `json:"cols"`
-	Rows        int        `json:"rows"`
-	Status      string     `json:"status" gorm:"comment:状态;default:进行中"`
-	StartedAt   time.Time  `json:"startedAt"`
-	EndedAt     *time.Time `json:"endedAt"`
-	Fingerprint string     `json:"fingerprint" gorm:"comment:主机公钥指纹(SHA256,TOFU)"`
+	HostID       uint       `json:"hostId" gorm:"comment:主机ID;index"`
+	Hostname     string     `json:"hostname" gorm:"comment:主机名快照"`
+	IP           string     `json:"ip" gorm:"comment:目标IP"`
+	UserID       uint       `json:"userId" gorm:"comment:操作用户ID;index"`
+	Username     string     `json:"username" gorm:"comment:操作用户"`
+	CredentialID uint       `json:"credentialId" gorm:"comment:使用凭据ID"`
+	ClientIP     string     `json:"clientIp" gorm:"comment:客户端来源IP"`
+	Cols         int        `json:"cols"`
+	Rows         int        `json:"rows"`
+	Status       string     `json:"status" gorm:"comment:状态;default:进行中"`
+	StartedAt    time.Time  `json:"startedAt"`
+	EndedAt      *time.Time `json:"endedAt"`
+	Fingerprint  string     `json:"fingerprint" gorm:"comment:主机公钥指纹(SHA256,TOFU)"`
 }
 
 // TermSessionStream 终端流镜像（全量录像数据，按 seq 回放）

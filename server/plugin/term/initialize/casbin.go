@@ -8,25 +8,30 @@ import (
 	"go.uber.org/zap"
 )
 
-// Casbin 注册 WS 端点策略（幂等；实际鉴权在握手时通过 query token 完成）
+// Casbin 注册 WS 端点策略（幂等；握手时 casbin 自验强制生效）
+// 终端/日志 tail 为写级能力（建立 SSH 通道），仅 888——历史误授 9528 的策略幂等移除
 func Casbin(ctx context.Context) {
 	e := utils.GetCasbin()
 	if e == nil {
 		zap.L().Warn("term 插件：casbin 未初始化，跳过策略注册")
 		return
 	}
-	for _, role := range []string{"888", "9528"} {
-		for _, p := range []struct{ Path, Method string }{
-			{"/term/ws", "GET"},
-			{"/term/logtail", "GET"},
-		} {
-			has, err := e.HasPolicy(role, p.Path, p.Method)
-			if err != nil || has {
-				continue
+	for _, p := range []struct{ Path, Method string }{
+		{"/term/ws", "GET"},
+		{"/term/logtail", "GET"},
+	} {
+		// 历史遗留：9528 曾被授予终端权限，收敛移除
+		if has, _ := e.HasPolicy("9528", p.Path, p.Method); has {
+			if _, err := e.RemovePolicy("9528", p.Path, p.Method); err != nil {
+				zap.L().Error("term 插件：移除 9528 终端策略失败", zap.Error(err))
 			}
-			if _, err := e.AddPolicy(role, p.Path, p.Method); err != nil {
-				zap.L().Error("term 插件：添加 casbin 策略失败", zap.Error(err))
-			}
+		}
+		has, err := e.HasPolicy("888", p.Path, p.Method)
+		if err != nil || has {
+			continue
+		}
+		if _, err := e.AddPolicy("888", p.Path, p.Method); err != nil {
+			zap.L().Error("term 插件：添加 casbin 策略失败", zap.Error(err))
 		}
 	}
 	// SFTP：888 全部；9528 只读（list/download）

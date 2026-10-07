@@ -1,21 +1,27 @@
 // Package api 白泽终端接口：WebSSH WebSocket 端点
 // 握手鉴权：浏览器 WebSocket 无法携带自定义 header，token 经 query 传入，
-// 复用底座 utils.NewJWT().ParseToken 校验后再升级连接（不经过 Casbin，终端权限=登录可用）。
+// 复用底座 utils.NewJWT().ParseToken 校验 + casbin 角色自验后升级连接。
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	systemReq "github.com/hequan2017/new-ops/server/model/system/request"
 	"github.com/hequan2017/new-ops/server/plugin/term/service"
 	"github.com/hequan2017/new-ops/server/utils"
 )
 
 type terminal struct{}
+
+// enforceWsPolicy WS 握手 casbin 自验（query token 场景中间件不生效）
+func enforceWsPolicy(claims *systemReq.CustomClaims, path string) bool {
+	ok, _ := utils.GetCasbin().Enforce(strconv.FormatUint(uint64(claims.AuthorityId), 10), path, "GET")
+	return ok
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  8192,
@@ -44,6 +50,11 @@ func (t *terminal) WebSSH(c *gin.Context) {
 	claims, err := utils.NewJWT().ParseToken(token)
 	if err != nil {
 		c.String(http.StatusUnauthorized, "token 无效: "+err.Error())
+		return
+	}
+	// 终端为写级能力：握手 casbin 自验
+	if !enforceWsPolicy(claims, "/term/ws") {
+		c.String(http.StatusForbidden, "无终端使用权限")
 		return
 	}
 	hostID, err := strconv.ParseUint(c.Query("hostId"), 10, 64)
@@ -96,6 +107,11 @@ func (t *terminal) LogTail(c *gin.Context) {
 		c.String(http.StatusUnauthorized, "token 无效: "+err.Error())
 		return
 	}
+	// 日志 tail 需建立 SSH 通道（消耗凭据），同样按写级收敛：握手 casbin 自验
+	if !enforceWsPolicy(claims, "/term/logtail") {
+		c.String(http.StatusForbidden, "无日志 tail 使用权限")
+		return
+	}
 	hostID, err := strconv.ParseUint(c.Query("hostId"), 10, 64)
 	if err != nil || hostID == 0 {
 		c.String(http.StatusBadRequest, "hostId 无效")
@@ -126,6 +142,3 @@ func (t *terminal) LogTail(c *gin.Context) {
 	}
 	_ = service.TermService.StartLogTail(ws, params)
 }
-
-// 提示：handler 中 fmt 引用由路由组注册使用
-var _ = fmt.Sprintf

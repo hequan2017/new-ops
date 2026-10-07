@@ -16,11 +16,11 @@ import (
 
 // NetworkView 网络视图
 type NetworkView struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Driver  string   `json:"driver"`
-	Subnet  string   `json:"subnet"`
-	BuiltIn bool     `json:"builtIn"` // bridge/host/none 等内置网络不可删
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Driver  string `json:"driver"`
+	Subnet  string `json:"subnet"`
+	BuiltIn bool   `json:"builtIn"` // bridge/host/none 等内置网络不可删
 }
 
 // VolumeView 卷视图

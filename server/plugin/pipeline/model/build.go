@@ -9,12 +9,12 @@ import (
 
 // 构建状态机：等待中 → 执行中 →（等待审批）→ 成功 | 失败 | 已取消
 const (
-	BuildPending   = "等待中"
-	BuildAwaiting  = "等待审批"
-	BuildRunning   = "执行中"
-	BuildSuccess   = "成功"
-	BuildFailed    = "失败"
-	BuildCanceled  = "已取消"
+	BuildPending  = "等待中"
+	BuildAwaiting = "等待审批"
+	BuildRunning  = "执行中"
+	BuildSuccess  = "成功"
+	BuildFailed   = "失败"
+	BuildCanceled = "已取消"
 )
 
 // 构建日志级别
@@ -27,14 +27,14 @@ const (
 // PipelineBuild 构建记录（触发时对定义做快照，之后改定义不影响本次构建）
 type PipelineBuild struct {
 	global.GVA_MODEL
-	PipelineID   uint   `json:"pipelineId" gorm:"comment:流水线ID;index"`
-	PipelineName string `json:"pipelineName" gorm:"comment:流水线名快照"`
-	BuildNo      int    `json:"buildNo" gorm:"comment:构建序号(按流水线递增)"`
-	Status       string `json:"status" gorm:"comment:状态;index"`
-	Params       string `json:"params" gorm:"type:text;comment:触发参数JSON"`
-	Snapshot     string `json:"snapshot" gorm:"type:longtext;comment:定义快照JSON(变量已替换)"`
-	Operator     string `json:"operator" gorm:"comment:触发人"`
-	UserID       uint   `json:"userId" gorm:"comment:触发用户ID;index"`
+	PipelineID   uint       `json:"pipelineId" gorm:"comment:流水线ID;index"`
+	PipelineName string     `json:"pipelineName" gorm:"comment:流水线名快照"`
+	BuildNo      int        `json:"buildNo" gorm:"comment:构建序号(按流水线递增)"`
+	Status       string     `json:"status" gorm:"comment:状态;index"`
+	Params       string     `json:"params" gorm:"type:text;comment:触发参数JSON"`
+	Snapshot     string     `json:"snapshot" gorm:"type:longtext;comment:定义快照JSON(变量已替换)"`
+	Operator     string     `json:"operator" gorm:"comment:触发人"`
+	UserID       uint       `json:"userId" gorm:"comment:触发用户ID;index"`
 	StartedAt    *time.Time `json:"startedAt" gorm:"comment:开始时间"`
 	FinishedAt   *time.Time `json:"finishedAt" gorm:"comment:结束时间"`
 }

@@ -101,8 +101,8 @@ func (p *pipelineBuild) ApproveBuild(c *gin.Context) {
 // @Router /pipeline/build/list [post]
 func (p *pipelineBuild) GetBuildList(c *gin.Context) {
 	var info struct {
-		Page       int `json:"page"`
-		PageSize   int `json:"pageSize"`
+		Page       int  `json:"page"`
+		PageSize   int  `json:"pageSize"`
 		PipelineID uint `json:"pipelineId"`
 	}
 	_ = c.ShouldBindJSON(&info)
@@ -204,8 +204,14 @@ func (p *pipelineBuild) StreamBuildLogs(c *gin.Context) {
 		c.String(http.StatusUnauthorized, "缺少 token")
 		return
 	}
-	if _, err := utils.NewJWT().ParseToken(token); err != nil {
+	claims, err := utils.NewJWT().ParseToken(token)
+	if err != nil {
 		c.String(http.StatusUnauthorized, "token 无效: "+err.Error())
+		return
+	}
+	// SSE 握手 casbin 自验（query token 场景中间件不生效；只读流 888+9528）
+	if ok, _ := utils.GetCasbin().Enforce(fmt.Sprintf("%d", claims.AuthorityId), "/sse/pipeline/build/logs", "GET"); !ok {
+		c.String(http.StatusForbidden, "无日志流使用权限")
 		return
 	}
 	id, err := strconv.ParseUint(c.Query("id"), 10, 64)

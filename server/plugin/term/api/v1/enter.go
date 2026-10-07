@@ -12,7 +12,7 @@ var Api = new(api)
 type api struct {
 	Terminal    terminal
 	TermSession termSession
-	Sftp       sftpApi
+	Sftp        sftpApi
 }
 
 var termService = service.TermService
