@@ -42,3 +42,4 @@ web/pnpm-lock.yaml
 *.sqlite
 *.sqlite3
 worktrees/
+.mimosa/
