@@ -60,9 +60,9 @@ func (h *k8sHelm) GetHelmHistory(c *gin.Context) {
 	response.OkWithData(list, c)
 }
 
-// InstallHelmRelease 安装 release（chart tgz 上传 + values YAML 覆盖）
+// InstallHelmRelease 安装/升级 release
 // @Tags K8sHelm
-// @Summary 安装 Helm release（写操作仅 888）
+// @Summary 安装或升级 Helm release（同名已存在则升级，revision 递增；写操作仅 888）
 // @Security ApiKeyAuth
 // @Accept multipart/form-data
 // @Produce application/json
@@ -71,7 +71,7 @@ func (h *k8sHelm) GetHelmHistory(c *gin.Context) {
 // @Param releaseName formData string true "release 名"
 // @Param values formData string false "values YAML（可选）"
 // @Param chart formData file true "chart .tgz 包"
-// @Success 200 {object} response.Response{data=service.HelmReleaseInfo,msg=string} "安装成功"
+// @Success 200 {object} response.Response{data=service.HelmReleaseInfo,msg=string} "安装/升级成功"
 // @Router /k8s/helm/install [post]
 func (h *k8sHelm) InstallHelmRelease(c *gin.Context) {
 	clusterID, ok := parseUintQ(c, "clusterId")

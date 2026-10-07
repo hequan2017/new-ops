@@ -112,7 +112,7 @@ func (s *K8sClusterService) ListHelmReleases(clusterID uint, namespace string) (
 	return out, nil
 }
 
-// InstallHelmRelease 安装 release（chart tgz 上传 + values YAML 覆盖）
+// InstallHelmRelease 安装/升级 release（不存在则装、存在则升——revision 递增；chart tgz 上传 + values YAML 覆盖）
 func (s *K8sClusterService) InstallHelmRelease(clusterID uint, namespace, releaseName string, tgz io.Reader, valuesYAML string) (*HelmReleaseInfo, error) {
 	if namespace == "" || releaseName == "" {
 		return nil, newK8sErr(ErrCodeNamespaceReq, "namespace/releaseName 必填")
@@ -138,6 +138,22 @@ func (s *K8sClusterService) InstallHelmRelease(clusterID uint, namespace, releas
 	actionCfg, err := helmActionConfig(clusterID, namespace)
 	if err != nil {
 		return nil, err
+	}
+	// 已存在则升级（revision 递增，回滚可用）
+	probe := action.NewList(actionCfg)
+	probe.Filter = "^" + releaseName + "$"
+	probe.Deployed = true
+	probe.Failed = true
+	probe.Pending = true
+	if rels, lerr := probe.Run(); lerr == nil && len(rels) > 0 {
+		up := action.NewUpgrade(actionCfg)
+		up.Namespace = namespace
+		up.Timeout = 2 * time.Minute
+		rel, uerr := up.Run(releaseName, ch, vals)
+		if uerr != nil {
+			return nil, fmt.Errorf("升级失败: %w", uerr)
+		}
+		return releaseInfo(rel), nil
 	}
 	install := action.NewInstall(actionCfg)
 	install.ReleaseName = releaseName
