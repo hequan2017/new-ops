@@ -60,4 +60,9 @@ func (r *K8sWriteRouter) InitK8sWriteRouter(Router *gin.RouterGroup) {
 	{
 		podGroup.POST("delete", v1.Api.K8sWrite.DeletePod)
 	}
+	yamlGroup := Router.Group("k8s/workload")
+	{
+		yamlGroup.POST("diff", v1.Api.K8sYaml.PreviewWorkloadYAML)
+		yamlGroup.POST("apply", v1.Api.K8sYaml.ApplyWorkloadYAML)
+	}
 }

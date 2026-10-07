@@ -61,7 +61,7 @@ func Casbin() {
 	}
 	apply("888", all)
 	apply("9528", readonly)
-	// 写操作仅 888（扩缩容/滚动重启/节点隔离/节点驱逐/删除 Pod）
+	// 写操作仅 888（扩缩容/滚动重启/节点隔离/节点驱逐/删除 Pod/YAML 下发）
 	writeOps := []struct {
 		Path   string
 		Method string
@@ -71,6 +71,10 @@ func Casbin() {
 		{"/k8s/node/cordon", "POST"},
 		{"/k8s/node/drain", "POST"},
 		{"/k8s/pod/delete", "POST"},
+		{"/k8s/workload/diff", "POST"},
+		{"/k8s/workload/apply", "POST"},
+		// 终端为写级能力：execws 握手 casbin 自验（仅 888）
+		{"/k8s/pod/execws", "GET"},
 	}
 	for _, p := range writeOps {
 		has, err := e.HasPolicy("888", p.Path, p.Method)

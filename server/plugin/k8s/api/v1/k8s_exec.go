@@ -3,6 +3,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -38,8 +39,14 @@ func (t *k8sResource) PodExecWS(c *gin.Context) {
 		c.String(http.StatusUnauthorized, "缺少 token")
 		return
 	}
-	if _, err := utils.NewJWT().ParseToken(token); err != nil {
+	claims, err := utils.NewJWT().ParseToken(token)
+	if err != nil {
 		c.String(http.StatusUnauthorized, "token 无效: "+err.Error())
+		return
+	}
+	// 终端为写级能力：握手时强制 casbin（query token 场景中间件不生效，需自验角色）
+	if ok, _ := utils.GetCasbin().Enforce(fmt.Sprintf("%d", claims.AuthorityId), "/k8s/pod/execws", "GET"); !ok {
+		c.String(http.StatusForbidden, "无终端使用权限")
 		return
 	}
 	clusterID, err := strconv.ParseUint(c.Query("clusterId"), 10, 64)
