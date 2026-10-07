@@ -198,6 +198,7 @@
 | 终端通道 | `gorilla/websocket` + `@xterm/xterm`(6.0)+`@xterm/addon-fit` | 统一走插件内 `/term/ws` 网关（query token 握手鉴权） | new-jenkins / tianqi |
 | Docker | Docker SDK（moby/client） | 支持 TLS 连接远程节点 | GPU 系列 |
 | Kubernetes | `k8s.io/client-go` | kubeconfig 动态加载 + 连接池 | seal / docker-gpu-manage |
+| K8s 指标 | `k8s.io/metrics`（与 client-go 同版本 v0.33.3） | metrics-server Node/Pod 用量（集群总览；不可用降级） | 场53 登记 |
 | 凭据加密 | `crypto/aes` + GCM（信封加密） | 标准库优先，主密钥环境变量注入 | go-webssh |
 | 云同步 | 阿里云 OpenAPI RPC V1 签名（自实现，纯标准库） | 仅 DescribeInstances 单接口，不引入官方 SDK（传递依赖过重）；AccessKey 走凭据保险库；HMAC-SHA1 为协议固定要求 | raptor |
 | SQL 审核 | goInception + soar 外部二进制 | 进程调用 + 结果解析 | seal |
@@ -308,7 +309,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 - [ ] container：endpoint CRUD + TLS 凭据入保险库 + 30s 巡检（进行中：场32 交付——docker_endpoint 模型、NewDockerClient（unix 直连/TCP+TLS，v28 WithTLSClientConfig 直收 PEM，凭据保险库 docker_tls 解密 JSON{ca,cert,key}）、PingEndpoint+StartInspectLoop 30s 合并巡检（并发5）、五接口+种子+前端接入点页（35s 轻刷新）；Docker SDK v28.0.4 登记 3.5（go-connections 钉 v0.5.0 修 Windows 编译）；真机：unix socket 巡检在线 API 1.54、离线节点状态回写、重名拦截；剩余：容器生命周期与创建参数）
 - [x] container：日志流 + exec 终端（WebSocket 桥接）；inspect 回写 + docker events 订阅（场36 双 WS 通道：LogsWS（logs -f，TTY 判断+stdcopy 去复用）/ExecWS（exec /bin/sh TTY→hijack⇄WS，resize），public 组 query token 自验；前端 ContainerShell/ContainerLogs 组件+抽屉按钮；真机：日志流跟随连续 tick、exec echo 双向打通（修复 readControl 丢弃用户输入真 bug）。场37 events：复用 30s 巡检按 [last_event_at, now] 区间拉取落库 docker_event_log（7 天留存），水位推进、离线恢复自动补拉（窗口上限 1h）；排障链：RFC3339Nano→unix 秒→**根因 v28 SDK 在 daemon 关流时经 errCh 发 io.EOF 且不关 msgCh，原消费把 EOF 当错误丢弃 batch 不推水位**（本地 SSH 隧道复现+远端空窗对照定位），重写消费（EOF=正常收尾落库+推水位，超时已收事件仍落库不推水位）；期间发现并行会话 k8s 前端半成品致部署 npm build 失败、修复版曾未上机（去重 deleteK8sCluster、集群函数转出口）；真机：ops-ev5 容器 create/start/kill/stop/die/destroy 6 事件全捕获。**C1 全部完成**）
-- [ ] k8s：集群注册（kubeconfig 加密）+ 连接测试 + 连接池；集群总览（metrics-server 用量）；Node 管理（cordon/drain）
+- [x] k8s：集群注册（kubeconfig 加密）+ 连接测试 + 连接池；集群总览（metrics-server 用量）；Node 管理（cordon/drain）（场35 集群注册全链交付；场53 补齐：集群总览（版本/节点/命名空间/Pod 统计+metrics-server 汇总用量，metrics 不可用降级）、Node 详情（allocatable/capacity/conditions/taints）、cordon/uncordon patch、drain 先隔离后 Eviction（跳过 DaemonSet/镜像 Pod/删除中，纯函数决策单测）；clientset 按集群即时构造（无长连接池，多集群低频管理面量级足够）；测试机 k3s 真集群全链验证：注册/总览（88 核/125.7GiB/用量真实）/cordon→SchedulingDisabled→uncordon/drain 驱逐 5 Pod、替代 Pod Pending 于隔离节点；错误码 1505）
 - [ ] k8s：工作负载（列表/YAML/扩缩容/滚动重启）；Pod（列表/详情/日志/WebShell/删除）；ConfigMap/Secret(脱敏)/PVC/Service/Ingress/Event
 - [ ] 两套真实环境联调 + 管理员/普通用户两级数据隔离验证
 
@@ -322,7 +323,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 ### M6 任务清单（dbops + monitor）
 
 - [ ] dbops（进行中：场45 交付可做部分——dbops_instance（密码 AES-GCM 密文复用 asset/crypto，独立请求体保证响应永不回显）/dbops_order 两表、实例 CRUD+TCP 探活回写（SQL 层检测待 mysql 驱动引入）、SQL 工单创建/取消/分页（普通用户仅本人）、审核接口 goInception 未配置明确报 1708 不动状态（接入点已留）；九接口+实例/工单双页+种子（错误码 1701-1708）；真机：密文不泄露（SecretNotLeaked）、3306 探活离线回写、工单流转、审核未配置报错；剩余：goInception 审核/执行/备份、soar 优化建议、多环境——待 goInception 二进制与 MySQL 环境）
-- [x] monitor：SSH 采集任务（CPU/内存/磁盘/网络）+ 指标留存与自动清理 + ECharts 图表页（场38 交付：monitor_metric 表（asset+name+ts 复合索引、30 天留存随轮清理）、单命令组合采样 1s 完成（loadavg/cpu 两次 /proc/stat delta 含除零保护/meminfo/df，解析纯函数 3 组单测）、CollectAll 并发 5 全量采集（绑凭据非报废主机，复用 asset SSH 通道指纹校验）、@every 5m 注册底座 timer、/monitor/metric/{list,collect}+种子（888/9528 只读）；前端 PerfChart（ECharts 时间轴四折线双 Y 轴、1h/6h/24h/7d、立即采集）挂主机页「监控」抽屉；真机：disk 25% 与宿主 df 精准一致、load/mem 合理、CPU 0% 为 88 核空闲机真实值；网络指标待补）
+- [x] monitor：SSH 采集任务（CPU/内存/磁盘/网络）+ 指标留存与自动清理 + ECharts 图表页（场38 交付：monitor_metric 表（asset+name+ts 复合索引、30 天留存随轮清理）、单命令组合采样 1s 完成（loadavg/cpu 两次 /proc/stat delta 含除零保护/meminfo/df，解析纯函数 3 组单测）、CollectAll 并发 5 全量采集（绑凭据非报废主机，复用 asset SSH 通道指纹校验）、@every 5m 注册底座 timer、/monitor/metric/{list,collect}+种子（888/9528 只读）；前端 PerfChart（ECharts 时间轴四折线双 Y 轴、1h/6h/24h/7d、立即采集）挂主机页「监控」抽屉；真机：disk 25% 与宿主 df 精准一致、load/mem 合理、CPU 0% 为 88 核空闲机真实值；网络指标场51 补齐（net/dev tail 跳表头修复 + ParsePerfOutput 特征扫描解析，真机流量验证））
 - [x] monitor：告警规则引擎（阈值/持续时间/静默窗口）+ 钉钉机器人推送 + 端口探活（场39：monitor_alert_rule（metric 阈值>/< 连续 N 次、port TCP 探活、静默默认 30min、钉钉 webhook 选配）+ event（触发/恢复/通知状态）；评估挂采集轮末尾统一执行、evaluateMetric 纯函数单测、触发静默去重、恢复自动关闭未决事件、pushDingTalk 仅 http(s) 5s 超时；五接口+前端规则/事件双页签；真机：mem<99 触发含当前值、端口不可达触发、二轮采集静默不重复、非法指标名拦截；修复告警两表漏注册迁移与摘要重复主机名两处）
 
 ### M7 任务清单（workflow + org + aiops）
@@ -353,6 +354,7 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 | 部署 | `bash scripts/deploy-test.sh` 一键部署：全新安装与增量更新同一命令，自动完成构建→上传→systemd/nginx 安装→SQLite 初始化→冒烟；支持环境变量覆盖目标机器/端口/目录/服务名（详见脚本头部），可一键部署到任何 Ubuntu+Docker 机器。`config.yaml` 为有状态文件（含初始化信息），更新模式不覆盖 |
 | 帐号 | 管理员 `admin`（密码记录在本地运维记忆，不入仓库）；测试机配置 `open-captcha: 999999`（等效关闭验证码，便于自动化冒烟） |
 | 端口约定 | 8080 被机器上其他容器占用；new-ops web 固定 8081、server 固定 8888 |
+| k3s 集群 | 场53 安装 k3s v1.36.5+k3s1 单节点（`localhost`/192.168.112.138:6443，禁用 traefik/servicelb 避免端口冲突）；kubeconfig `/etc/rancher/k3s/k3s.yaml`；`/etc/rancher/k3s/registries.yaml` 配 docker.io 镜像加速（同机 Docker daemon.json 同源 mirrors，containerd 直连 docker.io 会超时）；内置 metrics-server；已在平台内注册为集群 `k3s-test` 供 K1/K2/K3 联调 |
 
 ---
 
@@ -573,3 +575,4 @@ web/src/plugin/asset/
 | 2026-10-07 | 50 | M5 GPU 骨架（场50，无环境可交付部分）：三表（节点/规格定价/实例分配台账）+ 防超卖引擎——开通事务内 FOR UPDATE 行锁节点 + 运行中实例占用聚合 + canAllocate 纯函数判定（余量不足报 1605 带明细），销毁释放配额复用、总量不可低于占用、离线节点拒开通；十接口+菜单/API/casbin 种子+前端算力管理三页签；真机：2 卡节点开通 2 次 1 卡满载 → 第三次精确拒"GPU 余 0 需 1" → 销毁释放 → 配额循环复用全过，验证数据已清理。**至此全部里程碑的可无环境交付部分均已落地** | 剩余项均待环境：GPU Docker 直通（显卡）/goInception+MySQL/钉钉/LLM 密钥/真集群 kubeconfig；C2 端口转发留 M5 跳板场景；Compose 待设计 |
 | 2026-10-06 | 49 | M4 K2 写操作：Deployment 扩缩容（replicas 0-500 校验+单测）与滚动重启（restartedAt 注解 patch）——service/写接口（仅 888 casbin）/前端 ScaleDialog + Deployments 操作列按钮；写操作走 GVA 操作日志中间件 | 下一场：k8s 资源浏览真集群联调（待 kubeconfig）；M5 GPU 或 M6 继续推进 |
 | 2026-10-06 | 25 | M2 收官回归（method 修正后一次全通）：SFTP 递归删除（mkdir→递归删→已删净）；workflow 全链（定义列表→发起工单→流转记录）；自动注入端到端（批次6 每主机 Command=echo baize-auto-inject-done）。确认并行会话已交付 workflow 全链（服务/迁移/种子/前端 ticket 页）——我方重复的 state_machine 模型已删除避免双写 | 下一周期：M3 执行器增强、M7 工单模板扩充（发版/SQL/资源申请联动）由并行会话推进；M5 GPU 剩余需真实 GPU 环境 |
+| 2026-10-07 | 53 | **M4 K1 收官（场53，k3s 真集群解锁）**：测试机安装 k3s v1.36.5+k3s1 单节点（禁 traefik/servicelb；registries.yaml 配 docker.io 加速——k3s 内嵌 containerd 直连超时致系统 Pod 卡 ContainerCreating，复用同机 Docker mirrors 后恢复）；K1 补齐——集群总览（版本/节点/命名空间/Pod 统计+metrics-server 用量，不可用降级 metricsAvailable=false）、Node 详情（allocatable/capacity/conditions/taints）、cordon/uncordon（patch spec.unschedulable）、drain（先隔离后 policy/v1 Eviction，drainDecisions 纯函数跳过 DaemonSet/镜像 Pod/删除中，单测 3 组）；k8s.io/metrics v0.33.3 登记 3.5；casbin/api 种子补齐资源浏览路径缺口+node 写操作仅 888；前端总览抽屉+Nodes 操作列（详情抽屉/隔离恢复/驱逐二次确认）；真机全链：注册 k3s-test 在线→总览 88 核/125.7GiB/用量真实（CPU 0.14 核 mem 6.4GiB）→cordon→SchedulingDisabled→uncordon→drain 驱逐 5 Pod（替代 Pod Pending 于隔离节点）→恢复调度全过，验证数据已清理。场首收尾 Mimosa 扫描硬拦截：修复 5 项（MD5V→SHA256V 全链/exec 绝对路径校验/删除零引用 openDocument.js/componentName 目录遍历边界校验/package.json 脚本清理）；⚠️ 并行会话误 git add 全量 .mimosa 快照（8.7 万行）入库且捎带我暂存文件，已移出仓库+gitignore+还原其致编译不过的 gorm_biz 遗留改动，历史垃圾保留在已推送提交中 | 下一场：K2 剩余（Pod 详情/事件/WebShell/删除、StatefulSet/DaemonSet、YAML 查看、PVC/Ingress/Event）——k3s 真集群已可联调；或 C2 Compose；K1 收官后 M4 仅剩"两套真实环境联调"（k3s 已占一套） |
