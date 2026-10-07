@@ -38,7 +38,9 @@
     { name: 'cpu_percent', color: '#38bdf8' },
     { name: 'mem_percent', color: '#a78bfa' },
     { name: 'disk_percent', color: '#fbbf24' },
-    { name: 'load1', color: '#34d399' }
+    { name: 'load1', color: '#34d399' },
+    { name: 'net_rx_kbs', color: '#f472b6' },
+    { name: 'net_tx_kbs', color: '#fb923c' }
   ]
 
   const render = (rows) => {
@@ -65,7 +67,7 @@
         type: 'line',
         showSymbol: false,
         smooth: true,
-        yAxisIndex: s.name === 'load1' ? 1 : 0,
+        yAxisIndex: s.name === 'load1' || s.name.startsWith('net_') ? 1 : 0,
         itemStyle: { color: s.color },
         data: byName[s.name] || []
       }))

@@ -16,15 +16,17 @@ import (
 	"github.com/hequan2017/new-ops/server/plugin/monitor/model"
 )
 
-// perfCmd 性能采样命令（cpu 两次采样间隔 1s）
-const perfCmd = `cat /proc/loadavg; grep 'cpu ' /proc/stat; sleep 1; grep 'cpu ' /proc/stat; grep -E 'MemTotal|MemAvailable' /proc/meminfo; df -kP / | tail -1`
+// perfCmd 性能采样命令（cpu/net 两次采样间隔 1s；NET 标记行分块供解析）
+const perfCmd = `cat /proc/loadavg; grep 'cpu ' /proc/stat; echo ---NET1---; grep -v ':' /proc/net/dev | grep -v lo; sleep 1; grep 'cpu ' /proc/stat; echo ---NET2---; grep -v ':' /proc/net/dev | grep -v lo; grep -E 'MemTotal|MemAvailable' /proc/meminfo; df -kP / | tail -1`
 
-// PerfSample 一次采样的四指标
+// PerfSample 一次采样的六指标（net 为 1s 窗口速率 KB/s，全部非 lo 网卡之和）
 type PerfSample struct {
 	CPUPercent  float64
 	MemPercent  float64
 	DiskPercent float64
 	Load1       float64
+	NetRxKBs    float64
+	NetTxKBs    float64
 }
 
 // cpuStatLine 解析 /proc/stat 的 cpu 聚合行 → (user,nice,system,idle,iowait,irq,softirq,steal 总和与 idle 和)
@@ -52,8 +54,55 @@ func cpuStatLine(line string) (total, idle float64) {
 	return total, idle
 }
 
+// netDevLine 解析 /proc/net/dev 数据行 → (iface, rxBytes, txBytes, ok)
+func netDevLine(line string) (string, float64, float64, bool) {
+	// 形如 "  eth0: 12345 100 ... 67890 200 ..."
+	i := strings.Index(line, ":")
+	if i < 0 {
+		return "", 0, 0, false
+	}
+	iface := strings.TrimSpace(line[:i])
+	if iface == "" || iface == "lo" {
+		return "", 0, 0, false
+	}
+	f := strings.Fields(line[i+1:])
+	if len(f) < 10 {
+		return "", 0, 0, false
+	}
+	rx, err1 := strconv.ParseFloat(f[0], 64)
+	tx, err2 := strconv.ParseFloat(f[8], 64)
+	if err1 != nil || err2 != nil {
+		return "", 0, 0, false
+	}
+	return iface, rx, tx, true
+}
+
+// netBlockRate 计算两次 net/dev 采样块的速率（KB/s，全网卡求和；纯函数，可单测）
+func netBlockRate(block1, block2 []string, window time.Duration) (rxKBs, txKBs float64) {
+	if window <= 0 || len(block1) == 0 || len(block2) == 0 {
+		return 0, 0
+	}
+	sum := func(block []string) (rx, tx float64) {
+		for _, ln := range block {
+			if _, r, t, ok := netDevLine(ln); ok {
+				rx += r
+				tx += t
+			}
+		}
+		return rx, tx
+	}
+	rx1, tx1 := sum(block1)
+	rx2, tx2 := sum(block2)
+	secs := window.Seconds()
+	if secs <= 0 || rx2 < rx1 || tx2 < tx1 {
+		return 0, 0 // 计数器回绕/重启异常时按 0 处理
+	}
+	return (rx2 - rx1) / 1024 / secs, (tx2 - tx1) / 1024 / secs
+}
+
 // ParsePerfOutput 解析采样输出（纯函数，可单测）
-// 结构：loadavg 行 / cpu 行 / cpu 行 / MemTotal / MemAvailable / df 尾行
+// 结构：loadavg / cpu 行×2 / MemTotal / MemAvailable / df 尾行，
+// 其后可选 NET 分块（---NET1--- 与 ---NET2--- 标记，各含若干 net/dev 行）——向后兼容旧格式。
 func ParsePerfOutput(out string) (*PerfSample, error) {
 	lines := strings.Split(strings.TrimSpace(out), "\n")
 	if len(lines) < 6 {
@@ -94,6 +143,28 @@ func ParsePerfOutput(out string) (*PerfSample, error) {
 	// df 尾行：Filesystem 1024-blocks Used Available Capacity Mounted
 	if f := strings.Fields(lines[5]); len(f) >= 5 {
 		s.DiskPercent, _ = strconv.ParseFloat(strings.TrimSuffix(f[4], "%"), 64)
+	}
+	// NET 分块（可选）：按标记切两次采样块求速率
+	var b1, b2 []string
+	cur := ""
+	for _, ln := range lines[6:] {
+		switch strings.TrimSpace(ln) {
+		case "---NET1---":
+			cur = "1"
+			continue
+		case "---NET2---":
+			cur = "2"
+			continue
+		}
+		switch cur {
+		case "1":
+			b1 = append(b1, ln)
+		case "2":
+			b2 = append(b2, ln)
+		}
+	}
+	if len(b1) > 0 && len(b2) > 0 {
+		s.NetRxKBs, s.NetTxKBs = netBlockRate(b1, b2, time.Second)
 	}
 	return s, nil
 }
@@ -153,6 +224,8 @@ func (s *MonitorService) CollectAll() {
 				{AssetID: h.ID, Name: model.MetricMemPercent, Value: round2(sample.MemPercent), TS: now},
 				{AssetID: h.ID, Name: model.MetricDiskPercent, Value: round2(sample.DiskPercent), TS: now},
 				{AssetID: h.ID, Name: model.MetricLoad1, Value: round2(sample.Load1), TS: now},
+				{AssetID: h.ID, Name: model.MetricNetRxKBs, Value: round2(sample.NetRxKBs), TS: now},
+				{AssetID: h.ID, Name: model.MetricNetTxKBs, Value: round2(sample.NetTxKBs), TS: now},
 			}
 			global.GVA_DB.Create(&rows)
 		}(h)

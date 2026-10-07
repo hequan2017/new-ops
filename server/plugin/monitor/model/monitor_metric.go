@@ -14,6 +14,8 @@ const (
 	MetricMemPercent  = "mem_percent"
 	MetricDiskPercent = "disk_percent"
 	MetricLoad1       = "load1"
+	MetricNetRxKBs    = "net_rx_kbs"
+	MetricNetTxKBs    = "net_tx_kbs"
 )
 
 // ValidMetricNames 合法指标集合（查询过滤白名单）
@@ -21,6 +23,7 @@ func ValidMetricNames() map[string]bool {
 	return map[string]bool{
 		MetricCPUPercent: true, MetricMemPercent: true,
 		MetricDiskPercent: true, MetricLoad1: true,
+		MetricNetRxKBs: true, MetricNetTxKBs: true,
 	}
 }
 
