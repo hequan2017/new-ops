@@ -17,7 +17,8 @@ import (
 )
 
 // perfCmd 性能采样命令（cpu/net 两次采样间隔 1s；NET 标记行分块供解析）
-const perfCmd = `cat /proc/loadavg; grep 'cpu ' /proc/stat; echo ---NET1---; grep -v ':' /proc/net/dev | grep -v lo; sleep 1; grep 'cpu ' /proc/stat; echo ---NET2---; grep -v ':' /proc/net/dev | grep -v lo; grep -E 'MemTotal|MemAvailable' /proc/meminfo; df -kP / | tail -1`
+// net/dev 用 tail 跳过两行表头（数据行含冒号，不能用 grep -v ':' 过滤；lo 网卡排除）
+const perfCmd = `cat /proc/loadavg; grep 'cpu ' /proc/stat; echo ---NET1---; tail -n +3 /proc/net/dev | grep -v 'lo:'; sleep 1; grep 'cpu ' /proc/stat; echo ---NET2---; tail -n +3 /proc/net/dev | grep -v 'lo:'; grep -E 'MemTotal|MemAvailable' /proc/meminfo; df -kP / | tail -1`
 
 // PerfSample 一次采样的六指标（net 为 1s 窗口速率 KB/s，全部非 lo 网卡之和）
 type PerfSample struct {
