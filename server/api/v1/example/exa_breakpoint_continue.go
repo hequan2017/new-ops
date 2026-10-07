@@ -51,9 +51,9 @@ func (b *FileUploadAndDownloadApi) BreakpointContinue(c *gin.Context) {
 		}
 	}(f)
 	cen, _ := io.ReadAll(f)
-	if !utils.CheckMd5(cen, chunkMd5) {
-		global.GVA_LOG.Error("检查md5失败!", zap.Error(err))
-		response.FailWithMessage("检查md5失败", c)
+	if !utils.CheckChunkHash(cen, chunkMd5) {
+		global.GVA_LOG.Error("检查分片摘要失败!", zap.Error(err))
+		response.FailWithMessage("检查分片摘要失败", c)
 		return
 	}
 	file, err := fileUploadAndDownloadService.FindOrCreateFile(fileMd5, fileName, chunkTotal)

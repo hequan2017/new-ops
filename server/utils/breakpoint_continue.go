@@ -37,14 +37,14 @@ func BreakPointContinue(content []byte, fileName string, contentNumber int, cont
 }
 
 //@author: [piexlmax](https://github.com/piexlmax)
-//@function: CheckMd5
-//@description: 检查Md5
-//@param: content []byte, chunkMd5 string
+//@function: CheckChunkHash
+//@description: 校验分片摘要与内容一致（SHA-256）
+//@param: content []byte, chunkHash string
 //@return: CanUpload bool
 
-func CheckMd5(content []byte, chunkMd5 string) (CanUpload bool) {
-	fileMd5 := MD5V(content)
-	if fileMd5 == chunkMd5 {
+func CheckChunkHash(content []byte, chunkHash string) (CanUpload bool) {
+	fileHash := SHA256V(content)
+	if fileHash == chunkHash {
 		return true // 可以继续上传
 	} else {
 		return false // 切片不完整，废弃

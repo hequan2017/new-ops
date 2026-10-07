@@ -134,8 +134,8 @@ func (m *mongo) CreateIndexes(ctx context.Context, name string, indexes [][]stri
 		if len(fmt.Sprintf("%s.%s.$%s", collection.Name(), name, v1)) > 127 {
 			err = global.GVA_MONGO.Database.Collection(name).CreateOneIndex(ctx, options.IndexModel{
 				Key:          v1,
-				IndexOptions: option.Index().SetName(utils.MD5V([]byte(k1))),
-				// IndexOptions: option.Index().SetName(utils.MD5V([]byte(k1))).SetExpireAfterSeconds(86400), // SetExpireAfterSeconds(86400) 设置索引过期时间, 86400 = 1天
+				IndexOptions: option.Index().SetName(utils.SHA256V([]byte(k1))),
+				// IndexOptions: option.Index().SetName(utils.SHA256V([]byte(k1))).SetExpireAfterSeconds(86400), // SetExpireAfterSeconds(86400) 设置索引过期时间, 86400 = 1天
 			})
 			if err != nil {
 				return errors.Wrapf(err, "创建索引[%s]失败!", k1)

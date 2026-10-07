@@ -70,7 +70,7 @@ func (m *Minio) UploadFile(file *multipart.FileHeader) (filePathres, key string,
 
 	// 对文件名进行加密存储
 	ext := filepath.Ext(file.Filename)
-	filename := utils.MD5V([]byte(strings.TrimSuffix(file.Filename, ext))) + ext
+	filename := utils.SHA256V([]byte(strings.TrimSuffix(file.Filename, ext))) + ext
 	if global.GVA_CONFIG.Minio.BasePath == "" {
 		filePathres = "uploads" + "/" + time.Now().Format("2006-01-02") + "/" + filename
 	} else {

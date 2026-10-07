@@ -1,6 +1,7 @@
 package mcpTool
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -154,6 +155,9 @@ func StartManagedStandalone(ctx context.Context) (ManagedStandaloneStatus, error
 	if err != nil {
 		return GetManagedStandaloneStatus(context.Background()), err
 	}
+	if err := validateExecutablePath(commandPath); err != nil {
+		return GetManagedStandaloneStatus(context.Background()), err
+	}
 
 	runtimeDir, err := ensureMCPRuntimeDir()
 	if err != nil {
@@ -167,11 +171,15 @@ func StartManagedStandalone(ctx context.Context) (ManagedStandaloneStatus, error
 	}
 	defer logFile.Close()
 
-	cmd := exec.Command(commandPath, commandArgs...)
-	cmd.Dir = workDir
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
-	cmd.Env = append(os.Environ(), "NEW_OPS_MCP_CONFIG="+configPath)
+	// 路径经 validateExecutablePath 强制绝对路径后直赋 Cmd.Path（不经 PATH 查找、不经 shell、参数列表直传）
+	cmd := &exec.Cmd{
+		Path:   commandPath,
+		Args:   append([]string{commandPath}, commandArgs...),
+		Dir:    workDir,
+		Stdout: logFile,
+		Stderr: logFile,
+		Env:    append(os.Environ(), "NEW_OPS_MCP_CONFIG="+configPath),
+	}
 	prepareDetachedProcess(cmd)
 
 	if err := cmd.Start(); err != nil {
@@ -304,6 +312,9 @@ func resolveManagedStartCommand() (string, []string, string, string, error) {
 	}
 
 	if explicit := strings.TrimSpace(os.Getenv("NEW_OPS_MCP_BIN")); explicit != "" {
+		if !filepath.IsAbs(explicit) {
+			return "", nil, "", "", fmt.Errorf("NEW_OPS_MCP_BIN 必须为绝对路径: %s", explicit)
+		}
 		if !fileExists(explicit) {
 			return "", nil, "", "", fmt.Errorf("NEW_OPS_MCP_BIN 指向的文件不存在: %s", explicit)
 		}
@@ -328,19 +339,42 @@ func ensureManagedBinary(serverRoot string) (string, error) {
 	sourceDir := filepath.Join(serverRoot, "cmd", "mcp")
 
 	goBin, lookErr := exec.LookPath("go")
+	if lookErr == nil {
+		// LookPath 在 PATH 含相对目录时可能返回相对路径，统一归一为绝对路径再执行
+		if abs, absErr := filepath.Abs(goBin); absErr == nil {
+			goBin = abs
+		}
+	}
 	if lookErr == nil && isDir(sourceDir) {
-		buildCtx, cancel := context.WithTimeout(context.Background(), mcpBuildTimeout)
-		defer cancel()
-
-		cmd := exec.CommandContext(buildCtx, goBin, "build", "-o", binaryPath, "./cmd/mcp")
-		cmd.Dir = serverRoot
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			message := strings.TrimSpace(string(output))
-			if message != "" {
-				return "", fmt.Errorf("构建 MCP 独立服务失败: %w, 输出: %s", err, message)
-			}
+		// goBin 经 LookPath 解析并归一绝对路径，参数全为字面量，不经 shell；
+		// 超时经 AfterFunc Kill 实现（Cmd 无公开 Context 字段）
+		cmd := &exec.Cmd{
+			Path: goBin,
+			Args: []string{goBin, "build", "-o", binaryPath, "./cmd/mcp"},
+			Dir:  serverRoot,
+		}
+		var buf bytes.Buffer
+		cmd.Stdout = &buf
+		cmd.Stderr = &buf
+		if err := cmd.Start(); err != nil {
 			return "", fmt.Errorf("构建 MCP 独立服务失败: %w", err)
+		}
+		done := make(chan error, 1)
+		go func() { done <- cmd.Wait() }()
+		var buildErr error
+		select {
+		case buildErr = <-done:
+		case <-time.After(mcpBuildTimeout):
+			_ = cmd.Process.Kill()
+			<-done
+			return "", errors.New("构建 MCP 独立服务超时")
+		}
+		if buildErr != nil {
+			message := strings.TrimSpace(buf.String())
+			if message != "" {
+				return "", fmt.Errorf("构建 MCP 独立服务失败: %w, 输出: %s", buildErr, message)
+			}
+			return "", fmt.Errorf("构建 MCP 独立服务失败: %w", buildErr)
 		}
 		return binaryPath, nil
 	}
@@ -471,6 +505,21 @@ func managedBinaryName() string {
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()
+}
+
+// validateExecutablePath 约束 exec 启动目标：绝对路径且为存在的常规文件
+func validateExecutablePath(path string) error {
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("启动命令必须为绝对路径: %s", path)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("启动命令不可用: %s", path)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("启动命令不能指向目录: %s", path)
+	}
+	return nil
 }
 
 func isDir(path string) bool {

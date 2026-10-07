@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,13 +19,13 @@ func BcryptCheck(password, hash string) bool {
 }
 
 //@author: [piexlmax](https://github.com/piexlmax)
-//@function: MD5V
-//@description: md5加密
+//@function: SHA256V
+//@description: SHA-256 摘要（原 MD5V 已升级：MD5 不满足安全要求，调用点均为文件命名/索引名/分片校验）
 //@param: str []byte
 //@return: string
 
-func MD5V(str []byte, b ...byte) string {
-	h := md5.New()
+func SHA256V(str []byte, b ...byte) string {
+	h := sha256.New()
 	h.Write(str)
 	return hex.EncodeToString(h.Sum(b))
 }
