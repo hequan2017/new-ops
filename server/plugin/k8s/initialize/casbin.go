@@ -46,6 +46,7 @@ func Casbin() {
 		{"/k8s/event/list", "GET"},
 		{"/k8s/helm/list", "GET"},
 		{"/k8s/helm/history", "GET"},
+		{"/k8s/helm/repo/list", "GET"},
 	}
 	apply := func(role string, rules []struct {
 		Path   string
@@ -79,8 +80,13 @@ func Casbin() {
 		{"/k8s/workload/diff", "POST"},
 		{"/k8s/workload/apply", "POST"},
 		{"/k8s/helm/install", "POST"},
+		{"/k8s/helm/install-repo", "POST"},
 		{"/k8s/helm/uninstall", "POST"},
 		{"/k8s/helm/rollback", "POST"},
+		{"/k8s/helm/repo", "POST"},
+		{"/k8s/helm/repo", "DELETE"},
+		// release 详情含渲染 manifest（敏感面）：仅 888
+		{"/k8s/helm/detail", "GET"},
 		// 终端为写级能力：execws 握手 casbin 自验（仅 888）
 		{"/k8s/pod/execws", "GET"},
 	}

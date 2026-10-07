@@ -77,7 +77,12 @@ func (r *K8sHelmRouter) InitK8sHelmRouter(Router *gin.RouterGroup) {
 		helm.GET("list", v1.Api.K8sHelm.ListHelmReleases)
 		helm.GET("history", v1.Api.K8sHelm.GetHelmHistory)
 		helm.POST("install", v1.Api.K8sHelm.InstallHelmRelease)
+		helm.POST("install-repo", v1.Api.K8sHelm.InstallHelmFromRepo)
 		helm.POST("uninstall", v1.Api.K8sHelm.UninstallHelmRelease)
 		helm.POST("rollback", v1.Api.K8sHelm.RollbackHelmRelease)
+		helm.DELETE("repo", v1.Api.K8sHelm.DeleteHelmRepo)
+		helm.POST("repo", v1.Api.K8sHelm.CreateHelmRepo)
+		helm.GET("repo/list", v1.Api.K8sHelm.GetHelmRepoList)
+		helm.GET("detail", v1.Api.K8sHelm.GetHelmReleaseDetail)
 	}
 }

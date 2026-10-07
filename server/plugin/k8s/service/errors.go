@@ -11,6 +11,7 @@ const (
 	ErrCodeKindUnsupported      = 1509
 	ErrCodeYAMLIdentityMismatch = 1510
 	ErrCodeYAMLEmpty            = 1511
+	ErrCodeRepoURLInvalid       = 1512
 )
 
 // K8sError k8s 插件错误

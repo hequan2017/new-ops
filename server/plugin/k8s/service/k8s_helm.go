@@ -5,14 +5,20 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/asset/crypto"
 	"github.com/hequan2017/new-ops/server/plugin/k8s/model"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/release"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
@@ -21,6 +27,7 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"sigs.k8s.io/yaml"
 )
 
 // helmRestGetter 用集群 kubeconfig 适配 helm 的 RESTClientGetter
@@ -126,32 +133,50 @@ func (s *K8sClusterService) ListHelmReleases(clusterID uint, namespace string) (
 
 // InstallHelmRelease 安装/升级 release（不存在则装、存在则升——revision 递增；chart tgz 上传 + values YAML 覆盖）
 func (s *K8sClusterService) InstallHelmRelease(clusterID uint, namespace, releaseName string, tgz io.Reader, valuesYAML string) (*HelmReleaseInfo, error) {
-	if namespace == "" || releaseName == "" {
-		return nil, newK8sErr(ErrCodeNamespaceReq, "namespace/releaseName 必填")
-	}
-	data, err := io.ReadAll(tgz)
+	ch, vals, err := loadChartAndValues(tgz, valuesYAML)
 	if err != nil {
-		return nil, fmt.Errorf("chart 包读取失败: %w", err)
-	}
-	if len(data) == 0 {
-		return nil, newK8sErr(ErrCodeYAMLEmpty, "chart 包不能为空")
-	}
-	ch, err := loader.LoadArchive(bytes.NewReader(data))
-	if err != nil {
-		return nil, fmt.Errorf("chart 包解析失败: %w", err)
-	}
-	vals := map[string]any{}
-	if valuesYAML != "" {
-		vals, err = chartutil.ReadValues([]byte(valuesYAML))
-		if err != nil {
-			return nil, fmt.Errorf("values YAML 解析失败: %w", err)
-		}
+		return nil, err
 	}
 	actionCfg, err := helmActionConfig(clusterID, namespace)
 	if err != nil {
 		return nil, err
 	}
-	// 已存在则升级（revision 递增，回滚可用）
+	return installOrUpgrade(actionCfg, namespace, releaseName, ch, vals)
+}
+
+// loadChartAndValues tgz 读取 + values YAML 解析（安装双路径共用）
+func loadChartAndValues(tgz io.Reader, valuesYAML string) (*chart.Chart, map[string]any, error) {
+	data, err := io.ReadAll(tgz)
+	if err != nil {
+		return nil, nil, fmt.Errorf("chart 包读取失败: %w", err)
+	}
+	if len(data) == 0 {
+		return nil, nil, newK8sErr(ErrCodeYAMLEmpty, "chart 包不能为空")
+	}
+	ch, err := loader.LoadArchive(bytes.NewReader(data))
+	if err != nil {
+		return nil, nil, fmt.Errorf("chart 包解析失败: %w", err)
+	}
+	vals, err := parseValuesYAML(valuesYAML)
+	if err != nil {
+		return nil, nil, err
+	}
+	return ch, vals, nil
+}
+
+func parseValuesYAML(valuesYAML string) (map[string]any, error) {
+	if valuesYAML == "" {
+		return map[string]any{}, nil
+	}
+	vals, err := chartutil.ReadValues([]byte(valuesYAML))
+	if err != nil {
+		return nil, fmt.Errorf("values YAML 解析失败: %w", err)
+	}
+	return vals, nil
+}
+
+// installOrUpgrade 同名已存在走 upgrade（revision 递增），否则 install；不等待就绪快速返回
+func installOrUpgrade(actionCfg *action.Configuration, namespace, releaseName string, ch *chart.Chart, vals map[string]any) (*HelmReleaseInfo, error) {
 	probe := action.NewList(actionCfg)
 	probe.Filter = "^" + releaseName + "$"
 	probe.Deployed = true
@@ -171,12 +196,117 @@ func (s *K8sClusterService) InstallHelmRelease(clusterID uint, namespace, releas
 	install.ReleaseName = releaseName
 	install.Namespace = namespace
 	install.Timeout = 2 * time.Minute
-	// 不等待资源就绪（Wait=false）：返回快，状态由 release 列表观察
 	rel, err := install.Run(ch, vals)
 	if err != nil {
 		return nil, fmt.Errorf("安装失败: %w", err)
 	}
 	return releaseInfo(rel), nil
+}
+
+// validateRepoURL 仓库地址校验（仅 http/https）
+func validateRepoURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return newK8sErr(ErrCodeRepoURLInvalid, "仓库地址无效")
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return newK8sErr(ErrCodeRepoURLInvalid, "仓库地址仅支持 http/https")
+	}
+	if u.Host == "" {
+		return newK8sErr(ErrCodeRepoURLInvalid, "仓库地址缺少主机")
+	}
+	return nil
+}
+
+// CreateHelmRepo 登记 chart 仓库
+func (s *K8sClusterService) CreateHelmRepo(r *model.K8sHelmRepo) error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.URL = strings.TrimSpace(r.URL)
+	if r.Name == "" {
+		return newK8sErr(ErrCodeNamespaceReq, "仓库名不能为空")
+	}
+	if err := validateRepoURL(r.URL); err != nil {
+		return err
+	}
+	var count int64
+	global.GVA_DB.Model(&model.K8sHelmRepo{}).Where("name = ?", r.Name).Count(&count)
+	if count > 0 {
+		return newK8sErr(ErrCodeClusterDuplicate, fmt.Sprintf("仓库已存在: %s", r.Name))
+	}
+	return global.GVA_DB.Create(r).Error
+}
+
+// DeleteHelmRepo 删除仓库登记
+func (s *K8sClusterService) DeleteHelmRepo(id uint) error {
+	return global.GVA_DB.Delete(&model.K8sHelmRepo{}, id).Error
+}
+
+// GetHelmRepoList 仓库列表
+func (s *K8sClusterService) GetHelmRepoList() ([]*model.K8sHelmRepo, error) {
+	var list []*model.K8sHelmRepo
+	err := global.GVA_DB.Order("id DESC").Find(&list).Error
+	return list, err
+}
+
+// InstallHelmFromRepo 仓库模式安装/升级（repoId + chart 名 + 版本，免 tgz 上传）
+func (s *K8sClusterService) InstallHelmFromRepo(clusterID uint, repoID uint, namespace, releaseName, chartRef, version, valuesYAML string) (*HelmReleaseInfo, error) {
+	if namespace == "" || releaseName == "" || chartRef == "" {
+		return nil, newK8sErr(ErrCodeNamespaceReq, "namespace/releaseName/chart 必填")
+	}
+	var repo model.K8sHelmRepo
+	if err := global.GVA_DB.First(&repo, repoID).Error; err != nil {
+		return nil, newK8sErr(ErrCodeClusterNotFound, "仓库不存在")
+	}
+	vals, err := parseValuesYAML(valuesYAML)
+	if err != nil {
+		return nil, err
+	}
+	actionCfg, err := helmActionConfig(clusterID, namespace)
+	if err != nil {
+		return nil, err
+	}
+	// LocateChart 经 downloader 拉取到本地缓存后加载（RepoURL 直连，无需预登记 repositories.yaml）
+	cpo := &action.ChartPathOptions{RepoURL: repo.URL, Version: strings.TrimSpace(version)}
+	settings := cli.New()
+	if settings.RepositoryCache == "" {
+		settings.RepositoryCache = filepath.Join(os.TempDir(), "helm-cache")
+	}
+	chartPath, err := cpo.LocateChart(chartRef, settings)
+	if err != nil {
+		return nil, fmt.Errorf("chart 定位失败（仓库 %s）: %w", repo.Name, err)
+	}
+	ch, err := loader.Load(chartPath)
+	if err != nil {
+		return nil, fmt.Errorf("chart 加载失败: %w", err)
+	}
+	return installOrUpgrade(actionCfg, namespace, releaseName, ch, vals)
+}
+
+// HelmReleaseDetail release 详情（values + 渲染 manifest——manifest 含敏感面，仅 888）
+type HelmReleaseDetail struct {
+	HelmReleaseInfo
+	Values   string `json:"values"`
+	Manifest string `json:"manifest"`
+}
+
+// GetHelmReleaseDetail release 详情（当前版本 values 与渲染清单）
+func (s *K8sClusterService) GetHelmReleaseDetail(clusterID uint, namespace, name string) (*HelmReleaseDetail, error) {
+	if namespace == "" || name == "" {
+		return nil, newK8sErr(ErrCodeNamespaceReq, "namespace/name 必填")
+	}
+	actionCfg, err := helmActionConfig(clusterID, namespace)
+	if err != nil {
+		return nil, err
+	}
+	rel, err := action.NewGet(actionCfg).Run(name)
+	if err != nil {
+		return nil, fmt.Errorf("release 获取失败: %w", err)
+	}
+	detail := &HelmReleaseDetail{HelmReleaseInfo: *releaseInfo(rel), Manifest: rel.Manifest}
+	if b, verr := yaml.Marshal(rel.Config); verr == nil {
+		detail.Values = string(b)
+	}
+	return detail, nil
 }
 
 // UninstallHelmRelease 卸载 release
