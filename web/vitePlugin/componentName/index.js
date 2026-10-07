@@ -10,13 +10,18 @@ const clearAndUpper = (text) => {
   return text.replace(/-/, '').toUpperCase()
 }
 
-// 递归获取目录下所有的 .vue 文件
-const getAllVueFiles = (dir, fileList = []) => {
+// 递归获取目录下所有的 .vue 文件（base 为项目根，路径逐项解析校验，防止符号链接等引用越出项目边界）
+const getAllVueFiles = (base, dir, fileList = []) => {
+  const baseAbs = path.resolve(base)
   const files = fs.readdirSync(dir)
   files.forEach((file) => {
-    const filePath = path.join(dir, file)
+    const filePath = path.resolve(dir, file)
+    const rel = path.relative(baseAbs, filePath)
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      return
+    }
     if (fs.statSync(filePath).isDirectory()) {
-      getAllVueFiles(filePath, fileList)
+      getAllVueFiles(base, filePath, fileList)
     } else if (filePath.endsWith('.vue')) {
       fileList.push(filePath)
     }
@@ -37,8 +42,8 @@ const vueFilePathPlugin = (outputFilePath) => {
   let isDev = false
   const generatePathNameMap = () => {
     const vueFiles = [
-      ...getAllVueFiles(path.join(root, 'src/view')),
-      ...getAllVueFiles(path.join(root, 'src/plugin'))
+      ...getAllVueFiles(root, path.join(root, 'src/view')),
+      ...getAllVueFiles(root, path.join(root, 'src/plugin'))
     ]
     const pathNameMap = vueFiles.reduce((acc, filePath) => {
       const content = fs.readFileSync(filePath, 'utf-8')
