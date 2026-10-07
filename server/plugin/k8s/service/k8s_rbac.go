@@ -152,8 +152,13 @@ func (s *K8sClusterService) ListNsGrants(clusterID uint) ([]NsGrantItem, error) 
 	out := make([]NsGrantItem, 0, len(rows))
 	for _, r := range rows {
 		item := NsGrantItem{ID: r.ID, ClusterID: r.ClusterID, Namespace: r.Namespace, UserID: r.UserID}
-		// 用户信息联查（软删除容错：用户已删则留空）
-		global.GVA_DB.Table("sys_users").Select("username, nick_name").Where("id = ?", r.UserID).Scan(&item)
+		// 用户信息联查（独立结构承接——Scan 会按列覆写同名映射字段，不可扫进预填结构）
+		var u struct {
+			Username string `gorm:"column:username"`
+			NickName string `gorm:"column:nick_name"`
+		}
+		global.GVA_DB.Table("sys_users").Select("username, nick_name").Where("id = ?", r.UserID).Scan(&u)
+		item.Username, item.NickName = u.Username, u.NickName
 		out = append(out, item)
 	}
 	return out, nil
