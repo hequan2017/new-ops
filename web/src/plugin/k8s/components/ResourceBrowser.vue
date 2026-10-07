@@ -13,10 +13,11 @@
           <el-table-column prop="restarts" label="重启" width="70" />
           <el-table-column prop="node" label="节点" min-width="130" />
           <el-table-column prop="age" label="年龄" width="80" />
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="260" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" icon="document" @click="showLogs(row)">日志</el-button>
               <el-button link type="primary" icon="view" @click="showPodDetail(row)">详情</el-button>
+              <el-button link type="success" icon="monitor" @click="openShell(row)">终端</el-button>
               <el-button link type="danger" icon="delete" @click="onDeletePod(row)">删除</el-button>
             </template>
           </el-table-column>
@@ -205,6 +206,15 @@
       </div>
     </el-drawer>
 
+    <el-drawer v-model="shellVisible" :title="`Pod 终端`" size="65%" append-to-body destroy-on-close>
+      <PodShell
+        v-if="shellVisible && shellTarget.clusterId"
+        :cluster-id="shellTarget.clusterId"
+        :namespace="shellTarget.namespace"
+        :pod="shellTarget.pod"
+      />
+    </el-drawer>
+
     <el-drawer v-model="podDetailVisible" :title="`Pod 详情 · ${podDetail?.name || ''}`" size="60%" append-to-body>
       <div v-if="podDetail" v-loading="podDetailLoading">
         <el-descriptions :column="2" border size="small">
@@ -269,6 +279,7 @@
   } from '@/plugin/k8s/api/k8sResource'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { ref, watch } from 'vue'
+  import PodShell from '@/plugin/k8s/components/PodShell.vue'
 
   const visible = defineModel('visible', { type: Boolean })
   const props = defineProps({
@@ -396,6 +407,16 @@
   const yamlLoading = ref(false)
   const yamlTitle = ref('')
   const yamlText = ref('')
+
+  // Pod 终端
+  const shellVisible = ref(false)
+  const shellTarget = ref({ clusterId: 0, namespace: '', pod: '' })
+  const openShell = (row) => {
+    shellTarget.value = {
+      clusterId: props.clusterId, namespace: row.namespace, pod: row.name
+    }
+    shellVisible.value = true
+  }
 
   const showYaml = async (kind, row) => {
     yamlTitle.value = `${row.namespace}/${row.name}`

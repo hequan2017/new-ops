@@ -90,6 +90,8 @@
   "/src/plugin/job/view/script/index.vue": "jobScript",
   "/src/plugin/job/view/varGroup/index.vue": "jobVarGroup",
   "/src/plugin/k8s/components/OverviewDrawer.vue": "OverviewDrawer",
+  "/src/plugin/k8s/components/PodShell.vue": "PodShell",
+  "/src/plugin/k8s/components/PodShellTerm.vue": "PodShellTerm",
   "/src/plugin/k8s/components/ResourceBrowser.vue": "ResourceBrowser",
   "/src/plugin/k8s/components/ScaleDialog.vue": "ScaleDialog",
   "/src/plugin/k8s/view/cluster/index.vue": "K8sCluster",
