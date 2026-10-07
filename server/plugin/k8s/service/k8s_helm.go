@@ -20,10 +20,15 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // helmRestGetter 用集群 kubeconfig 适配 helm 的 RESTClientGetter
-type helmRestGetter struct{ cfg *rest.Config }
+// （kubeconfig 原文保留：helm kube 客户端 namespace 为空时回退 ToRawKubeConfigLoader，返回 nil 会 panic）
+type helmRestGetter struct {
+	cfg        *rest.Config
+	kubeconfig []byte
+}
 
 func (g *helmRestGetter) ToRESTConfig() (*rest.Config, error) { return g.cfg, nil }
 func (g *helmRestGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
@@ -44,7 +49,14 @@ func (g *helmRestGetter) ToRESTMapper() (meta.RESTMapper, error) {
 	}
 	return restmapper.NewDiscoveryRESTMapper(gr), nil
 }
-func (g *helmRestGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig { return nil }
+func (g *helmRestGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+	cc, err := clientcmd.NewClientConfigFromBytes(g.kubeconfig)
+	if err != nil {
+		// 兜底空配置（namespace 解析失败时 helm 自行回落 default）
+		return clientcmd.NewDefaultClientConfig(clientcmdapi.Config{}, &clientcmd.ConfigOverrides{})
+	}
+	return cc
+}
 
 // helmActionConfig 为集群构造 helm action 配置（release 存 secret，默认 namespace）
 func helmActionConfig(clusterID uint, namespace string) (*action.Configuration, error) {
@@ -64,7 +76,7 @@ func helmActionConfig(clusterID uint, namespace string) (*action.Configuration, 
 		return nil, err
 	}
 	actionCfg := new(action.Configuration)
-	if err := actionCfg.Init(&helmRestGetter{cfg: cfg}, namespace, "secret", func(_ string, _ ...interface{}) {}); err != nil {
+	if err := actionCfg.Init(&helmRestGetter{cfg: cfg, kubeconfig: []byte(kubeconfig)}, namespace, "secret", func(_ string, _ ...interface{}) {}); err != nil {
 		return nil, fmt.Errorf("helm 初始化失败: %w", err)
 	}
 	return actionCfg, nil
