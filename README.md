@@ -1,6 +1,6 @@
 # 白泽 BaiZe · 统一运维开发平台（new-ops）
 
-> **v0.2.0+**（2026-10-06）—— M0-M3 全部完成，M4 容器管理主体（C1 全部 + C2 镜像/网络/卷/资源统计），M6 监控告警三项 + 数据库工单可做部分（实例纳管/SQL 工单），M7 工单引擎 + **MCP 运维工具**（AI 助手可直查资产/告警/工单）；全部功能经真实环境端到端验证。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
+> **v0.2.0+**（2026-10-07 更新）—— M0-M3 全部完成；**M4 容器管理（C1 全部 + C2 主体）与 K8s 管理（K1/K2 全部）收官**，全部经测试机 k3s 真集群端到端验证；M5 GPU 算力骨架 + 防超卖引擎（无显卡部分待环境）；M8 Helm release 管理（安装/升级/回滚/卸载/仓库）已交付；并完成一轮**平台级安全加固**（9 插件鉴权漏洞修复、WS/SSE 端点角色收敛、MD5→SHA-256）。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
 >
 > **命名由来**：白泽是中国上古神话中的瑞兽，通晓天下万物之情——愿这套平台也能"通晓"你的全部基础设施。仓库/工程名沿用 `new-ops`。
 >
@@ -34,7 +34,7 @@
 | 后端 | Go 1.24 · Gin · GORM · Casbin v3 · JWT · Zap · Viper |
 | 前端 | Vue 3.5 · Vite 8 · Element Plus · Pinia · ECharts 5 · xterm.js 6 |
 | 实时通道 | WebSocket（WebSSH / SFTP / 容器终端与日志）· SSE（流水线日志流） |
-| 执行通道 | Go SSH（`golang.org/x/crypto/ssh`，密码/私钥/keyboard-interactive）· Docker SDK v28 · client-go |
+| 执行通道 | Go SSH（`golang.org/x/crypto/ssh`，密码/私钥/keyboard-interactive）· Docker SDK v28 · client-go · Helm SDK v3.22 |
 | 数据 | MySQL / SQLite（零依赖部署）· Redis（可选） |
 | CI | GitHub Actions（server: build/vet/test；web: build） |
 
@@ -48,7 +48,7 @@
 ┌──────────┴──────────────────────────────────────────────┴───────────────────────────┐
 │  server : Gin + GORM + Casbin + Zap + 定时任务(robfig/cron) + MCP Server 骨架         │
 │  plugin/asset  plugin/term  plugin/job  plugin/pipeline  plugin/container             │
-│  plugin/k8s    plugin/monitor  plugin/workflow  plugin/dbops   （gpu/org 骨架就绪）    │
+│  plugin/k8s(含Helm)  plugin/monitor  plugin/workflow  plugin/dbops  plugin/gpu(防超卖) │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
 │  执行通道：SSH 直连/ProxyJump 级联 │ Docker API(unix/TCP+TLS) │ K8s API(kubeconfig)   │
 │  外部依赖：阿里云 OpenAPI(RPC V1 自实现签名) │ 钉钉机器人 webhook │ goInception(规划)   │
@@ -118,18 +118,37 @@
 | 网络与卷 | network 创建（bridge+子网 IPAM、内置保护）/列表/删除；volume 列表/删除（占用由 daemon 拒绝回传） |
 | 资源统计 | ContainerStats one-shot：CPU（delta×在线核数）/内存（去 inactive_file）/网络/块 IO/进程数 |
 
-### k8s 集群管理（M4 K1/K2 🚧 进行中）
+### k8s 集群管理（M4 K1/K2 ✅ 全部完成 + M8 K3 Helm 🔨 主体已交付）
 
-- ✅ 集群注册：kubeconfig **AES-256-GCM 加密落库**（接口不回显）、连接测试（失败不阻断、状态记离线）
-- ✅ 资源浏览：Pods / Deployments / Nodes / Services / ConfigMaps / Secrets 只读列表 + Pod 日志（Secret 值永不回显，仅列键名）
-- 🚧 写操作（扩缩容/滚动重启）与真集群联调进行中；其余 K2 能力见开发日志
+| 功能 | 说明 |
+|---|---|
+| 集群注册 | kubeconfig **AES-256-GCM 加密落库**（接口不回显）、连接测试（失败不阻断、状态记离线） |
+| 集群总览 | 版本/API Server/节点统计（就绪/隔离）/命名空间/Pod 数 + **metrics-server 资源用量**（CPU/内存汇总与可分配百分比，metrics 不可用时降级） |
+| Node 管理 | 列表/详情（allocatable/capacity/conditions/taints）；**cordon/uncordon**（patch unschedulable）、**drain**（先隔离后 policy/v1 Eviction，自动跳过 DaemonSet/静态镜像 Pod，驱逐明细回传） |
+| 资源浏览 | Pods / Deployments / **StatefulSets / DaemonSets** / Nodes / Services / ConfigMaps / Secrets / **PVC / Ingress / Events** 十一类只读列表（Secret 值永不回显；事件倒序限 200） |
+| Pod 详情/日志/删除 | 详情（容器状态/条件/相关事件 fieldSelector 匹配）、日志（tail 限流）、删除（二次确认，888） |
+| **Pod WebShell** | client-go SPDY remotecommand ⇄ WebSocket（TTY 单流 `/bin/sh`、resize 经 TerminalSizeQueue、心跳/关闭帧）；多容器下拉选择；query token 握手 + **casbin 角色自验** |
+| 工作负载写操作 | Deployment **扩缩容**（0-500 校验）与**滚动重启**（restartedAt 注解 patch） |
+| **YAML 查看/编辑下发** | 三类工作负载 YAML 查看（剔 managedFields）；编辑后**服务端 dry-run diff 预览**（红绿行）→ 确认下发（强类型解析、对象一致性校验防跨对象写、乐观锁 resourceVersion） |
+| **Helm release 管理** | 列表（全命名空间）/安装或升级（同名自动 upgrade、revision 递增）/卸载/回滚（空=上一版）/历史/release 详情（当前 values+渲染 manifest，敏感面仅 888）；安装双模式：**tgz 上传**或**仓库引用**（chart 仓库登记 CRUD，URL 仅 http/https） |
+
+> 测试环境内置 k3s v1.36 单节点真集群，K1/K2/Helm 全部功能经真机端到端验证（含 drain 驱逐语义、WebShell resize、Helm 装升滚卸全生命周期）。
+
+### gpu 算力平台（M5 🔨 骨架 + 防超卖引擎已交付）
+
+| 功能 | 说明 |
+|---|---|
+| 节点/规格/实例 | 三表模型：算力节点（资产关联、GPU/CPU/内存/磁盘总量）、产品规格（GPU 数/显存/定价）、实例分配台账；前端算力管理三页签 |
+| **防超卖引擎** | 开通走事务内 `FOR UPDATE` 行锁 + 运行中实例占用聚合 + `canAllocate` 纯函数判定（余量不足精确报错带明细）；销毁释放配额复用、总量不可低于已占用、离线节点拒绝开通 |
+| 待环境 | GPU Docker 直通（DeviceRequest）、HAMi 显存切分、实例监控与 SSH 跳板——待真实显卡环境联调 |
+
 
 ### monitor 监控告警（M6 ✅ 三项全部）
 
 | 功能 | 说明 |
 |---|---|
-| 性能采集 | SSH 单命令组合采样（1s：loadavg / cpu 两次 /proc/stat delta / meminfo / df），解析纯函数单测；@every 5m 定时，并发 5 |
-| 指标留存 | monitor_metric（asset+name+ts 复合索引），30 天自动清理；ECharts 四折线双 Y 轴（cpu/mem/disk % + load1）、1h/6h/24h/7d 切换、立即采集 |
+| 性能采集 | SSH 单命令组合采样（1s：loadavg / cpu 两次 /proc/stat delta / meminfo / df / **net/dev 双采样算收发速率**），特征扫描解析（不依赖行序）；@every 5m 定时，并发 5 |
+| 指标留存 | monitor_metric（asset+name+ts 复合索引），30 天自动清理；ECharts 折线双 Y 轴（cpu/mem/disk % + load1 + **网络 KB/s**）、1h/6h/24h/7d 切换、立即采集 |
 | 告警引擎 | metric 阈值（>/< 连续 N 次）+ port TCP 探活；静默窗口去重（默认 30min）、恢复自动关闭未决事件；**钉钉机器人文本推送**（仅 http(s)）；规则/事件管理页 |
 
 ### workflow 工单引擎（M7 ✅ 核心交付）
@@ -214,9 +233,10 @@ cd web && npm install && npm run serve
 5. **流水线**编排阶段（shell 步骤选目标主机 / http 步骤），试 webhook/cron 触发与审批 gate；
 6. **工单中心**建定义发起 release 工单，审批通过看流水线自动构建；
 7. **容器管理**接入点（`unix:///var/run/docker.sock`）→ 容器/镜像/网络/卷/统计/事件/终端；
-8. **告警规则**配阈值或端口探活 + 钉钉 webhook，主机页「监控」看趋势图；
-9. **数据库工单**注册 MySQL 实例（密码加密落库、TCP 探活），提 SQL 工单（审核引擎待 goInception 环境）；
-10. **MCP 运维工具**：`cd server && go run ./cmd/mcp` 后，把 `http://127.0.0.1:8889/mcp` 接入你的 AI 助手，即可对话式查询资产概览 / 最近告警 / 工单状态。
+8. **K8s 管理**注册集群（粘贴 kubeconfig，测试机可装 k3s 体验）→ 集群总览看资源用量 → 资源浏览十一类页签 → Pod「终端」进 WebShell → 工作负载 YAML 编辑下发（dry-run diff）→ **Helm 页签**登记 chart 仓库后一键安装/升级/回滚；
+9. **告警规则**配阈值或端口探活 + 钉钉 webhook，主机页「监控」看趋势图；
+10. **数据库工单**注册 MySQL 实例（密码加密落库、TCP 探活），提 SQL 工单（审核引擎待 goInception 环境）；
+11. **MCP 运维工具**：`cd server && go run ./cmd/mcp` 后，把 `http://127.0.0.1:8889/mcp` 接入你的 AI 助手，即可对话式查询资产概览 / 最近告警 / 工单状态。
 
 ---
 
@@ -229,6 +249,9 @@ cd web && npm install && npm run serve
 - **数据权限**：资产组 + casbin 资源规则——888 全量、普通用户仅授权组内（资产列表/批量执行/终端主机选择全链路过滤）、9528 只读
 - **SSRF 防护**：http 步骤/钉钉 webhook 仅允许 http(s)；webhook 触发令牌即凭据（uuid、错误令牌 404 语义防枚举）
 - **注入防护**：日志 tail `tail -F --` 终止选项解析 + 绝对路径校验；shell 步骤在远端资产执行，平台进程无本机 exec 面
+- **插件路由显式鉴权**：业务插件自建路由组显式挂载 JWT + Casbin 中间件（不依赖底座组的隐式继承——该缺口曾致 9 插件 REST 端点裸奔，已修复并成为插件开发规范）
+- **WS/SSE 流端点角色收敛**：终端类（WebSSH/日志 tail/容器与 Pod exec）握手时 casbin 自验且仅 888；日志流类（容器日志/流水线 SSE）888+9528——query token 场景不经过中间件，必须显式自验
+- **摘要算法**：平台工具链统一 SHA-256（历史 MD5 调用点已全量替换）
 
 ---
 
@@ -252,12 +275,13 @@ new-ops/
 │   │   ├── job/                   # 批量执行/脚本库/变量组（M2 ✅）
 │   │   ├── pipeline/              # 流水线/执行器/SSE/触发器（M3 ✅）
 │   │   ├── container/             # Docker 接入点/容器/镜像/网络卷/事件/stats（M4 ✅）
-│   │   ├── k8s/                   # 集群注册 + 资源浏览（M4 🚧）
+│   │   ├── k8s/                   # 集群注册/总览/Node/资源浏览/WebShell/YAML 下发/Helm（K1+K2 ✅、K3 🔨）
 │   │   ├── monitor/               # 性能采集/告警引擎/钉钉（M6 ✅）
 │   │   ├── workflow/              # 工单引擎 + 发版闭环（M7 ✅）
 │   │   ├── dbops/                 # MySQL 纳管/SQL 工单（M6 🔨 审核引擎待环境）
+│   │   ├── gpu/                   # 节点/规格/实例 + 防超卖引擎（M5 🔨 待显卡环境）
 │   │   ├── mcp/(骨架) + cmd/mcp   # MCP Server 独立进程 + aiops 运维工具（M7 🔨）
-│   │   └── gpu/org/               # 骨架就绪（依赖环境/配置）
+│   │   └── org/                   # 骨架就绪（钉钉待企业配置）
 │   └── ...                        # GVA 底座（零修改）
 ├── web/src/plugin/                # 各插件前端视图（与 server/plugin 同名对应）
 ├── docs/
@@ -293,14 +317,14 @@ server/plugin/<name>/
 | M1 | 资产中心：CRUD/SSH 采集/云同步/凭据保险库/数据权限/导入导出 | ✅ |
 | M2 | 终端作业：WebSSH/级联/审计/SFTP/批量执行/脚本库变量组/日志tail/网段发现 | ✅ |
 | M3 | 流水线：三层模型/执行器（快照+状态机+审批+并发）/SSE/三通道触发/发版闭环 | ✅ |
-| M4 | 容器 C1 全部 + C2 镜像/网络/卷/stats；k8s K1/K2 进行中 | 🔨 |
-| M5 | GPU 算力：节点/规格/实例/防超卖/HAMi | ⏳ 待显卡环境 |
+| M4 | 容器 C1 全部 + C2 镜像/网络/卷/stats；**k8s K1/K2 全部**（k3s 真集群验证） | ✅ |
+| M5 | GPU 算力：节点/规格/实例/**防超卖引擎**已交付；Docker 直通/HAMi/监控待显卡环境 | 🔨 |
 | M6 | monitor 三项 ✅；dbops 实例纳管 + SQL 工单骨架 ✅（goInception 审核/执行待环境） | 🔨 |
 | M7 | workflow 工单引擎 ✅；aiops MCP 运维工具 ✅（AI 诊断网关待 LLM 密钥）；org 钉钉登录 | 🔨 |
-| M8 | Compose/端口转发、Helm、三级 RBAC、AI 诊断 | 📋 |
+| M8 | **Helm release 管理 + chart 仓库已交付**；values 表单模式/三级 RBAC/AI 诊断/GPU 视图 | 🔨 |
 | M9 | 轻量 Go Agent：反向长连接/采集上报/第二执行通道 | 📋 |
 
-- 发布：`v0.1.0`（M0-M2）、`v0.2.0`（+M3/M4 主体/M6 monitor/M7 workflow）
+- 发布：`v0.1.0`（M0-M2）、`v0.2.0`（+M3/M4 主体/M6 monitor/M7 workflow）；M4 收官（K1/K2 + k3s 真集群验证）后的下一个小版本筹备中
 - 逐场进展与排期见 [DEV_PLAN 开发日志](docs/DEV_PLAN.md)；旧仓库功能并入后将逐一归档标注"功能已并入 new-ops"
 
 ---
