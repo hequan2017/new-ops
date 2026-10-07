@@ -22,12 +22,18 @@
       </el-tab-pane>
       <el-tab-pane label="Deployments" name="deployments">
         <el-table :data="deployments" size="small" v-loading="loading">
-          <el-table-column prop="name" label="名称" min-width="180" />
+          <el-table-column prop="name" label="名称" min-width="160" />
           <el-table-column prop="namespace" label="命名空间" min-width="110" />
           <el-table-column label="副本" width="120">
             <template #default="{ row }">{{ row.ready }}/{{ row.replicas }}</template>
           </el-table-column>
           <el-table-column prop="age" label="年龄" width="90" />
+          <el-table-column label="操作" width="170" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" icon="sort" @click="$emit('scale', row)">扩缩容</el-button>
+              <el-button link type="warning" icon="refresh" @click="$emit('restart', row)">重启</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-tab-pane>
       <el-tab-pane label="Nodes" name="nodes">

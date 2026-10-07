@@ -74,7 +74,11 @@
       v-model:visible="browserVisible"
       :cluster-id="browserClusterId"
       :cluster-name="browserName"
+      @scale="onScale"
+      @restart="onRestart"
     />
+
+    <ScaleDialog ref="scaleDialogRef" @done="onScaleDone" />
   </div>
 </template>
 
@@ -86,6 +90,7 @@
     testK8sCluster
   } from '@/plugin/k8s/api/k8sCluster'
   import ResourceBrowser from '@/plugin/k8s/components/ResourceBrowser.vue'
+  import ScaleDialog from '@/plugin/k8s/components/ScaleDialog.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { onMounted, reactive, ref } from 'vue'
 
@@ -112,9 +117,16 @@
   const browserVisible = ref(false)
   const browserClusterId = ref(0)
   const browserName = ref('')
+  const scaleDialogRef = ref(null)
   const openBrowser = (row) => {
     browserClusterId.value = row.ID
     browserName.value = row.name
+  }
+  const onScale = (row) => {
+    scaleDialogRef.value?.open(row, browserClusterId.value)
+  }
+  const onRestart = (row) => {
+    scaleDialogRef.value?.confirmRestart(row, browserClusterId.value)
   }
 
   const openDialog = () => {

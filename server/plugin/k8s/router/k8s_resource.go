@@ -22,3 +22,14 @@ func (r *K8sResourceRouter) InitK8sResourceRouter(Router *gin.RouterGroup) {
 		res.GET("secret/list", v1.Api.K8sResource.ListSecrets)
 	}
 }
+
+type K8sWriteRouter struct{}
+
+// InitK8sWriteRouter 写操作路由（private 组；casbin 策略仅 888）
+func (r *K8sWriteRouter) InitK8sWriteRouter(Router *gin.RouterGroup) {
+	writeGroup := Router.Group("k8s/deployment")
+	{
+		writeGroup.POST("scale", v1.Api.K8sWrite.ScaleDeployment)
+		writeGroup.POST("restart", v1.Api.K8sWrite.RestartDeployment)
+	}
+}

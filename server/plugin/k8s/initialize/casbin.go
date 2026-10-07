@@ -45,4 +45,21 @@ func Casbin() {
 	}
 	apply("888", all)
 	apply("9528", readonly)
+	// 写操作仅 888（扩缩容/滚动重启）
+	writeOps := []struct {
+		Path   string
+		Method string
+	}{
+		{"/k8s/deployment/scale", "POST"},
+		{"/k8s/deployment/restart", "POST"},
+	}
+	for _, p := range writeOps {
+		has, err := e.HasPolicy("888", p.Path, p.Method)
+		if err != nil || has {
+			continue
+		}
+		if _, err := e.AddPolicy("888", p.Path, p.Method); err != nil {
+			zap.L().Error("k8s 插件：添加写操作策略失败", zap.Error(err))
+		}
+	}
 }

@@ -8,6 +8,7 @@ import (
 type RouterGroup struct {
 	K8sClusterRouter
 	K8sResourceRouter
+	K8sWriteRouter
 }
 
 var RouterGroupApp = new(RouterGroup)
@@ -17,4 +18,5 @@ func (rg *RouterGroup) Init(public, private *gin.RouterGroup) {
 	_ = public
 	rg.K8sClusterRouter.InitK8sClusterRouter(private)
 	rg.K8sResourceRouter.InitK8sResourceRouter(private)
+	rg.K8sWriteRouter.InitK8sWriteRouter(private)
 }
