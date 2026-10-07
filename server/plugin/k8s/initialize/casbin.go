@@ -59,7 +59,10 @@ func Casbin() {
 			}
 		}
 	}
+	// 888 = 集群管理全集 + 资源浏览只读全集（修复：场55 鉴权强制后发现 readonly 仅授 9528，
+	// admin 反而无权浏览资源，两列表必须同时叠加给 888）
 	apply("888", all)
+	apply("888", readonly)
 	apply("9528", readonly)
 	// 写操作仅 888（扩缩容/滚动重启/节点隔离/节点驱逐/删除 Pod/YAML 下发）
 	writeOps := []struct {
