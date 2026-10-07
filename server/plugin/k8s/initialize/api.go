@@ -20,6 +20,7 @@ func Api(ctx context.Context) {
 		{Path: "/k8s/pod/logs", Description: "Pod 日志", ApiGroup: "K8s管理", Method: "GET"},
 		{Path: "/k8s/pod/detail", Description: "Pod 详情", ApiGroup: "K8s管理", Method: "GET"},
 		{Path: "/k8s/pod/delete", Description: "删除 Pod", ApiGroup: "K8s管理", Method: "POST"},
+		{Path: "/k8s/pod/execws", Description: "Pod WebShell WebSocket", ApiGroup: "K8s管理", Method: "GET"},
 		{Path: "/k8s/deployment/list", Description: "Deployment 列表", ApiGroup: "K8s管理", Method: "GET"},
 		{Path: "/k8s/deployment/scale", Description: "Deployment 扩缩容", ApiGroup: "K8s管理", Method: "POST"},
 		{Path: "/k8s/deployment/restart", Description: "Deployment 滚动重启", ApiGroup: "K8s管理", Method: "POST"},
