@@ -42,6 +42,7 @@
             <el-button link type="primary" icon="link" :loading="testingId === row.ID" @click="onTest(row)">连接测试</el-button>
             <el-button link type="success" icon="grid" @click="openBrowser(row)">资源浏览</el-button>
             <el-button link type="primary" icon="data-line" @click="openOverview(row)">总览</el-button>
+            <el-button link type="warning" icon="key" @click="openGrant(row)">命名空间授权</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -81,6 +82,29 @@
 
     <OverviewDrawer v-model:visible="overviewVisible" :cluster-id="overviewClusterId" :cluster-name="overviewName" />
 
+    <el-drawer v-model="grantVisible" :title="`命名空间授权 · ${grantClusterName}`" size="55%" append-to-body>
+      <div class="ops-btn-list" style="margin-bottom: 8px">
+        <el-select v-model="grantForm.namespace" size="small" style="width: 180px" placeholder="命名空间">
+          <el-option v-for="n in grantNsOptions" :key="n.name" :label="n.name" :value="n.name" />
+        </el-select>
+        <el-select v-model="grantForm.userId" size="small" style="width: 160px" filterable placeholder="用户">
+          <el-option v-for="u in grantUsers" :key="u.ID" :label="u.nickName || u.userName" :value="u.ID" />
+        </el-select>
+        <el-button type="primary" size="small" icon="plus" @click="submitGrant">授权</el-button>
+        <el-button size="small" icon="refresh" @click="loadGrants">刷新</el-button>
+      </div>
+      <el-table :data="grants" size="small" border>
+        <el-table-column prop="namespace" label="命名空间" min-width="140" />
+        <el-table-column prop="username" label="用户名" min-width="120" />
+        <el-table-column prop="nickName" label="昵称" min-width="120" />
+        <el-table-column label="操作" width="80">
+          <template #default="{ row }">
+            <el-button link type="danger" icon="delete" @click="onDeleteGrant(row)">收回</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-drawer>
+
     <ScaleDialog ref="scaleDialogRef" @done="onScaleDone" />
   </div>
 </template>
@@ -92,6 +116,8 @@
     getK8sClusterList,
     testK8sCluster
   } from '@/plugin/k8s/api/k8sCluster'
+  import { getNsVisibility, getNsGrantList, createNsGrant, deleteNsGrant } from '@/plugin/k8s/api/k8sResource'
+  import { getUserList } from '@/api/user'
   import ResourceBrowser from '@/plugin/k8s/components/ResourceBrowser.vue'
   import OverviewDrawer from '@/plugin/k8s/components/OverviewDrawer.vue'
   import ScaleDialog from '@/plugin/k8s/components/ScaleDialog.vue'
@@ -141,6 +167,62 @@
     overviewClusterId.value = row.ID
     overviewName.value = row.name
     overviewVisible.value = true
+  }
+
+  // 命名空间授权（三级 RBAC）
+  const grantVisible = ref(false)
+  const grantClusterId = ref(0)
+  const grantClusterName = ref('')
+  const grants = ref([])
+  const grantNsOptions = ref([])
+  const grantUsers = ref([])
+  const grantForm = ref({ namespace: '', userId: null })
+
+  const loadGrants = async () => {
+    const res = await getNsGrantList({ clusterId: grantClusterId.value })
+    if (res.code === 0) grants.value = res.data || []
+  }
+
+  const openGrant = async (row) => {
+    grantClusterId.value = row.ID
+    grantClusterName.value = row.name
+    grantVisible.value = true
+    loadGrants()
+    getNsVisibility({ clusterId: row.ID }).then((res) => {
+      if (res.code === 0) grantNsOptions.value = res.data || []
+    })
+    getUserList({ page: 1, pageSize: 100 }).then((res) => {
+      if (res.code === 0) grantUsers.value = res.data.list || []
+    })
+  }
+
+  const submitGrant = async () => {
+    if (!grantForm.value.namespace || !grantForm.value.userId) {
+      ElMessage.warning('命名空间与用户必填')
+      return
+    }
+    const res = await createNsGrant({
+      clusterId: grantClusterId.value,
+      namespace: grantForm.value.namespace,
+      userId: grantForm.value.userId
+    })
+    if (res.code === 0) {
+      ElMessage.success('授权成功')
+      grantForm.value = { namespace: '', userId: null }
+      loadGrants()
+    }
+  }
+
+  const onDeleteGrant = (row) => {
+    ElMessageBox.confirm(`确定收回 ${row.username} 在「${row.namespace}」的访问权限吗？`, '提示', {
+      confirmButtonText: '收回', cancelButtonText: '取消', type: 'warning'
+    }).then(async () => {
+      const res = await deleteNsGrant(row.ID)
+      if (res.code === 0) {
+        ElMessage.success('已收回')
+        loadGrants()
+      }
+    })
   }
 
   const openDialog = () => {

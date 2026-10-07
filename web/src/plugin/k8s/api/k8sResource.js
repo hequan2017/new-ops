@@ -168,3 +168,17 @@ export const createHelmRepo = (data) => {
 export const deleteHelmRepo = (id) => {
   return service({ url: '/k8s/helm/repo', method: 'delete', params: { id } })
 }
+
+// 命名空间授权（三级 RBAC）
+export const getNsVisibility = (params) => {
+  return service({ url: '/k8s/cluster/ns-visibility', method: 'get', params })
+}
+export const getNsGrantList = (params) => {
+  return service({ url: '/k8s/grant/list', method: 'get', params })
+}
+export const createNsGrant = (data) => {
+  return service({ url: '/k8s/grant', method: 'post', data })
+}
+export const deleteNsGrant = (id) => {
+  return service({ url: '/k8s/grant', method: 'delete', params: { id } })
+}

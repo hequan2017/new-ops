@@ -1,5 +1,11 @@
 <template>
   <el-drawer v-model="visible" :title="`资源浏览 · ${clusterName}`" size="75%" destroy-on-close>
+    <div class="ops-btn-list" style="margin-bottom: 8px">
+      <span style="font-size: 13px; color: #606266">命名空间：</span>
+      <el-select v-model="nsFilter" size="small" style="width: 220px" clearable placeholder="全部（授权范围）" @change="loadAll">
+        <el-option v-for="n in nsOptions" :key="n.name" :label="n.name" :value="n.name" />
+      </el-select>
+    </div>
     <el-tabs v-model="activeTab">
       <el-tab-pane label="Pods" name="pods">
         <el-table :data="pods" size="small" v-loading="loading">
@@ -419,7 +425,8 @@
     getK8sPodDetail, deleteK8sPod,
     getK8sPvcList, getK8sIngressList, getK8sEventList,
     getHelmList, getHelmHistory, installHelmRelease, uninstallHelmRelease, rollbackHelmRelease,
-    installHelmFromRepo, getHelmReleaseDetail, getHelmRepoList, createHelmRepo, deleteHelmRepo
+    installHelmFromRepo, getHelmReleaseDetail, getHelmRepoList, createHelmRepo, deleteHelmRepo,
+    getNsVisibility
   } from '@/plugin/k8s/api/k8sResource'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { ref, watch } from 'vue'
@@ -433,6 +440,9 @@
 
   const activeTab = ref('pods')
   const loading = ref(false)
+  // 命名空间过滤（普通用户下拉仅列授权项——后端 ns-visibility 按当前用户返回）
+  const nsFilter = ref('')
+  const nsOptions = ref([])
   const pods = ref([])
   const deployments = ref([])
   const statefulsets = ref([])
@@ -627,19 +637,20 @@
 
   const loadAll = async () => {
     loading.value = true
+    const ns = nsFilter.value || ''
     try {
       const [p, d, sts, ds, n, sv, cm, sec, pvc, ing, ev] = await Promise.all([
-        getK8sClusterPodList({ clusterId: props.clusterId }),
-        getK8sClusterDeploymentList({ clusterId: props.clusterId }),
-        getK8sStatefulSetList({ clusterId: props.clusterId }),
-        getK8sDaemonSetList({ clusterId: props.clusterId }),
+        getK8sClusterPodList({ clusterId: props.clusterId, namespace: ns }),
+        getK8sClusterDeploymentList({ clusterId: props.clusterId, namespace: ns }),
+        getK8sStatefulSetList({ clusterId: props.clusterId, namespace: ns }),
+        getK8sDaemonSetList({ clusterId: props.clusterId, namespace: ns }),
         getK8sClusterNodeList({ clusterId: props.clusterId }),
-        getK8sServiceList({ clusterId: props.clusterId }),
-        getK8sConfigMapList({ clusterId: props.clusterId }),
-        getK8sSecretList({ clusterId: props.clusterId }),
-        getK8sPvcList({ clusterId: props.clusterId }),
-        getK8sIngressList({ clusterId: props.clusterId }),
-        getK8sEventList({ clusterId: props.clusterId })
+        getK8sServiceList({ clusterId: props.clusterId, namespace: ns }),
+        getK8sConfigMapList({ clusterId: props.clusterId, namespace: ns }),
+        getK8sSecretList({ clusterId: props.clusterId, namespace: ns }),
+        getK8sPvcList({ clusterId: props.clusterId, namespace: ns }),
+        getK8sIngressList({ clusterId: props.clusterId, namespace: ns }),
+        getK8sEventList({ clusterId: props.clusterId, namespace: ns })
       ])
       pods.value = p.code === 0 ? p.data : []
       deployments.value = d.code === 0 ? d.data : []
@@ -874,7 +885,14 @@
   }
 
   watch(visible, (v) => {
-    if (v) loadAll()
+    if (v) {
+      loadAll()
+      getNsVisibility({ clusterId: props.clusterId }).then((res) => {
+        if (res.code === 0) {
+          nsOptions.value = (res.data || []).filter((n) => n.granted)
+        }
+      })
+    }
   })
 </script>
 
