@@ -62,3 +62,38 @@ export const drainK8sNode = (clusterId, name, gracePeriod = -1) => {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
+
+// K2 补齐：工作负载/Pod 详情/PVC/Ingress/Event
+export const getK8sStatefulSetList = (params) => {
+  return service({ url: '/k8s/statefulset/list', method: 'get', params })
+}
+export const getK8sDaemonSetList = (params) => {
+  return service({ url: '/k8s/daemonset/list', method: 'get', params })
+}
+export const getK8sWorkloadYaml = (params) => {
+  return service({ url: '/k8s/workload/yaml', method: 'get', params })
+}
+export const getK8sPodDetail = (params) => {
+  return service({ url: '/k8s/pod/detail', method: 'get', params })
+}
+export const deleteK8sPod = (clusterId, namespace, name) => {
+  const params = new URLSearchParams({ clusterId })
+  const form = new FormData()
+  form.append('namespace', namespace)
+  form.append('name', name)
+  return service({
+    url: `/k8s/pod/delete?${params}`,
+    method: 'post',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+export const getK8sPvcList = (params) => {
+  return service({ url: '/k8s/pvc/list', method: 'get', params })
+}
+export const getK8sIngressList = (params) => {
+  return service({ url: '/k8s/ingress/list', method: 'get', params })
+}
+export const getK8sEventList = (params) => {
+  return service({ url: '/k8s/event/list', method: 'get', params })
+}

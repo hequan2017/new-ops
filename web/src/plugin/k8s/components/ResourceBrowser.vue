@@ -13,9 +13,11 @@
           <el-table-column prop="restarts" label="重启" width="70" />
           <el-table-column prop="node" label="节点" min-width="130" />
           <el-table-column prop="age" label="年龄" width="80" />
-          <el-table-column label="操作" width="90" fixed="right">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" icon="document" @click="showLogs(row)">日志</el-button>
+              <el-button link type="primary" icon="view" @click="showPodDetail(row)">详情</el-button>
+              <el-button link type="danger" icon="delete" @click="onDeletePod(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -28,10 +30,42 @@
             <template #default="{ row }">{{ row.ready }}/{{ row.replicas }}</template>
           </el-table-column>
           <el-table-column prop="age" label="年龄" width="90" />
-          <el-table-column label="操作" width="170" fixed="right">
+          <el-table-column label="操作" width="230" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" icon="sort" @click="$emit('scale', row)">扩缩容</el-button>
               <el-button link type="warning" icon="refresh" @click="$emit('restart', row)">重启</el-button>
+              <el-button link type="info" icon="tickets" @click="showYaml('deployment', row)">YAML</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="StatefulSets" name="statefulsets">
+        <el-table :data="statefulsets" size="small" v-loading="loading">
+          <el-table-column prop="name" label="名称" min-width="160" />
+          <el-table-column prop="namespace" label="命名空间" min-width="110" />
+          <el-table-column label="就绪" width="100">
+            <template #default="{ row }">{{ row.ready }}/{{ row.replicas }}</template>
+          </el-table-column>
+          <el-table-column prop="age" label="年龄" width="90" />
+          <el-table-column label="操作" width="90" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="info" icon="tickets" @click="showYaml('statefulset', row)">YAML</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="DaemonSets" name="daemonsets">
+        <el-table :data="daemonsets" size="small" v-loading="loading">
+          <el-table-column prop="name" label="名称" min-width="160" />
+          <el-table-column prop="namespace" label="命名空间" min-width="110" />
+          <el-table-column label="就绪" width="100">
+            <template #default="{ row }">{{ row.ready }}/{{ row.desired }}</template>
+          </el-table-column>
+          <el-table-column prop="available" label="可用" width="80" />
+          <el-table-column prop="age" label="年龄" width="90" />
+          <el-table-column label="操作" width="90" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="info" icon="tickets" @click="showYaml('daemonset', row)">YAML</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -86,6 +120,44 @@
           <el-table-column prop="age" label="年龄" width="90" />
         </el-table>
       </el-tab-pane>
+      <el-tab-pane label="PVC" name="pvcs">
+        <el-table :data="pvcs" size="small" v-loading="loading">
+          <el-table-column prop="name" label="名称" min-width="160" />
+          <el-table-column prop="namespace" label="命名空间" min-width="110" />
+          <el-table-column prop="status" label="状态" width="110">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'Bound' ? 'success' : 'warning'" size="small">{{ row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="capacity" label="容量" width="100" />
+          <el-table-column prop="storageClass" label="StorageClass" min-width="130" />
+          <el-table-column prop="volume" label="PV" min-width="150" />
+          <el-table-column prop="age" label="年龄" width="90" />
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="Ingress" name="ingresses">
+        <el-table :data="ingresses" size="small" v-loading="loading">
+          <el-table-column prop="name" label="名称" min-width="150" />
+          <el-table-column prop="namespace" label="命名空间" min-width="110" />
+          <el-table-column prop="hosts" label="主机" min-width="150" />
+          <el-table-column prop="paths" label="路径" min-width="240" show-overflow-tooltip />
+          <el-table-column prop="age" label="年龄" width="90" />
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="Events" name="events">
+        <el-table :data="events" size="small" v-loading="loading">
+          <el-table-column prop="lastTime" label="最近" width="90" />
+          <el-table-column prop="type" label="类型" width="90">
+            <template #default="{ row }">
+              <el-tag :type="row.type === 'Warning' ? 'danger' : 'info'" size="small">{{ row.type || '-' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="reason" label="原因" width="160" />
+          <el-table-column prop="object" label="对象" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="message" label="消息" min-width="260" show-overflow-tooltip />
+          <el-table-column prop="count" label="次数" width="70" />
+        </el-table>
+      </el-tab-pane>
     </el-tabs>
 
     <el-drawer v-model="logsVisible" :title="`日志 · ${logsPod}`" size="60%" append-to-body>
@@ -126,6 +198,62 @@
         </el-table>
       </div>
     </el-drawer>
+
+    <el-drawer v-model="yamlVisible" :title="`YAML · ${yamlTitle}`" size="55%" append-to-body>
+      <div v-loading="yamlLoading">
+        <pre class="logs-pre">{{ yamlText || '（空）' }}</pre>
+      </div>
+    </el-drawer>
+
+    <el-drawer v-model="podDetailVisible" :title="`Pod 详情 · ${podDetail?.name || ''}`" size="60%" append-to-body>
+      <div v-if="podDetail" v-loading="podDetailLoading">
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="命名空间">{{ podDetail.namespace }}</el-descriptions-item>
+          <el-descriptions-item label="阶段">
+            <el-tag :type="podDetail.phase === 'Running' ? 'success' : 'warning'" size="small">{{ podDetail.phase }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="节点">{{ podDetail.node || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="PodIP">{{ podDetail.podIP || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="HostIP">{{ podDetail.hostIP || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="QoS">{{ podDetail.qoS || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="重启总数">{{ podDetail.restarts }}</el-descriptions-item>
+          <el-descriptions-item label="年龄">{{ podDetail.age }}</el-descriptions-item>
+        </el-descriptions>
+        <h4>容器</h4>
+        <el-table :data="podDetail.containers" size="small" border>
+          <el-table-column prop="name" label="名称" min-width="130" />
+          <el-table-column prop="image" label="镜像" min-width="200" show-overflow-tooltip />
+          <el-table-column label="就绪" width="70">
+            <template #default="{ row }">
+              <el-tag :type="row.ready ? 'success' : 'danger'" size="small">{{ row.ready ? '是' : '否' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="restarts" label="重启" width="60" />
+          <el-table-column prop="state" label="状态" width="120">
+            <template #default="{ row }">
+              <el-tag :type="row.state === 'Running' ? 'success' : row.state === 'Waiting' ? 'warning' : 'info'" size="small">
+                {{ row.state }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="reason" label="原因" min-width="140" show-overflow-tooltip />
+        </el-table>
+        <h4>Conditions</h4>
+        <el-table :data="podDetail.conditions" size="small" border>
+          <el-table-column prop="type" label="类型" width="160" />
+          <el-table-column prop="status" label="状态" width="80" />
+          <el-table-column prop="reason" label="原因" min-width="160" show-overflow-tooltip />
+        </el-table>
+        <h4>Events</h4>
+        <el-table :data="podDetail.events" size="small" border>
+          <el-table-column prop="lastTime" label="最近" width="90" />
+          <el-table-column prop="type" label="类型" width="80" />
+          <el-table-column prop="reason" label="原因" width="150" />
+          <el-table-column prop="message" label="消息" min-width="220" show-overflow-tooltip />
+          <el-table-column prop="count" label="次数" width="60" />
+        </el-table>
+      </div>
+    </el-drawer>
   </el-drawer>
 </template>
 
@@ -134,7 +262,10 @@
     getK8sClusterList, getK8sClusterPodList, getK8sClusterPodLogs,
     getK8sClusterDeploymentList, getK8sClusterNodeList,
     getK8sServiceList, getK8sConfigMapList, getK8sSecretList,
-    getK8sNodeDetail, cordonK8sNode, drainK8sNode
+    getK8sNodeDetail, cordonK8sNode, drainK8sNode,
+    getK8sStatefulSetList, getK8sDaemonSetList, getK8sWorkloadYaml,
+    getK8sPodDetail, deleteK8sPod,
+    getK8sPvcList, getK8sIngressList, getK8sEventList
   } from '@/plugin/k8s/api/k8sResource'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { ref, watch } from 'vue'
@@ -149,10 +280,15 @@
   const loading = ref(false)
   const pods = ref([])
   const deployments = ref([])
+  const statefulsets = ref([])
+  const daemonsets = ref([])
   const nodes = ref([])
   const services = ref([])
   const configMaps = ref([])
   const secrets = ref([])
+  const pvcs = ref([])
+  const ingresses = ref([])
+  const events = ref([])
   const logsVisible = ref(false)
   const logsPod = ref('')
   const logsText = ref('')
@@ -160,20 +296,30 @@
   const loadAll = async () => {
     loading.value = true
     try {
-      const [p, d, n, sv, cm, sec] = await Promise.all([
+      const [p, d, sts, ds, n, sv, cm, sec, pvc, ing, ev] = await Promise.all([
         getK8sClusterPodList({ clusterId: props.clusterId }),
         getK8sClusterDeploymentList({ clusterId: props.clusterId }),
+        getK8sStatefulSetList({ clusterId: props.clusterId }),
+        getK8sDaemonSetList({ clusterId: props.clusterId }),
         getK8sClusterNodeList({ clusterId: props.clusterId }),
         getK8sServiceList({ clusterId: props.clusterId }),
         getK8sConfigMapList({ clusterId: props.clusterId }),
-        getK8sSecretList({ clusterId: props.clusterId })
+        getK8sSecretList({ clusterId: props.clusterId }),
+        getK8sPvcList({ clusterId: props.clusterId }),
+        getK8sIngressList({ clusterId: props.clusterId }),
+        getK8sEventList({ clusterId: props.clusterId })
       ])
       pods.value = p.code === 0 ? p.data : []
       deployments.value = d.code === 0 ? d.data : []
+      statefulsets.value = sts.code === 0 ? sts.data : []
+      daemonsets.value = ds.code === 0 ? ds.data : []
       nodes.value = n.code === 0 ? n.data : []
       services.value = sv.code === 0 ? sv.data : []
       configMaps.value = cm.code === 0 ? cm.data : []
       secrets.value = sec.code === 0 ? sec.data : []
+      pvcs.value = pvc.code === 0 ? pvc.data : []
+      ingresses.value = ing.code === 0 ? ing.data : []
+      events.value = ev.code === 0 ? ev.data : []
     } finally {
       loading.value = false
     }
@@ -241,6 +387,70 @@
         const d = res.data || {}
         ElMessage.success(`驱逐已提交：成功 ${d.evicted?.length || 0}，跳过 ${d.skipped?.length || 0}，失败 ${d.failed?.length || 0}`)
         refreshNodes()
+      }
+    })
+  }
+
+  // 工作负载 YAML
+  const yamlVisible = ref(false)
+  const yamlLoading = ref(false)
+  const yamlTitle = ref('')
+  const yamlText = ref('')
+
+  const showYaml = async (kind, row) => {
+    yamlTitle.value = `${row.namespace}/${row.name}`
+    yamlVisible.value = true
+    yamlLoading.value = true
+    yamlText.value = ''
+    try {
+      const res = await getK8sWorkloadYaml({
+        clusterId: props.clusterId, kind, namespace: row.namespace, name: row.name
+      })
+      yamlText.value = res.code === 0 ? res.data : `获取失败：${res.msg}`
+    } finally {
+      yamlLoading.value = false
+    }
+  }
+
+  // Pod 详情 / 删除
+  const podDetailVisible = ref(false)
+  const podDetailLoading = ref(false)
+  const podDetail = ref(null)
+
+  const showPodDetail = async (row) => {
+    podDetailVisible.value = true
+    podDetailLoading.value = true
+    podDetail.value = null
+    try {
+      const res = await getK8sPodDetail({
+        clusterId: props.clusterId, namespace: row.namespace, name: row.name
+      })
+      if (res.code === 0) {
+        podDetail.value = res.data
+      } else {
+        ElMessage.error(res.msg || 'Pod 详情获取失败')
+        podDetailVisible.value = false
+      }
+    } finally {
+      podDetailLoading.value = false
+    }
+  }
+
+  const refreshPods = async () => {
+    const p = await getK8sClusterPodList({ clusterId: props.clusterId })
+    if (p.code === 0) pods.value = p.data
+  }
+
+  const onDeletePod = (row) => {
+    ElMessageBox.confirm(
+      `确定删除 Pod「${row.namespace}/${row.name}」吗？无控制器的 Pod 将永久移除，有控制器的会被重建。`,
+      '危险操作',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'error' }
+    ).then(async () => {
+      const res = await deleteK8sPod(props.clusterId, row.namespace, row.name)
+      if (res.code === 0) {
+        ElMessage.success(res.msg || '删除已提交')
+        refreshPods()
       }
     })
   }
