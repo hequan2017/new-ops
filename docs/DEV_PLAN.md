@@ -314,8 +314,8 @@ M1-M3 完成即可替代 autoops/chain/go-webssh/new-jenkins 的日常使用；M
 
 ### M5 任务清单（gpu）
 
-- [ ] gpu_node/gpu_spec/gpu_image CRUD 与定价上架
-- [ ] 实例开通：智能匹配（扣减已用量防超卖，事务+行锁）+ Docker 创建（DeviceRequest GPU 直通、CPU/内存限制、独立数据卷）
+- [x] gpu_node/gpu_spec CRUD 与定价上架（gpu_image 随 C2 镜像库联动后补；场50 交付：三表迁移、节点/规格/实例十接口+菜单/API/casbin 种子（888 全量、9528 只读）、前端算力管理三页签（节点余量展示/规格定价/实例开通销毁）；错误码 1601-1606）
+- [ ] 实例开通（进行中：场50 交付防超卖引擎——事务内 FOR UPDATE 行锁节点 + 运行中实例占用聚合 + canAllocate 纯函数判定（余量不足报 1605 带明细），销毁释放配额复用、更新总量不可低于占用、离线节点拒开通；真机：2 卡节点开通 2 次 1 卡后第三次精确拒"GPU 余 0 需 1"、销毁后配额循环复用；剩余：Docker 创建（DeviceRequest GPU 直通）联动 container 插件——需真实 GPU 环境）
 - [ ] HAMi 显存切分注入（环境变量组）；实例生命周期操作 + 状态自动同步
 - [ ] 实例监控（docker stats + GPU 指标）+ SSH 跳板机（2026 端口，选连自己的容器）+ 端口转发管理
 
@@ -570,3 +570,4 @@ web/src/plugin/asset/
 | 2026-10-06 | 47 | k8s K2 补充：Services/ConfigMaps/Secrets 只读列表（后端三接口+路由+种子+资源浏览三页签；Secret 值永不回显仅列键名）；自动注入真机回归通过（批次6 每主机 Command=echo baize-auto-inject-done，注入闭环）；正确 method 下历次 404 全部复现排除——验证脚本规范已立 | 下一场：k8s 资源浏览真集群联调（待用户提供 kubeconfig）或继续 K2 写操作（Scale/滚动重启）|
 | 2026-10-06 | 48 | M6 dbops 可做部分（场48）：MySQL 实例纳管（密码 AES-GCM 密文复用 asset/crypto、独立请求体防回显、TCP 探活回写、未结束工单拒删）+ SQL 工单（创建/取消/分页、审核接口 goInception 未配置明确报 1708 不动状态、接入点已留）——九接口+实例/工单双页+种子（错误码 1701-1708）；真机：密文不泄露、3306 探活离线、工单流转、审核未配置报错全过 | 下一场：aiops MCP 工具注册（M7 末项可做部分）或 M5 GPU 骨架（防超卖纯逻辑）；goInception/MySQL/钉钉/LLM 环境就绪后接对应断点 |
 | 2026-10-06 | 49 | M7 aiops 可做部分（场49）：MCP 运维只读工具三件（ops_asset_overview/ops_alert_recent/ops_ticket_status）注册进 GVA mcp 骨架（StreamableHTTP standalone，init 自动注册；数据经骨架上游代理调主 server API、鉴权透传，standalone 无 DB 禁直查）；真机 MCP 协议全验：initialize→tools/list→tools/call 三工具均返回真实数据（5 资产/2 告警/3 工单）；排障：列表接口均为 POST，GET 命中 gin 404（'404' 先解析为 JSON 数字致 'p' after top-level value 假象）——与并行会话"404=method 推断错误"复盘互证 | 下一场：M5 GPU 骨架（防超卖纯逻辑+单测，无环境也可交付）；LLM 密钥就绪后接 AI 诊断网关 |
+| 2026-10-07 | 50 | M5 GPU 骨架（场50，无环境可交付部分）：三表（节点/规格定价/实例分配台账）+ 防超卖引擎——开通事务内 FOR UPDATE 行锁节点 + 运行中实例占用聚合 + canAllocate 纯函数判定（余量不足报 1605 带明细），销毁释放配额复用、总量不可低于占用、离线节点拒开通；十接口+菜单/API/casbin 种子+前端算力管理三页签；真机：2 卡节点开通 2 次 1 卡满载 → 第三次精确拒"GPU 余 0 需 1" → 销毁释放 → 配额循环复用全过，验证数据已清理。**至此全部里程碑的可无环境交付部分均已落地** | 剩余项均待环境：GPU Docker 直通（显卡）/goInception+MySQL/钉钉/LLM 密钥/真集群 kubeconfig；C2 端口转发留 M5 跳板场景；Compose 待设计 |
