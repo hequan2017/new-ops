@@ -73,6 +73,12 @@ export const getK8sDaemonSetList = (params) => {
 export const getK8sWorkloadYaml = (params) => {
   return service({ url: '/k8s/workload/yaml', method: 'get', params })
 }
+export const previewK8sWorkloadYaml = (clusterId, data) => {
+  return service({ url: '/k8s/workload/diff', method: 'post', params: { clusterId }, data })
+}
+export const applyK8sWorkloadYaml = (clusterId, data) => {
+  return service({ url: '/k8s/workload/apply', method: 'post', params: { clusterId }, data })
+}
 export const getK8sPodDetail = (params) => {
   return service({ url: '/k8s/pod/detail', method: 'get', params })
 }

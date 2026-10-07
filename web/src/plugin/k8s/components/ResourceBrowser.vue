@@ -202,9 +202,35 @@
 
     <el-drawer v-model="yamlVisible" :title="`YAML · ${yamlTitle}`" size="55%" append-to-body>
       <div v-loading="yamlLoading">
-        <pre class="logs-pre">{{ yamlText || '（空）' }}</pre>
+        <div class="yaml-toolbar">
+          <el-button v-if="!yamlEditing" type="primary" size="small" icon="edit" @click="startEditYaml">编辑</el-button>
+          <template v-else>
+            <el-button type="warning" size="small" icon="view" :loading="yamlDiffing" @click="previewYamlChange">预览变更</el-button>
+            <el-button size="small" @click="cancelEditYaml">取消</el-button>
+          </template>
+          <span v-if="yamlEditing" class="yaml-tip">编辑后先预览变更，确认 diff 再下发（乐观锁保护）</span>
+        </div>
+        <pre v-if="!yamlEditing" class="logs-pre">{{ yamlText || '（空）' }}</pre>
+        <el-input
+          v-else
+          v-model="yamlDraft"
+          type="textarea"
+          :rows="26"
+          class="yaml-editor"
+          spellcheck="false"
+        />
       </div>
     </el-drawer>
+
+    <el-dialog v-model="yamlDiffVisible" title="变更预览（服务端 dry-run diff）" width="70%" append-to-body>
+      <div v-loading="yamlDiffing" class="yaml-diff-box">
+        <div v-for="(line, i) in yamlDiffLines" :key="i" class="yaml-diff-line" :class="diffLineClass(line)">{{ line }}</div>
+      </div>
+      <template #footer>
+        <el-button @click="yamlDiffVisible = false">取 消</el-button>
+        <el-button type="danger" :loading="yamlApplying" @click="confirmApplyYaml">确认下发</el-button>
+      </template>
+    </el-dialog>
 
     <el-drawer v-model="shellVisible" :title="`Pod 终端`" size="65%" append-to-body destroy-on-close>
       <PodShell
@@ -274,6 +300,7 @@
     getK8sServiceList, getK8sConfigMapList, getK8sSecretList,
     getK8sNodeDetail, cordonK8sNode, drainK8sNode,
     getK8sStatefulSetList, getK8sDaemonSetList, getK8sWorkloadYaml,
+    previewK8sWorkloadYaml, applyK8sWorkloadYaml,
     getK8sPodDetail, deleteK8sPod,
     getK8sPvcList, getK8sIngressList, getK8sEventList
   } from '@/plugin/k8s/api/k8sResource'
@@ -407,6 +434,78 @@
   const yamlLoading = ref(false)
   const yamlTitle = ref('')
   const yamlText = ref('')
+  const yamlKind = ref('')
+
+  // YAML 编辑下发（diff 预览 → 确认 apply）
+  const yamlEditing = ref(false)
+  const yamlDraft = ref('')
+  const yamlDiffVisible = ref(false)
+  const yamlDiffing = ref(false)
+  const yamlApplying = ref(false)
+  const yamlDiffLines = ref([])
+  const yamlTarget = ref({ namespace: '', name: '' })
+
+  const diffLineClass = (line) => {
+    if (line.startsWith('+')) return 'diff-add'
+    if (line.startsWith('-')) return 'diff-del'
+    return 'diff-same'
+  }
+
+  const startEditYaml = () => {
+    yamlDraft.value = yamlText.value
+    yamlEditing.value = true
+  }
+
+  const cancelEditYaml = () => {
+    yamlEditing.value = false
+    yamlDraft.value = ''
+  }
+
+  const previewYamlChange = async () => {
+    yamlDiffing.value = true
+    try {
+      const res = await previewK8sWorkloadYaml(props.clusterId, {
+        kind: yamlKind.value,
+        namespace: yamlTarget.value.namespace,
+        name: yamlTarget.value.name,
+        yaml: yamlDraft.value
+      })
+      if (res.code !== 0) {
+        ElMessage.error(res.msg || '预览失败')
+        return
+      }
+      const diff = String(res.data || '')
+      if (diff.includes('（无实质变更）')) {
+        ElMessage.info('无实质变更，无需下发')
+        return
+      }
+      yamlDiffLines.value = diff.split('\n')
+      yamlDiffVisible.value = true
+    } finally {
+      yamlDiffing.value = false
+    }
+  }
+
+  const confirmApplyYaml = async () => {
+    yamlApplying.value = true
+    try {
+      const res = await applyK8sWorkloadYaml(props.clusterId, {
+        kind: yamlKind.value,
+        namespace: yamlTarget.value.namespace,
+        name: yamlTarget.value.name,
+        yaml: yamlDraft.value
+      })
+      if (res.code === 0) {
+        ElMessage.success(res.msg || 'YAML 已下发')
+        yamlDiffVisible.value = false
+        yamlEditing.value = false
+        yamlVisible.value = false
+        loadAll()
+      }
+    } finally {
+      yamlApplying.value = false
+    }
+  }
 
   // Pod 终端
   const shellVisible = ref(false)
@@ -420,6 +519,9 @@
 
   const showYaml = async (kind, row) => {
     yamlTitle.value = `${row.namespace}/${row.name}`
+    yamlKind.value = kind
+    yamlTarget.value = { namespace: row.namespace, name: row.name }
+    yamlEditing.value = false
     yamlVisible.value = true
     yamlLoading.value = true
     yamlText.value = ''
@@ -488,5 +590,46 @@
   font-size: 12px;
   max-height: 65vh;
   overflow: auto;
+}
+.yaml-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.yaml-tip {
+  font-size: 12px;
+  color: #909399;
+}
+.yaml-editor :deep(textarea) {
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.yaml-diff-box {
+  max-height: 55vh;
+  overflow: auto;
+  background: #0b1021;
+  border-radius: 4px;
+  padding: 8px 0;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.yaml-diff-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 0 12px;
+}
+.diff-add {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.08);
+}
+.diff-del {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+}
+.diff-same {
+  color: #94a3b8;
 }
 </style>
