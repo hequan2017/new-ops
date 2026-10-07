@@ -85,6 +85,7 @@
   "/src/plugin/dbops/view/instance/index.vue": "dbopsInstance",
   "/src/plugin/dbops/view/order/index.vue": "dbopsOrder",
   "/src/plugin/email/view/index.vue": "Email",
+  "/src/plugin/gpu/view/instance/index.vue": "gpuInstance",
   "/src/plugin/job/view/batchExec/index.vue": "jobBatchExec",
   "/src/plugin/job/view/script/index.vue": "jobScript",
   "/src/plugin/job/view/varGroup/index.vue": "jobVarGroup",
