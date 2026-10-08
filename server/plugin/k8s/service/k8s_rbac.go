@@ -120,6 +120,10 @@ func (s *K8sClusterService) CreateNsGrant(g *model.K8sNsGrant) error {
 	if g.ClusterID == 0 || g.Namespace == "" || g.UserID == 0 {
 		return newK8sErr(ErrCodeNamespaceReq, "clusterId/namespace/userId 必填")
 	}
+	// 先硬清同键软删残留：唯一索引含软删行，不清会以 2067 挡住重新授权（同 asset IP 唯一索引教训）
+	global.GVA_DB.Unscoped().
+		Where("cluster_id = ? AND namespace = ? AND user_id = ? AND deleted_at IS NOT NULL", g.ClusterID, g.Namespace, g.UserID).
+		Delete(&model.K8sNsGrant{})
 	var count int64
 	global.GVA_DB.Model(&model.K8sNsGrant{}).
 		Where("cluster_id = ? AND namespace = ? AND user_id = ?", g.ClusterID, g.Namespace, g.UserID).Count(&count)
