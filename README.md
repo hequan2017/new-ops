@@ -1,6 +1,6 @@
 # 白泽 BaiZe · 统一运维开发平台（new-ops）
 
-> **v0.2.0+**（2026-10-08 更新）—— M0-M3 全部完成；**M4 容器管理（C1 全部 + C2 主体）与 K8s 管理（K1/K2 全部）收官**，全部经测试机 k3s 真集群端到端验证；**M8 K3 主体交付：Helm release 管理（装/升/滚/卸 + chart 仓库）+ 三级 RBAC 命名空间层（k3s 双命名空间真机验证）**；M5 GPU 算力骨架 + 防超卖引擎（无显卡部分待环境）；并完成一轮**平台级安全加固**（9 插件鉴权漏洞修复、WS/SSE 端点角色收敛、MD5→SHA-256）。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
+> **v0.2.0+**（2026-10-08 更新）—— M0-M4 全部完成（**两套真实集群联调 + 两级数据隔离验证收官**）；**M8 主体完成：K3 Helm 全生命周期（values 表单/YAML 双模式 + chart 仓库）+ 三级 RBAC 命名空间层 + C2 Compose 编排/端口转发/统计历史图表化**，全部经测试机双 k3s 集群与 Docker 真机端到端验证；M5 GPU 算力骨架 + 防超卖引擎（无显卡部分待环境）；并完成一轮**平台级安全加固**（9 插件鉴权漏洞修复、WS/SSE 端点角色收敛、MD5→SHA-256）。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
 >
 > **命名由来**：白泽是中国上古神话中的瑞兽，通晓天下万物之情——愿这套平台也能"通晓"你的全部基础设施。仓库/工程名沿用 `new-ops`。
 >
@@ -115,7 +115,7 @@
 | 构建历史 | 即时取消（ctx 中断 SSH/HTTP）、复用历史参数重跑 |
 | 编排页 | 阶段卡片配置、审批/并发/失败继续开关、shell/http 切换、参数触发、轮询、放行/取消/重跑 |
 
-### container 容器管理（M4 C1 ✅ + C2 主体 ✅）
+### container 容器管理（M4 C1 ✅ + M8 C2 ✅ 全部完成）
 
 Docker 单机/远程节点的全生命周期纳管，TLS 远程节点与本地 socket 同权。
 
@@ -127,10 +127,11 @@ Docker 单机/远程节点的全生命周期纳管，TLS 远程节点与本地 s
 | 日志流 / exec 终端 | 双 WS 通道：logs -f（TTY 判断 + stdcopy 去复用）；exec `/bin/sh` TTY → hijack 双向桥、resize |
 | 事件订阅 | 复用 30s 巡检按 `[水位, now]` 区间拉取 docker events 落库（离线恢复自动补拉、窗口上限 1h、7 天留存） |
 | 镜像管理 | 列表/异步拉取（内存状态表+轮询、重复拦截）/删除 force/**打标签/导出 tar 流式下载/导入上传** |
-| 网络与卷 | network 创建（bridge+子网 IPAM、内置保护）/列表/删除；volume 列表/删除（占用由 daemon 拒绝回传） |
-| 资源统计 | ContainerStats one-shot：CPU（delta×在线核数）/内存（去 inactive_file）/网络/块 IO/进程数 |
+| 网络与卷 | network 创建（bridge+子网 IPAM、内置保护）/列表/删除；volume 列表/删除（占用由 daemon 拒绝回传）；**端口转发规则管理**（inspect 读取 + 规则校验 + 按新规则重建容器，运行中自动拉起） |
+| 资源统计 | ContainerStats one-shot：CPU（delta×在线核数）/内存（去 inactive_file）/网络/块 IO/进程数；**5 分钟采样历史（7 天留存）+ 统计抽屉 ECharts 双轴时间轴（CPU%/内存，1h/6h/24h/7d）** |
+| **Compose 编排** | 项目制管理（compose 文件留存）：创建（`docker compose config` 客户端侧校验 → up -d）/列表/详情/ps（双格式 JSON 兼容）/up/down/restart/内容更新/删除（先 down）；执行走 docker compose CLI（绝对路径+字面量参数+超时 Kill，接入点映射 DOCKER_HOST/TLS 证书临时目录）；独立「Compose 编排」页 |
 
-### k8s 集群管理（M4 K1/K2 ✅ 全部 + M8 K3 Helm/命名空间 RBAC ✅ 主体完成）
+### k8s 集群管理（M4 K1/K2 ✅ 全部 + M8 K3 ✅ 全部完成）
 
 多集群注册、十一类资源浏览、Pod 终端、YAML 下发、Helm 全生命周期与命名空间级授权隔离。
 
@@ -144,11 +145,11 @@ Docker 单机/远程节点的全生命周期纳管，TLS 远程节点与本地 s
 | **Pod WebShell** | client-go SPDY remotecommand ⇄ WebSocket（TTY 单流 `/bin/sh`、resize 经 TerminalSizeQueue、心跳/关闭帧）；多容器下拉选择；query token 握手 + **casbin 角色自验** |
 | 工作负载写操作 | Deployment **扩缩容**（0-500 校验）与**滚动重启**（restartedAt 注解 patch） |
 | **YAML 查看/编辑下发** | 三类工作负载 YAML 查看（剔 managedFields）；编辑后**服务端 dry-run diff 预览**（红绿行）→ 确认下发（强类型解析、对象一致性校验防跨对象写、乐观锁 resourceVersion） |
-| **Helm release 管理** | 列表（全命名空间）/安装或升级（同名自动 upgrade、revision 递增）/卸载/回滚（空=上一版）/历史/release 详情（当前 values+渲染 manifest，敏感面仅 888）；安装双模式：**tgz 上传**或**仓库引用**（chart 仓库登记 CRUD，URL 仅 http/https） |
+| **Helm release 管理** | 列表（全命名空间）/安装或升级（同名自动 upgrade、revision 递增）/卸载/回滚（空=上一版）/历史/release 详情（当前 values+渲染 manifest，敏感面仅 888）；安装双模式：**tgz 上传**或**仓库引用**（chart 仓库登记 CRUD，URL 仅 http/https）；**values 表单模式**（values.schema.json 驱动动态表单：嵌套展开/枚举/布尔/数组，点路径合成 values YAML，无 schema chart 自动回退 YAML 模式） |
 | **命名空间授权（三级 RBAC 命名空间层）** | `k8s_ns_grant` 表（cluster+namespace+user 唯一）；授权/收回/清单仅 888（用户名联查），ns 可见性接口 888+9528（普通用户仅返回授权项）；前端集群页「命名空间授权」抽屉（ns 下拉+用户筛选+授权/收回） |
 | **浏览面隔离** | 十一类资源列表与 Helm 列表 scopedList 泛型包装（普通用户空 ns 聚合授权项、显式 ns 须在授权内否则空结果）；Pod 日志/详情、工作负载 YAML、Helm 历史 GuardNamespace 单对象守卫（越权错误码 1513）；ns 过滤下拉选项对普通用户即授权面 |
 
-> 测试环境内置 k3s v1.36 单节点真集群，K1/K2/Helm/命名空间隔离全部功能经真机端到端验证（含 drain 驱逐语义、WebShell resize、Helm 装升滚卸全生命周期、双命名空间授权隔离闭环）。
+> 测试环境内置两套真实集群：k3s v1.36 单节点（原生）+ k3s-in-docker 容器集群（6445），K1/K2/Helm/命名空间隔离全部功能经真机端到端验证（含 drain 驱逐语义、WebShell resize、Helm 装升滚卸全生命周期与 values 表单、双集群两级数据隔离闭环）。
 
 ### gpu 算力平台（M5 🔨 骨架 + 防超卖引擎已交付）
 
@@ -303,7 +304,7 @@ new-ops/
 │   │   ├── job/                   # 批量执行/脚本库/变量组（M2 ✅）
 │   │   ├── pipeline/              # 流水线/执行器/SSE/触发器（M3 ✅）
 │   │   ├── container/             # Docker 接入点/容器/镜像/网络卷/事件/stats（M4 ✅）
-│   │   ├── k8s/                   # 集群注册/总览/Node/资源浏览/WebShell/YAML 下发/Helm/命名空间授权（K1+K2 ✅、K3 主体 ✅）
+│   │   ├── k8s/                   # 集群注册/总览/Node/资源浏览/WebShell/YAML 下发/Helm(values 表单)/命名空间授权（K1+K2+K3 ✅）
 │   │   ├── monitor/               # 性能采集/告警引擎/钉钉（M6 ✅）
 │   │   ├── workflow/              # 工单引擎 + 发版闭环（M7 ✅）
 │   │   ├── dbops/                 # MySQL 纳管/SQL 工单（M6 🔨 审核引擎待环境）
@@ -345,11 +346,11 @@ server/plugin/<name>/
 | M1 | 资产中心：CRUD/SSH 采集/云同步/凭据保险库/数据权限/导入导出 | ✅ |
 | M2 | 终端作业：WebSSH/级联/审计/SFTP/批量执行/脚本库变量组/日志tail/网段发现 | ✅ |
 | M3 | 流水线：三层模型/执行器（快照+状态机+审批+并发）/SSE/三通道触发/发版闭环 | ✅ |
-| M4 | 容器 C1 全部 + C2 镜像/网络/卷/stats；**k8s K1/K2 全部**（k3s 真集群验证） | ✅ |
+| M4 | 容器 C1 全部 + C2 镜像/网络/卷/stats；**k8s K1/K2 全部**（k3s 真集群验证）；**两套真实集群联调 + 两级隔离验证收官** | ✅ |
 | M5 | GPU 算力：节点/规格/实例/**防超卖引擎**已交付；Docker 直通/HAMi/监控待显卡环境 | 🔨 |
 | M6 | monitor 三项 ✅；dbops 实例纳管 + SQL 工单骨架 ✅（goInception 审核/执行待环境） | 🔨 |
 | M7 | workflow 工单引擎 ✅；aiops MCP 运维工具 ✅（AI 诊断网关待 LLM 密钥）；org 钉钉登录 | 🔨 |
-| M8 | **Helm release 管理 + chart 仓库 + 三级 RBAC 命名空间层已交付**（k3s 双 ns 验证）；values 表单模式/Compose/AI 诊断/GPU 视图待续 | 🔨 |
+| M8 | **K3 全部完成：Helm 全生命周期（values 表单+YAML 双模式）+ chart 仓库 + 三级 RBAC 命名空间层**（双 k3s 集群验证）；**C2 全部完成：Compose 编排/端口转发/统计历史图表化**；AI 诊断/GPU 视图待环境 | 🔨 |
 | M9 | 轻量 Go Agent：反向长连接/采集上报/第二执行通道 | 📋 |
 
 - 发布：`v0.1.0`（M0-M2）、`v0.2.0`（+M3/M4 主体/M6 monitor/M7 workflow）；M4 收官（K1/K2 + k3s 真集群验证）后的下一个小版本筹备中
