@@ -49,6 +49,13 @@ func Api(ctx context.Context) {
 		{Path: "/container/volume/list", Description: "卷列表", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/volume", Description: "删除卷", ApiGroup: "容器管理", Method: "DELETE"},
 		{Path: "/container/container/stats", Description: "容器资源统计", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/compose", Description: "创建 Compose 项目", ApiGroup: "容器管理", Method: "POST"},
+		{Path: "/container/compose", Description: "更新 compose 内容", ApiGroup: "容器管理", Method: "PUT"},
+		{Path: "/container/compose", Description: "删除 Compose 项目", ApiGroup: "容器管理", Method: "DELETE"},
+		{Path: "/container/compose/list", Description: "Compose 项目列表", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/compose/detail", Description: "Compose 项目详情", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/compose/ps", Description: "Compose ps", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/compose/action", Description: "Compose up/down/restart", ApiGroup: "容器管理", Method: "POST"},
 	}
 	utils.RegisterApis(entities...)
 }
@@ -71,6 +78,14 @@ func Menu(ctx context.Context) {
 			Component: "plugin/container/view/endpoint/index.vue",
 			Sort:      1,
 			Meta:      sysModel.Meta{Title: "接入点管理", Icon: "guide"},
+		},
+		{
+			Path:      "containerCompose",
+			Name:      "containerCompose",
+			Hidden:    false,
+			Component: "plugin/container/view/compose/index.vue",
+			Sort:      2,
+			Meta:      sysModel.Meta{Title: "Compose 编排", Icon: "tickets"},
 		},
 	}
 	utils.RegisterMenus(entities...)

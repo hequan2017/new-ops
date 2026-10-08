@@ -50,6 +50,17 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		vol.DELETE("", v1.ContainerApi.RemoveVolume)
 	}
 	Router.GET("container/container/stats", v1.ContainerApi.ContainerStats)
+	// Compose 编排（M8 C2）
+	cp := Router.Group("container/compose")
+	{
+		cp.POST("", v1.ContainerApi.CreateComposeProject)
+		cp.PUT("", v1.ContainerApi.UpdateComposeProject)
+		cp.DELETE("", v1.ContainerApi.DeleteComposeProject)
+		cp.GET("list", v1.ContainerApi.GetComposeProjectList)
+		cp.GET("detail", v1.ContainerApi.GetComposeProjectDetail)
+		cp.GET("ps", v1.ContainerApi.ComposePS)
+		cp.POST("action", v1.ContainerApi.ComposeAction)
+	}
 	Public.GET("container/container/logws", v1.ContainerApi.LogsWS)
 	Public.GET("container/container/execws", v1.ContainerApi.ExecWS)
 }

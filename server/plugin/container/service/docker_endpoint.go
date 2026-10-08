@@ -40,6 +40,7 @@ var Service = new(containerSvc)
 
 type containerSvc struct {
 	Endpoint EndpointService
+	Compose  ComposeService
 }
 
 func newCtErr(code int, msg string) error { return &containerError{Code: code, Msg: msg} }
