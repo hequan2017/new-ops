@@ -52,6 +52,7 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		vol.DELETE("", v1.ContainerApi.RemoveVolume)
 	}
 	Router.GET("container/container/stats", v1.ContainerApi.ContainerStats)
+	Router.GET("container/container/stats/history", v1.ContainerApi.GetStatsHistory)
 	// Compose 编排（M8 C2）
 	cp := Router.Group("container/compose")
 	{

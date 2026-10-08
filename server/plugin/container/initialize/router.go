@@ -49,6 +49,7 @@ func Api(ctx context.Context) {
 		{Path: "/container/volume/list", Description: "卷列表", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/volume", Description: "删除卷", ApiGroup: "容器管理", Method: "DELETE"},
 		{Path: "/container/container/stats", Description: "容器资源统计", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/container/stats/history", Description: "容器统计历史", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/compose", Description: "创建 Compose 项目", ApiGroup: "容器管理", Method: "POST"},
 		{Path: "/container/compose", Description: "更新 compose 内容", ApiGroup: "容器管理", Method: "PUT"},
 		{Path: "/container/compose", Description: "删除 Compose 项目", ApiGroup: "容器管理", Method: "DELETE"},

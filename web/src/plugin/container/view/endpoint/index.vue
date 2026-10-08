@@ -112,7 +112,7 @@
       </el-table>
     </el-drawer>
 
-    <el-drawer v-model="statsVisible" :title="`资源统计 · ${statsName}`" size="45%" append-to-body>
+    <el-drawer v-model="statsVisible" :title="`资源统计 · ${statsName}`" size="45%" append-to-body @closed="disposeHistChart">
       <el-descriptions :column="2" border v-if="statsData">
         <el-descriptions-item label="CPU 使用">{{ statsData.cpuPercent }}%</el-descriptions-item>
         <el-descriptions-item label="内存">{{ statsData.memUsedMb }} / {{ statsData.memLimitMb }} MB（{{ statsData.memPercent }}%）</el-descriptions-item>
@@ -123,6 +123,17 @@
         <el-descriptions-item label="进程数">{{ statsData.pids }}</el-descriptions-item>
       </el-descriptions>
       <el-empty v-else description="加载中" />
+      <el-divider content-position="left">历史趋势（5 分钟采样 · 7 天留存）</el-divider>
+      <el-radio-group v-model="histHours" size="small" style="margin-bottom: 8px" @change="loadHistory">
+        <el-radio-button :value="1">1h</el-radio-button>
+        <el-radio-button :value="6">6h</el-radio-button>
+        <el-radio-button :value="24">24h</el-radio-button>
+        <el-radio-button :value="168">7d</el-radio-button>
+      </el-radio-group>
+      <div v-loading="histLoading" style="height: 240px">
+        <div v-show="!histLoading" ref="histChartEl" style="height: 240px" />
+        <el-empty v-if="!histLoading && histEmpty" description="暂无采样数据（采集循环每 5 分钟一轮）" :image-size="60" />
+      </div>
     </el-drawer>
 
     <el-dialog v-model="pfVisible" :title="`端口转发规则 · ${pfName}`" width="640px" append-to-body>
@@ -366,7 +377,8 @@
 </template>
 
 <script setup>
-  import { ref, reactive, onMounted, onUnmounted } from 'vue'
+  import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+  import * as echarts from 'echarts'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import {
     createEndpoint, updateEndpoint, deleteEndpoint, getEndpointList, checkEndpoint
@@ -374,7 +386,7 @@
   import { getContainerList, containerAction, createContainer, getImageList, pullImage, pullStatus, removeImage,
     tagImage, exportImage, importImage,
     getNetworkList, createNetwork, removeNetwork, getVolumeList, removeVolume, getContainerStats,
-    listPortForwards, setPortForwards } from '@/plugin/container/api/container'
+    getStatsHistory, listPortForwards, setPortForwards } from '@/plugin/container/api/container'
   import { getEventList } from '@/plugin/container/api/dockerEvent'
   import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
   import ContainerLogs from '@/plugin/container/components/ContainerLogs.vue'
@@ -689,12 +701,69 @@
   const statsName = ref('')
   const statsData = ref(null)
 
+  // 统计历史趋势（ECharts 双轴：CPU% / 内存MB）
+  const histHours = ref(24)
+  const histLoading = ref(false)
+  const histEmpty = ref(false)
+  const histChartEl = ref(null)
+  let histChart = null
+  let histTarget = { id: '' }
+
   const openStats = async (row) => {
     statsName.value = prettyName(row.names)
     statsData.value = null
     statsVisible.value = true
+    histTarget = { id: row.id }
     const res = await getContainerStats({ endpointId: ctEndpoint.value.ID, id: row.id })
     if (res.code === 0) statsData.value = res.data
+    loadHistory()
+  }
+
+  const loadHistory = async () => {
+    histLoading.value = true
+    histEmpty.value = false
+    try {
+      const res = await getStatsHistory({
+        endpointId: ctEndpoint.value.ID, id: histTarget.id, hours: histHours.value
+      })
+      if (res.code !== 0) return
+      const list = res.data || []
+      if (!list.length) {
+        histEmpty.value = true
+        if (histChart) histChart.clear()
+        return
+      }
+      const times = list.map((x) => x.createdAt?.replace('T', ' ').slice(5, 16) || '')
+      const cpu = list.map((x) => x.cpuPercent)
+      const mem = list.map((x) => x.memUsedMb)
+      await nextTick()
+      if (!histChartEl.value) return
+      if (!histChart) histChart = echarts.init(histChartEl.value)
+      histChart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['CPU %', '内存 MB'], top: 0 },
+        grid: { left: 50, right: 50, top: 30, bottom: 40 },
+        xAxis: { type: 'category', data: times, axisLabel: { fontSize: 10 } },
+        yAxis: [
+          { type: 'value', name: 'CPU %', axisLabel: { fontSize: 10 } },
+          { type: 'value', name: '内存 MB', axisLabel: { fontSize: 10 } }
+        ],
+        series: [
+          { name: 'CPU %', type: 'line', data: cpu, showSymbol: false, smooth: true, itemStyle: { color: '#409eff' } },
+          { name: '内存 MB', type: 'line', yAxisIndex: 1, data: mem, showSymbol: false, smooth: true, areaStyle: { opacity: 0.15 }, itemStyle: { color: '#67c23a' } }
+        ]
+      }, true)
+      histChart.resize()
+    } finally {
+      histLoading.value = false
+    }
+  }
+
+  const disposeHistChart = () => {
+    if (histChart) {
+      histChart.dispose()
+      histChart = null
+    }
   }
 
   // ---------- 端口转发规则 ----------

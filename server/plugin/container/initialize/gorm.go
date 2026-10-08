@@ -15,13 +15,15 @@ func Gorm(ctx context.Context) {
 		new(model.DockerEndpoint),
 		new(model.DockerEventLog),
 		new(model.DockerComposeProject),
+		new(model.DockerStatsSample),
 	)
 	if err != nil {
 		global.GVA_LOG.Error("container 注册表失败: " + err.Error())
 	}
 }
 
-// Inspect 启动 30s 合并巡检循环（进程生命周期，tianqi 合并巡检模式）
+// Inspect 启动 30s 合并巡检循环 + 5min 统计采样循环（进程生命周期，tianqi 合并巡检模式）
 func Inspect(ctx context.Context) {
 	service.Service.Endpoint.StartInspectLoop(ctx)
+	service.Service.Endpoint.StartStatsLoop(ctx)
 }
