@@ -13,4 +13,5 @@ import (
 	_ "github.com/hequan2017/new-ops/server/plugin/dbops"
 	_ "github.com/hequan2017/new-ops/server/plugin/monitor"
 	_ "github.com/hequan2017/new-ops/server/plugin/workflow"
+	_ "github.com/hequan2017/new-ops/server/plugin/agent"
 )

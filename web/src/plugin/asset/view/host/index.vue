@@ -90,7 +90,16 @@
             <el-tag :type="statusTagType(row.status)">{{ row.status || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="230" fixed="right">
+        <el-table-column label="Agent" width="90">
+          <template #default="{ row }">
+            <el-tag
+              :type="agentStatus(row.ID).type"
+              size="small"
+              effect="plain"
+            >{{ agentStatus(row.ID).label }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="340" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" icon="edit" @click="openDialog(row)">编辑</el-button>
             <el-button link type="success" icon="aim" @click="openCollect(row)">采集</el-button>
@@ -98,6 +107,7 @@
             <el-button link type="warning" icon="document" @click="openLogTail(row)">日志</el-button>
             <el-button link type="primary" icon="data-line" @click="openPerf(row)">监控</el-button>
             <el-button link type="warning" icon="clock" @click="openHistory(row)">历史</el-button>
+            <el-button link type="primary" icon="cpu" @click="openAgent(row)">Agent</el-button>
             <el-button link type="danger" icon="delete" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -234,6 +244,61 @@
     <el-drawer v-model="perfVisible" :title="`性能监控 · ${perfHost}`" size="60%">
       <PerfChart v-if="perfVisible" :asset-id="perfAssetId" :label="perfHost" />
     </el-drawer>
+
+    <el-dialog v-model="agentVisible" :title="`Agent 接入 · ${agentHost}`" width="640px">
+      <el-descriptions v-if="agentCurrent" :column="2" border size="small">
+        <el-descriptions-item label="状态">
+          <el-tag :type="agentCurrent.status === '在线' ? 'success' : 'danger'" size="small">{{ agentCurrent.status }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="版本">{{ agentCurrent.version || '未上报' }}</el-descriptions-item>
+        <el-descriptions-item label="系统">{{ agentCurrent.osArch || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="上报主机名">{{ agentCurrent.hostname || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="最近心跳" :span="2">
+          {{ agentCurrent.lastHeartbeat ? agentCurrent.lastHeartbeat.replace('T', ' ').slice(0, 19) : '—' }}
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-alert
+        v-if="agentTokenOnce"
+        type="success"
+        :closable="false"
+        show-icon
+        title="令牌仅此一次显示，请立即保存"
+        style="margin-top: 10px"
+      />
+      <el-input
+        v-if="agentTokenOnce"
+        v-model="agentTokenOnce"
+        readonly
+        style="margin-top: 8px"
+      >
+        <template #append>
+          <el-button icon="copy" @click="copyAgentToken">复制</el-button>
+        </template>
+      </el-input>
+      <el-input
+        v-if="agentTokenOnce"
+        :model-value="agentRunCmd"
+        readonly
+        style="margin-top: 8px"
+      >
+        <template #append>
+          <el-button icon="copy" @click="copyAgentCmd">复制接入命令</el-button>
+        </template>
+      </el-input>
+      <template #footer>
+        <el-button
+          v-if="!agentCurrent || !agentCurrent.ID"
+          type="primary"
+          :loading="agentIssuing"
+          @click="issueToken"
+        >签发接入令牌</el-button>
+        <template v-else>
+          <el-button type="warning" :loading="agentIssuing" @click="issueToken">重置令牌</el-button>
+          <el-button type="danger" @click="revokeAgent">吊销注册</el-button>
+        </template>
+        <el-button @click="agentVisible = false">关 闭</el-button>
+      </template>
+    </el-dialog>
 
     <el-drawer v-model="logVisible" :title="`日志 tail · ${logHost}`" size="70%">
       <el-form inline>
@@ -396,8 +461,9 @@
   import LogTail from '@/plugin/term/components/LogTail.vue'
   import PerfChart from '@/plugin/monitor/components/PerfChart.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
-  import { reactive, ref } from 'vue'
+  import { computed, reactive, ref } from 'vue'
   import { discoverHosts, importDiscoveredHosts } from '@/plugin/asset/api/assetHost'
+  import { getAgentInstanceList, issueAgentToken, revokeAgentInstance } from '@/plugin/agent/api/agentInstance'
   import { useUserStore } from '@/pinia/modules/user'
 
   defineOptions({ name: 'AssetHost' })
@@ -605,6 +671,79 @@
     perfAssetId.value = row.ID
     perfHost.value = `${row.hostname}（${row.ip}）`
     perfVisible.value = true
+  }
+
+  // Agent 接入（M9 A1）：实例列表按资产映射状态；签发令牌仅一次回显
+  const agentMap = ref({})
+  const agentVisible = ref(false)
+  const agentHost = ref('')
+  const agentCurrent = ref(null)
+  const agentTokenOnce = ref('')
+  const agentIssuing = ref(false)
+
+  const loadAgentMap = async () => {
+    const res = await getAgentInstanceList()
+    if (res.code === 0) {
+      const m = {}
+      for (const a of res.data || []) m[a.assetId] = a
+      agentMap.value = m
+    }
+  }
+
+  const agentStatus = (assetId) => {
+    const a = agentMap.value[assetId]
+    if (!a) return { label: '未接入', type: 'info' }
+    return a.status === '在线' ? { label: '在线', type: 'success' } : { label: '离线', type: 'danger' }
+  }
+
+  const openAgent = async (row) => {
+    agentHost.value = `${row.hostname}（${row.ip}）`
+    agentTokenOnce.value = ''
+    agentVisible.value = true
+    await loadAgentMap()
+    agentCurrent.value = agentMap.value[row.ID] || { assetId: row.ID }
+  }
+
+  const agentRunCmd = computed(
+    () => `baize-agent -server ${window.location.protocol}//${window.location.hostname}:8888 -token ${agentTokenOnce.value || '<令牌>'}`
+  )
+
+  const issueToken = async () => {
+    agentIssuing.value = true
+    try {
+      const res = await issueAgentToken({ assetId: agentCurrent.value.assetId })
+      if (res.code === 0) {
+        agentTokenOnce.value = res.data.token
+        await loadAgentMap()
+        agentCurrent.value = agentMap.value[agentCurrent.value.assetId]
+        ElMessage.success('令牌已签发（明文仅此一次）')
+      }
+    } finally {
+      agentIssuing.value = false
+    }
+  }
+
+  const revokeAgent = () => {
+    ElMessageBox.confirm('确定吊销该资产的 Agent 注册吗？已部署的 Agent 将无法再连接。', '提示', {
+      confirmButtonText: '吊销', cancelButtonText: '取消', type: 'warning'
+    }).then(async () => {
+      const res = await revokeAgentInstance({ id: agentCurrent.value.ID })
+      if (res.code === 0) {
+        ElMessage.success('已吊销')
+        agentVisible.value = false
+        loadAgentMap()
+      }
+    })
+  }
+
+  const copyAgentToken = () => {
+    navigator.clipboard?.writeText(agentTokenOnce.value)
+    ElMessage.success('已复制令牌')
+  }
+
+  const copyAgentCmd = () => {
+    navigator.clipboard?.writeText(agentRunCmd)
+    ElMessage.success('已复制接入命令')
   }
 
   const logVisible = ref(false)
@@ -824,4 +963,5 @@
   }
 
   getTableData()
+  loadAgentMap()
 </script>
