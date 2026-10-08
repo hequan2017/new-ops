@@ -56,6 +56,8 @@ func Api(ctx context.Context) {
 		{Path: "/container/compose/detail", Description: "Compose 项目详情", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/compose/ps", Description: "Compose ps", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/compose/action", Description: "Compose up/down/restart", ApiGroup: "容器管理", Method: "POST"},
+		{Path: "/container/container/portforwards", Description: "端口转发规则列表", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/container/portforwards", Description: "应用端口转发规则（重建容器）", ApiGroup: "容器管理", Method: "POST"},
 	}
 	utils.RegisterApis(entities...)
 }

@@ -97,7 +97,7 @@
         </el-table-column>
         <el-table-column prop="status" label="详情" min-width="120" show-overflow-tooltip />
         <el-table-column prop="ports" label="端口" min-width="140" show-overflow-tooltip />
-        <el-table-column label="操作" width="290" fixed="right">
+        <el-table-column label="操作" width="330" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openContainerLogs(row)">日志</el-button>
             <el-button v-if="row.state === 'running'" link type="success" @click="openContainerShell(row)">终端</el-button>
@@ -106,6 +106,7 @@
             <el-button v-if="row.state === 'running'" link type="primary" @click="doAction(row, 'restart')">重启</el-button>
             <el-button link type="danger" @click="doRemove(row)">删除</el-button>
             <el-button link type="primary" @click="openStats(row)">统计</el-button>
+            <el-button link type="warning" @click="openPortForwards(row)">端口</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -123,6 +124,53 @@
       </el-descriptions>
       <el-empty v-else description="加载中" />
     </el-drawer>
+
+    <el-dialog v-model="pfVisible" :title="`端口转发规则 · ${pfName}`" width="640px" append-to-body>
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        title="Docker 端口绑定不可在线修改：保存后将停止并按新规则重建容器（挂载卷数据保留，容器层内未落卷的数据将丢失），运行中的容器重建后自动拉起。"
+        style="margin-bottom: 10px"
+      />
+      <el-table :data="pfRules" size="small" border>
+        <el-table-column label="宿主IP" width="150">
+          <template #default="{ row }">
+            <el-input v-model="row.hostIp" placeholder="留空=0.0.0.0" size="small" />
+          </template>
+        </el-table-column>
+        <el-table-column label="宿主端口" width="120">
+          <template #default="{ row }">
+            <el-input v-model="row.hostPort" placeholder="8080" size="small" />
+          </template>
+        </el-table-column>
+        <el-table-column label="容器端口" width="120">
+          <template #default="{ row }">
+            <el-input-number v-model="row.containerPort" :min="1" :max="65535" controls-position="right" size="small" style="width: 100%" />
+          </template>
+        </el-table-column>
+        <el-table-column label="协议" width="100">
+          <template #default="{ row }">
+            <el-select v-model="row.proto" size="small">
+              <el-option label="tcp" value="tcp" />
+              <el-option label="udp" value="udp" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="70">
+          <template #default="{ $index }">
+            <el-button link type="danger" @click="pfRules.splice($index, 1)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="ops-btn-list" style="margin-top: 8px">
+        <el-button size="small" icon="plus" @click="pfRules.push({ hostIp: '', hostPort: '', containerPort: 80, proto: 'tcp' })">添加规则</el-button>
+      </div>
+      <template #footer>
+        <el-button @click="pfVisible = false">取 消</el-button>
+        <el-button type="danger" :loading="pfSaving" @click="submitPortForwards">应用（重建容器）</el-button>
+      </template>
+    </el-dialog>
 
     <el-drawer v-model="resVisible" :title="`网络与卷 · ${ctEndpoint?.name || ''}`" size="65%">
       <el-tabs v-model="resTab">
@@ -325,7 +373,8 @@
   } from '@/plugin/container/api/dockerEndpoint'
   import { getContainerList, containerAction, createContainer, getImageList, pullImage, pullStatus, removeImage,
     tagImage, exportImage, importImage,
-    getNetworkList, createNetwork, removeNetwork, getVolumeList, removeVolume, getContainerStats } from '@/plugin/container/api/container'
+    getNetworkList, createNetwork, removeNetwork, getVolumeList, removeVolume, getContainerStats,
+    listPortForwards, setPortForwards } from '@/plugin/container/api/container'
   import { getEventList } from '@/plugin/container/api/dockerEvent'
   import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
   import ContainerLogs from '@/plugin/container/components/ContainerLogs.vue'
@@ -646,6 +695,60 @@
     statsVisible.value = true
     const res = await getContainerStats({ endpointId: ctEndpoint.value.ID, id: row.id })
     if (res.code === 0) statsData.value = res.data
+  }
+
+  // ---------- 端口转发规则 ----------
+  const pfVisible = ref(false)
+  const pfName = ref('')
+  const pfTarget = ref({ id: '' })
+  const pfRules = ref([])
+  const pfSaving = ref(false)
+
+  const openPortForwards = async (row) => {
+    pfName.value = prettyName(row.names)
+    pfTarget.value = { id: row.id }
+    pfRules.value = []
+    pfVisible.value = true
+    const res = await listPortForwards({ endpointId: ctEndpoint.value.ID, id: row.id })
+    if (res.code === 0) {
+      pfRules.value = (res.data || []).map((r) => ({
+        hostIp: r.hostIp || '',
+        hostPort: r.hostPort || '',
+        containerPort: r.containerPort || 80,
+        proto: r.proto || 'tcp'
+      }))
+    } else {
+      ElMessage.error(res.msg || '端口规则获取失败')
+    }
+  }
+
+  const submitPortForwards = () => {
+    const rules = pfRules.value
+    if (!rules.length) {
+      ElMessage.warning('至少保留一条规则')
+      return
+    }
+    ElMessageBox.confirm(
+      '确认应用新端口规则吗？容器将被停止并按新规则重建（挂载卷数据保留，容器层数据丢失），运行中的容器自动拉起。',
+      '危险操作',
+      { confirmButtonText: '应用', cancelButtonText: '取消', type: 'error' }
+    ).then(async () => {
+      pfSaving.value = true
+      try {
+        const res = await setPortForwards({
+          endpointId: ctEndpoint.value.ID,
+          containerId: pfTarget.value.id,
+          rules
+        })
+        if (res.code === 0) {
+          ElMessage.success(res.msg || '端口规则已应用')
+          pfVisible.value = false
+          loadContainers()
+        }
+      } finally {
+        pfSaving.value = false
+      }
+    })
   }
 
   // ---------- 网络与卷 ----------

@@ -26,6 +26,8 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		cc.POST("", v1.ContainerApi.CreateContainer)
 		cc.GET("list", v1.ContainerApi.ListContainers)
 		cc.POST("action", v1.ContainerApi.ContainerAction)
+		cc.GET("portforwards", v1.ContainerApi.ListPortForwards)
+		cc.POST("portforwards", v1.ContainerApi.SetPortForwards)
 	}
 	Router.GET("container/event/list", v1.ContainerApi.GetEventList)
 	img := Router.Group("container/image")

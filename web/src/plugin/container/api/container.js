@@ -37,3 +37,8 @@ export const removeVolume = (params) => service({ url: '/container/volume', meth
 
 // 容器即时统计
 export const getContainerStats = (params) => service({ url: '/container/container/stats', method: 'get', params })
+
+// 端口转发规则列表/应用（应用=按新规则重建容器）
+export const listPortForwards = (params) => service({ url: '/container/container/portforwards', method: 'get', params })
+export const setPortForwards = (data) =>
+  service({ url: '/container/container/portforwards', method: 'post', data, timeout: 120000 })

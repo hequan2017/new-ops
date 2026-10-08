@@ -41,6 +41,8 @@ func Casbin(ctx context.Context) {
 		{"/container/volume/list", "GET"},
 		{"/container/volume", "DELETE"},
 		{"/container/container/stats", "GET"},
+		{"/container/container/portforwards", "GET"},
+		{"/container/container/portforwards", "POST"},
 		{"/container/container/logws", "GET"},
 		{"/container/container/execws", "GET"},
 		{"/container/compose", "POST"},
