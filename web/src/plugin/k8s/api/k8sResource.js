@@ -169,6 +169,21 @@ export const deleteHelmRepo = (id) => {
   return service({ url: '/k8s/helm/repo', method: 'delete', params: { id } })
 }
 
+// chart 元数据（values 表单模式数据源）
+export const getHelmChartMeta = (params) => {
+  return service({ url: '/k8s/helm/chart/meta', method: 'get', params })
+}
+export const inspectHelmChart = (file) => {
+  const form = new FormData()
+  form.append('chart', file)
+  return service({
+    url: '/k8s/helm/chart/inspect',
+    method: 'post',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
 // 命名空间授权（三级 RBAC）
 export const getNsVisibility = (params) => {
   return service({ url: '/k8s/cluster/ns-visibility', method: 'get', params })

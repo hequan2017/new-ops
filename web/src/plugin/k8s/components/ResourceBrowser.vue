@@ -282,7 +282,7 @@
         </el-form-item>
         <template v-if="helmInstallForm.mode === 'upload'">
           <el-form-item label="chart 包" required>
-            <input type="file" accept=".tgz" @change="(e) => (helmInstallForm.file = e.target.files[0])" />
+            <input type="file" accept=".tgz" @change="onHelmFileChange" />
           </el-form-item>
         </template>
         <template v-else>
@@ -298,8 +298,56 @@
             <el-input v-model="helmInstallForm.version" placeholder="留空=最新" />
           </el-form-item>
         </template>
-        <el-form-item label="values">
+        <el-form-item v-if="helmChartMeta" label="chart">
+          <span class="helm-meta-line">
+            {{ helmChartMeta.chartName }}-{{ helmChartMeta.chartVersion }}
+            <template v-if="helmChartMeta.appVersion">（app {{ helmChartMeta.appVersion }}）</template>
+          </span>
+        </el-form-item>
+        <el-form-item label="values 模式">
+          <el-radio-group v-model="helmInstallForm.valuesMode">
+            <el-radio value="yaml">YAML</el-radio>
+            <el-radio value="form" :disabled="!helmSchemaEntries.length">表单</el-radio>
+          </el-radio-group>
+          <el-button
+            v-if="helmInstallForm.valuesMode === 'form'"
+            link
+            type="primary"
+            icon="refresh"
+            style="margin-left: 8px"
+            @click="reloadHelmMeta"
+          >重新加载</el-button>
+        </el-form-item>
+        <el-form-item v-if="helmInstallForm.valuesMode === 'yaml'" label="values">
           <el-input v-model="helmInstallForm.values" type="textarea" :rows="6" placeholder="values YAML 覆盖（可选）" />
+        </el-form-item>
+        <el-form-item v-else label="values">
+          <div v-if="helmSchemaLoading" v-loading="true" class="helm-schema-loading" />
+          <template v-else-if="helmSchemaEntries.length">
+            <div class="helm-schema-box">
+              <div v-for="e in helmSchemaEntries" :key="e.path" class="helm-field">
+                <div class="helm-field-label">
+                  <span v-if="e.required" class="helm-req">*</span>{{ e.label }}
+                  <span class="helm-field-path">{{ e.path }}</span>
+                </div>
+                <el-select v-if="e.kind === 'select'" v-model="e.value" clearable style="width: 100%" placeholder="选择">
+                  <el-option v-for="o in e.enum" :key="String(o)" :label="String(o)" :value="o" />
+                </el-select>
+                <el-switch v-else-if="e.kind === 'switch'" v-model="e.value" />
+                <el-input-number v-else-if="e.kind === 'number'" v-model="e.value" style="width: 100%" />
+                <el-input
+                  v-else-if="e.kind === 'textarea'"
+                  v-model="e.value"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="JSON 数组/对象，或每行一项"
+                />
+                <el-input v-else v-model="e.value" clearable placeholder="（留空用默认值）" />
+                <div v-if="e.description" class="helm-field-desc">{{ e.description }}</div>
+              </div>
+            </div>
+          </template>
+          <div v-else class="helm-meta-line">该 chart 未提供 values.schema.json，无法表单化，请改用 YAML 模式</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -426,7 +474,7 @@
     getK8sPvcList, getK8sIngressList, getK8sEventList,
     getHelmList, getHelmHistory, installHelmRelease, uninstallHelmRelease, rollbackHelmRelease,
     installHelmFromRepo, getHelmReleaseDetail, getHelmRepoList, createHelmRepo, deleteHelmRepo,
-    getNsVisibility
+    getHelmChartMeta, inspectHelmChart, getNsVisibility
   } from '@/plugin/k8s/api/k8sResource'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { ref, watch } from 'vue'
@@ -461,10 +509,185 @@
   const helmInstallVisible = ref(false)
   const helmInstalling = ref(false)
   const emptyHelmInstallForm = () => ({
-    mode: 'upload', namespace: 'default', releaseName: '', values: '',
+    mode: 'upload', namespace: 'default', releaseName: '', values: '', valuesMode: 'yaml',
     file: null, repoId: null, chart: '', version: ''
   })
   const helmInstallForm = ref(emptyHelmInstallForm())
+
+  // values 表单模式（chart values.schema.json 驱动）
+  const helmChartMeta = ref(null)
+  const helmSchemaLoading = ref(false)
+  const helmSchemaEntries = ref([])
+
+  // schema 扁平化：嵌套对象展开为点路径字段（深度 ≤2），数组/深层对象回退 JSON 文本框
+  const flattenSchema = (schemaObj, defaults, prefix = '', depth = 0, out = []) => {
+    const props = schemaObj?.properties || {}
+    const required = schemaObj?.required || []
+    for (const key of Object.keys(props)) {
+      const p = props[key] || {}
+      const path = prefix ? `${prefix}.${key}` : key
+      if (p.type === 'object' && p.properties && depth < 2) {
+        flattenSchema(p, (defaults && typeof defaults === 'object' ? defaults[key] : undefined) || {}, path, depth + 1, out)
+        continue
+      }
+      const def = p.default !== undefined ? p.default : (defaults || {})[key]
+      let kind = 'input'
+      let value = ''
+      if (p.type === 'boolean') {
+        kind = 'switch'
+        value = def === true
+      } else if (p.type === 'integer' || p.type === 'number') {
+        kind = 'number'
+        value = typeof def === 'number' ? def : undefined
+      } else if (p.type === 'array') {
+        kind = 'textarea'
+        value = Array.isArray(def) ? JSON.stringify(def) : ''
+      } else if (p.type === 'object') {
+        kind = 'textarea'
+        value = def && typeof def === 'object' ? JSON.stringify(def) : ''
+      } else if (Array.isArray(p.enum) && p.enum.length) {
+        kind = 'select'
+        value = def !== undefined ? def : ''
+      } else {
+        value = def !== undefined && def !== null ? String(def) : ''
+      }
+      out.push({
+        path, label: p.title || key, kind, enum: Array.isArray(p.enum) ? p.enum : null,
+        required: required.includes(key), description: p.description || '', value
+      })
+    }
+    return out
+  }
+
+  const applyHelmMeta = (meta) => {
+    helmChartMeta.value = meta
+    let entries = []
+    if (meta?.schema) {
+      try {
+        entries = flattenSchema(JSON.parse(meta.schema), JSON.parse(meta.defaults || '{}'))
+      } catch (e) {
+        entries = []
+      }
+    }
+    helmSchemaEntries.value = entries
+    helmInstallForm.value.valuesMode = entries.length ? 'form' : 'yaml'
+  }
+
+  const loadHelmMetaRepo = async () => {
+    const f = helmInstallForm.value
+    if (f.mode !== 'repo' || !f.repoId || !f.chart) return
+    helmSchemaLoading.value = true
+    try {
+      const res = await getHelmChartMeta({ repoId: f.repoId, chart: f.chart, version: f.version || '' })
+      if (res.code === 0) applyHelmMeta(res.data)
+      else {
+        helmChartMeta.value = null
+        helmSchemaEntries.value = []
+        ElMessage.error(res.msg || 'chart 元数据获取失败')
+      }
+    } finally {
+      helmSchemaLoading.value = false
+    }
+  }
+
+  const reloadHelmMeta = () => {
+    if (helmInstallForm.value.mode === 'repo') loadHelmMetaRepo()
+    else if (helmInstallForm.value.file) loadHelmMetaUpload(helmInstallForm.value.file)
+  }
+
+  const loadHelmMetaUpload = async (file) => {
+    helmSchemaLoading.value = true
+    try {
+      const res = await inspectHelmChart(file)
+      if (res.code === 0) applyHelmMeta(res.data)
+      else {
+        helmChartMeta.value = null
+        helmSchemaEntries.value = []
+        ElMessage.error(res.msg || 'chart 解析失败')
+      }
+    } finally {
+      helmSchemaLoading.value = false
+    }
+  }
+
+  const onHelmFileChange = (e) => {
+    const file = e.target.files[0]
+    helmInstallForm.value.file = file
+    helmChartMeta.value = null
+    helmSchemaEntries.value = []
+    if (file) loadHelmMetaUpload(file)
+  }
+
+  watch(
+    () => [helmInstallForm.value.repoId, helmInstallForm.value.chart, helmInstallForm.value.version],
+    () => {
+      if (helmInstallForm.value.mode === 'repo') loadHelmMetaRepo()
+    }
+  )
+
+  // 表单值 → values YAML（字符串 JSON 引号转义，对象/数组叶节点走 JSON flow 风格，均为合法 YAML）
+  const yamlScalar = (v) => (typeof v === 'string' ? JSON.stringify(v) : String(v))
+  const toYAML = (obj) => {
+    const lines = []
+    const walk = (o, indent) => {
+      const pad = '  '.repeat(indent)
+      if (Array.isArray(o)) {
+        if (!o.length) {
+          lines[lines.length - 1] += ' []'
+          return
+        }
+        for (const item of o) {
+          if (item !== null && typeof item === 'object') lines.push(`${pad}- ${JSON.stringify(item)}`)
+          else lines.push(`${pad}- ${yamlScalar(item)}`)
+        }
+        return
+      }
+      const keys = Object.keys(o)
+      if (!keys.length) {
+        lines[lines.length - 1] += ' {}'
+        return
+      }
+      for (const k of keys) {
+        const v = o[k]
+        if (v !== null && typeof v === 'object') {
+          lines.push(`${pad}${k}:`)
+          walk(v, indent + 1)
+        } else {
+          lines.push(`${pad}${k}: ${yamlScalar(v)}`)
+        }
+      }
+    }
+    walk(obj, 0)
+    return lines.join('\n')
+  }
+
+  const setValuesPath = (obj, segs, val) => {
+    let cur = obj
+    for (let i = 0; i < segs.length - 1; i++) {
+      if (typeof cur[segs[i]] !== 'object' || cur[segs[i]] === null) cur[segs[i]] = {}
+      cur = cur[segs[i]]
+    }
+    cur[segs[segs.length - 1]] = val
+  }
+
+  const buildValuesFromEntries = () => {
+    const root = {}
+    for (const e of helmSchemaEntries.value) {
+      let v = e.value
+      if (e.kind === 'textarea') {
+        const t = String(v || '').trim()
+        if (!t) continue
+        try {
+          v = JSON.parse(t)
+        } catch (err) {
+          v = t.split('\n').map((s) => s.trim()).filter(Boolean)
+        }
+      }
+      if (v === '' || v === null || v === undefined) continue
+      setValuesPath(root, e.path.split('.'), v)
+    }
+    return Object.keys(root).length ? toYAML(root) : ''
+  }
   const helmHistoryVisible = ref(false)
   const helmHistoryLoading = ref(false)
   const helmHistory = ref([])
@@ -549,6 +772,9 @@
     if (!f.namespace || !f.releaseName) {
       ElMessage.warning('命名空间/release 名必填')
       return
+    }
+    if (f.valuesMode === 'form' && helmSchemaEntries.value.length) {
+      f.values = buildValuesFromEntries()
     }
     helmInstalling.value = true
     try {
@@ -944,5 +1170,41 @@
 }
 .diff-same {
   color: #94a3b8;
+}
+.helm-meta-line {
+  font-size: 12px;
+  color: #909399;
+}
+.helm-schema-loading {
+  width: 100%;
+  height: 60px;
+}
+.helm-schema-box {
+  width: 100%;
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.helm-field {
+  margin-bottom: 10px;
+}
+.helm-field-label {
+  font-size: 12px;
+  color: #606266;
+  margin-bottom: 2px;
+}
+.helm-req {
+  color: #f56c6c;
+  margin-right: 2px;
+}
+.helm-field-path {
+  color: #b0b3b8;
+  margin-left: 6px;
+  font-family: Consolas, Monaco, monospace;
+}
+.helm-field-desc {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
 }
 </style>

@@ -33,6 +33,8 @@ func Api(ctx context.Context) {
 		{Path: "/k8s/helm/repo", Description: "登记 chart 仓库", ApiGroup: "K8s管理", Method: "POST"},
 		{Path: "/k8s/helm/repo", Description: "删除 chart 仓库", ApiGroup: "K8s管理", Method: "DELETE"},
 		{Path: "/k8s/helm/repo/list", Description: "chart 仓库列表", ApiGroup: "K8s管理", Method: "GET"},
+		{Path: "/k8s/helm/chart/meta", Description: "chart 元数据（values 表单）", ApiGroup: "K8s管理", Method: "GET"},
+		{Path: "/k8s/helm/chart/inspect", Description: "上传 chart 解析（values 表单）", ApiGroup: "K8s管理", Method: "POST"},
 		{Path: "/k8s/grant", Description: "授予命名空间可见性", ApiGroup: "K8s管理", Method: "POST"},
 		{Path: "/k8s/grant", Description: "收回命名空间授权", ApiGroup: "K8s管理", Method: "DELETE"},
 		{Path: "/k8s/grant/list", Description: "命名空间授权清单", ApiGroup: "K8s管理", Method: "GET"},

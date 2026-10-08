@@ -47,6 +47,8 @@ func Casbin() {
 		{"/k8s/helm/list", "GET"},
 		{"/k8s/helm/history", "GET"},
 		{"/k8s/helm/repo/list", "GET"},
+		{"/k8s/helm/chart/meta", "GET"},
+		{"/k8s/helm/chart/inspect", "POST"},
 		{"/k8s/cluster/ns-visibility", "GET"},
 	}
 	apply := func(role string, rules []struct {

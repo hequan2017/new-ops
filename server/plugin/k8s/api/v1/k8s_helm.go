@@ -229,6 +229,59 @@ func (h *k8sHelm) GetHelmReleaseDetail(c *gin.Context) {
 	response.OkWithData(d, c)
 }
 
+// GetHelmChartMeta 仓库模式 chart 元数据（values 表单数据源）
+// @Tags K8sHelm
+// @Summary 读取 chart 元数据（values.schema.json + 默认值，values 表单模式数据源）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param repoId query int true "仓库ID"
+// @Param chart query string true "chart 名"
+// @Param version query string false "chart 版本（空=最新）"
+// @Success 200 {object} response.Response{data=service.HelmChartMeta} "获取成功"
+// @Router /k8s/helm/chart/meta [get]
+func (h *k8sHelm) GetHelmChartMeta(c *gin.Context) {
+	repoID, err := strconv.ParseUint(c.Query("repoId"), 10, 64)
+	if err != nil || repoID == 0 {
+		response.FailWithMessage("repoId 无效", c)
+		return
+	}
+	meta, err := k8sClusterService.GetHelmChartMetaFromRepo(uint(repoID), c.Query("chart"), c.Query("version"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithData(meta, c)
+}
+
+// InspectHelmChart 上传模式 chart 元数据
+// @Tags K8sHelm
+// @Summary 解析上传的 chart 包（values.schema.json + 默认值，不落集群）
+// @Security ApiKeyAuth
+// @Accept multipart/form-data
+// @Produce application/json
+// @Param chart formData file true "chart .tgz 包"
+// @Success 200 {object} response.Response{data=service.HelmChartMeta} "解析成功"
+// @Router /k8s/helm/chart/inspect [post]
+func (h *k8sHelm) InspectHelmChart(c *gin.Context) {
+	fh, err := c.FormFile("chart")
+	if err != nil {
+		response.FailWithMessage("chart 包必填（.tgz）", c)
+		return
+	}
+	f, err := fh.Open()
+	if err != nil {
+		response.FailWithMessage("chart 包读取失败: "+err.Error(), c)
+		return
+	}
+	defer f.Close()
+	meta, err := k8sClusterService.InspectHelmChartMeta(f)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithData(meta, c)
+}
+
 // helmRepoReq 仓库登记请求体
 type helmRepoReq struct {
 	Name   string `json:"name" binding:"required"`

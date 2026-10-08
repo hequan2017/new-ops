@@ -3,6 +3,7 @@ package service
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -248,6 +249,24 @@ func (s *K8sClusterService) GetHelmRepoList() ([]*model.K8sHelmRepo, error) {
 	return list, err
 }
 
+// locateRepoChart 经 downloader 拉取仓库 chart 到本地缓存后加载（RepoURL 直连，无需预登记 repositories.yaml）
+func locateRepoChart(repo *model.K8sHelmRepo, chartRef, version string) (*chart.Chart, error) {
+	cpo := &action.ChartPathOptions{RepoURL: repo.URL, Version: strings.TrimSpace(version)}
+	settings := cli.New()
+	if settings.RepositoryCache == "" {
+		settings.RepositoryCache = filepath.Join(os.TempDir(), "helm-cache")
+	}
+	chartPath, err := cpo.LocateChart(chartRef, settings)
+	if err != nil {
+		return nil, fmt.Errorf("chart 定位失败（仓库 %s）: %w", repo.Name, err)
+	}
+	ch, err := loader.Load(chartPath)
+	if err != nil {
+		return nil, fmt.Errorf("chart 加载失败: %w", err)
+	}
+	return ch, nil
+}
+
 // InstallHelmFromRepo 仓库模式安装/升级（repoId + chart 名 + 版本，免 tgz 上传）
 func (s *K8sClusterService) InstallHelmFromRepo(clusterID uint, repoID uint, namespace, releaseName, chartRef, version, valuesYAML string) (*HelmReleaseInfo, error) {
 	if namespace == "" || releaseName == "" || chartRef == "" {
@@ -265,21 +284,70 @@ func (s *K8sClusterService) InstallHelmFromRepo(clusterID uint, repoID uint, nam
 	if err != nil {
 		return nil, err
 	}
-	// LocateChart 经 downloader 拉取到本地缓存后加载（RepoURL 直连，无需预登记 repositories.yaml）
-	cpo := &action.ChartPathOptions{RepoURL: repo.URL, Version: strings.TrimSpace(version)}
-	settings := cli.New()
-	if settings.RepositoryCache == "" {
-		settings.RepositoryCache = filepath.Join(os.TempDir(), "helm-cache")
-	}
-	chartPath, err := cpo.LocateChart(chartRef, settings)
+	ch, err := locateRepoChart(&repo, chartRef, version)
 	if err != nil {
-		return nil, fmt.Errorf("chart 定位失败（仓库 %s）: %w", repo.Name, err)
-	}
-	ch, err := loader.Load(chartPath)
-	if err != nil {
-		return nil, fmt.Errorf("chart 加载失败: %w", err)
+		return nil, err
 	}
 	return installOrUpgrade(actionCfg, namespace, releaseName, ch, vals)
+}
+
+// HelmChartMeta chart 元数据（values 表单模式：schema JSON + 默认值 JSON，均原文回传由前端渲染表单）
+type HelmChartMeta struct {
+	ChartName    string `json:"chartName"`
+	ChartVersion string `json:"chartVersion"`
+	AppVersion   string `json:"appVersion"`
+	Schema       string `json:"schema"`   // values.schema.json 原文（chart 未提供时为空）
+	Defaults     string `json:"defaults"` // 默认 values 的 JSON 序列化（恒为合法 JSON）
+}
+
+func chartMetaOf(ch *chart.Chart) *HelmChartMeta {
+	m := &HelmChartMeta{Defaults: "{}"}
+	if ch.Metadata != nil {
+		m.ChartName = ch.Name()
+		m.ChartVersion = ch.Metadata.Version
+		m.AppVersion = ch.Metadata.AppVersion
+	}
+	if len(ch.Schema) > 0 {
+		m.Schema = string(ch.Schema)
+	}
+	if ch.Values != nil {
+		if b, err := json.Marshal(ch.Values); err == nil {
+			m.Defaults = string(b)
+		}
+	}
+	return m
+}
+
+// GetHelmChartMetaFromRepo 仓库模式读取 chart 元数据（values 表单数据源）
+func (s *K8sClusterService) GetHelmChartMetaFromRepo(repoID uint, chartRef, version string) (*HelmChartMeta, error) {
+	if chartRef == "" {
+		return nil, newK8sErr(ErrCodeNamespaceReq, "chart 名必填")
+	}
+	var repo model.K8sHelmRepo
+	if err := global.GVA_DB.First(&repo, repoID).Error; err != nil {
+		return nil, newK8sErr(ErrCodeClusterNotFound, "仓库不存在")
+	}
+	ch, err := locateRepoChart(&repo, chartRef, version)
+	if err != nil {
+		return nil, err
+	}
+	return chartMetaOf(ch), nil
+}
+
+// InspectHelmChartMeta 上传模式读取 chart 元数据（安装前预览 schema，不落集群）
+func (s *K8sClusterService) InspectHelmChartMeta(tgz io.Reader) (*HelmChartMeta, error) {
+	data, err := io.ReadAll(tgz)
+	if err != nil {
+		return nil, fmt.Errorf("chart 包读取失败: %w", err)
+	}
+	if len(data) == 0 {
+		return nil, newK8sErr(ErrCodeYAMLEmpty, "chart 包不能为空")
+	}
+	ch, err := loader.LoadArchive(bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("chart 包解析失败: %w", err)
+	}
+	return chartMetaOf(ch), nil
 }
 
 // HelmReleaseDetail release 详情（values + 渲染 manifest——manifest 含敏感面，仅 888）

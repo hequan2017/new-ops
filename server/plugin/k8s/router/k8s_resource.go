@@ -84,6 +84,9 @@ func (r *K8sHelmRouter) InitK8sHelmRouter(Router *gin.RouterGroup) {
 		helm.POST("repo", v1.Api.K8sHelm.CreateHelmRepo)
 		helm.GET("repo/list", v1.Api.K8sHelm.GetHelmRepoList)
 		helm.GET("detail", v1.Api.K8sHelm.GetHelmReleaseDetail)
+		// chart 元数据（values 表单模式数据源，读级）
+		helm.GET("chart/meta", v1.Api.K8sHelm.GetHelmChartMeta)
+		helm.POST("chart/inspect", v1.Api.K8sHelm.InspectHelmChart)
 	}
 }
 
