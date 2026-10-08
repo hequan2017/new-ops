@@ -85,6 +85,7 @@
   "/src/plugin/container/components/ContainerShell.vue": "ContainerShell",
   "/src/plugin/container/view/compose/index.vue": "Index",
   "/src/plugin/container/view/endpoint/index.vue": "containerEndpoint",
+  "/src/plugin/container/view/template/index.vue": "containerAppTemplate",
   "/src/plugin/dbops/view/instance/index.vue": "dbopsInstance",
   "/src/plugin/dbops/view/order/index.vue": "dbopsOrder",
   "/src/plugin/email/view/index.vue": "Email",

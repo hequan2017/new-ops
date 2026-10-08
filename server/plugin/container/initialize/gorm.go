@@ -16,6 +16,8 @@ func Gorm(ctx context.Context) {
 		new(model.DockerEventLog),
 		new(model.DockerComposeProject),
 		new(model.DockerStatsSample),
+		new(model.DockerAppTemplate),
+		new(model.DockerAppInstance),
 	)
 	if err != nil {
 		global.GVA_LOG.Error("container 注册表失败: " + err.Error())

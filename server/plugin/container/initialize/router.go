@@ -57,6 +57,11 @@ func Api(ctx context.Context) {
 		{Path: "/container/compose/detail", Description: "Compose 项目详情", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/compose/ps", Description: "Compose ps", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/compose/action", Description: "Compose up/down/restart", ApiGroup: "容器管理", Method: "POST"},
+		{Path: "/container/appTemplate", Description: "保存应用模板", ApiGroup: "容器管理", Method: "POST"},
+		{Path: "/container/appTemplate", Description: "删除应用模板", ApiGroup: "容器管理", Method: "DELETE"},
+		{Path: "/container/appTemplate/list", Description: "应用模板列表", ApiGroup: "容器管理", Method: "GET"},
+		{Path: "/container/appTemplate/deploy", Description: "模板一键部署", ApiGroup: "容器管理", Method: "POST"},
+		{Path: "/container/appTemplate/instances", Description: "模板部署实例列表", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/container/portforwards", Description: "端口转发规则列表", ApiGroup: "容器管理", Method: "GET"},
 		{Path: "/container/container/portforwards", Description: "应用端口转发规则（重建容器）", ApiGroup: "容器管理", Method: "POST"},
 	}
@@ -89,6 +94,14 @@ func Menu(ctx context.Context) {
 			Component: "plugin/container/view/compose/index.vue",
 			Sort:      2,
 			Meta:      sysModel.Meta{Title: "Compose 编排", Icon: "tickets"},
+		},
+		{
+			Path:      "containerAppTemplate",
+			Name:      "containerAppTemplate",
+			Hidden:    false,
+			Component: "plugin/container/view/template/index.vue",
+			Sort:      3,
+			Meta:      sysModel.Meta{Title: "应用模板", Icon: "files"},
 		},
 	}
 	utils.RegisterMenus(entities...)

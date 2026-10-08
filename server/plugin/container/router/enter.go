@@ -64,6 +64,15 @@ func (rg *RouterGroup) Init(Router, Public *gin.RouterGroup) {
 		cp.GET("ps", v1.ContainerApi.ComposePS)
 		cp.POST("action", v1.ContainerApi.ComposeAction)
 	}
+	// 应用模板一键部署（M8 C3）
+	at := Router.Group("container/appTemplate")
+	{
+		at.POST("", v1.ContainerApi.SaveAppTemplate)
+		at.DELETE("", v1.ContainerApi.DeleteAppTemplate)
+		at.GET("list", v1.ContainerApi.GetAppTemplates)
+		at.POST("deploy", v1.ContainerApi.DeployFromTemplate)
+		at.GET("instances", v1.ContainerApi.GetAppInstances)
+	}
 	Public.GET("container/container/logws", v1.ContainerApi.LogsWS)
 	Public.GET("container/container/execws", v1.ContainerApi.ExecWS)
 }
