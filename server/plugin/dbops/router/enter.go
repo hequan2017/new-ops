@@ -27,5 +27,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		order.POST("audit", v1.DbopsApi.AuditOrder)
 		order.POST("cancel", v1.DbopsApi.CancelOrder)
 		order.POST("list", v1.DbopsApi.ListOrders)
+		order.POST("execute", v1.DbopsApi.ExecuteOrder)
+	}
+	inc := Router.Group("dbops/inception")
+	{
+		inc.GET("", v1.DbopsApi.GetInceptionConfig)
+		inc.POST("", v1.DbopsApi.SaveInceptionConfig)
+		inc.POST("test", v1.DbopsApi.TestInception)
 	}
 }

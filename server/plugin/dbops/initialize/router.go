@@ -22,6 +22,7 @@ func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.DbopsInstance),
 		new(model.DbopsOrder),
+		new(model.DbopsInceptionConfig),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "dbops 注册表失败!")
@@ -48,6 +49,10 @@ func Api(ctx context.Context) {
 		{Path: "/dbops/order/audit", Description: "SQL 审核", ApiGroup: "数据库工单", Method: "POST"},
 		{Path: "/dbops/order/cancel", Description: "取消工单", ApiGroup: "数据库工单", Method: "POST"},
 		{Path: "/dbops/order/list", Description: "工单列表", ApiGroup: "数据库工单", Method: "POST"},
+		{Path: "/dbops/order/execute", Description: "执行 SQL 工单", ApiGroup: "数据库工单", Method: "POST"},
+		{Path: "/dbops/inception", Description: "读审核引擎配置", ApiGroup: "数据库工单", Method: "GET"},
+		{Path: "/dbops/inception", Description: "保存审核引擎配置", ApiGroup: "数据库工单", Method: "POST"},
+		{Path: "/dbops/inception/test", Description: "审核引擎连通测试", ApiGroup: "数据库工单", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -99,9 +104,13 @@ func Casbin(ctx context.Context) {
 		{"/dbops/order/audit", "POST"},
 		{"/dbops/order/cancel", "POST"},
 		{"/dbops/order/list", "POST"},
+		{"/dbops/order/execute", "POST"},
+		{"/dbops/inception", "GET"},
+		{"/dbops/inception", "POST"},
+		{"/dbops/inception/test", "POST"},
 	} {
 		roles := []string{"888"}
-		if p.Path == "/dbops/instance/list" || p.Path == "/dbops/order/list" {
+		if p.Path == "/dbops/instance/list" || p.Path == "/dbops/order/list" || p.Path == "/dbops/inception" {
 			roles = append(roles, "9528")
 		}
 		for _, role := range roles {

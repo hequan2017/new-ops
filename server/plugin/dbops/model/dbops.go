@@ -47,7 +47,7 @@ type DbopsOrder struct {
 	InstanceID   uint       `json:"instanceId" gorm:"comment:实例ID;index"`
 	InstanceNm   string     `json:"instanceName" gorm:"comment:实例名快照"`
 	Title        string     `json:"title" gorm:"comment:工单标题"`
-	SqlText      string     `json:"sqlText" gorm:"type:longtext;comment:SQL文本"`
+	AuditPayload string     `json:"sqlText" gorm:"column:sql_text;type:longtext;comment:SQL文本(送审载荷)"`
 	Status       string     `json:"status" gorm:"comment:状态;default:待审核;index"`
 	AuditResult  string     `json:"auditResult" gorm:"type:text;comment:审核结果JSON"`
 	ExecResult   string     `json:"execResult" gorm:"type:text;comment:执行结果JSON"`

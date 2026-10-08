@@ -187,24 +187,13 @@ func (s *DbopsService) CreateOrder(instID uint, title, sqlText, creator string, 
 	}
 	order := &model.DbopsOrder{
 		InstanceID: instID, InstanceNm: inst.Name,
-		Title: title, SqlText: sqlText,
+		Title: title, AuditPayload: sqlText,
 		Status: model.OrderPending, Creator: creator, UserID: userID,
 	}
 	return order, global.GVA_DB.Create(order).Error
 }
 
-// AuditOrder 审核（goInception 引擎；未接入时明确报未配置，工单状态不变）
-func (s *DbopsService) AuditOrder(orderID uint, operator string) (*model.DbopsOrder, error) {
-	var order model.DbopsOrder
-	if err := global.GVA_DB.First(&order, orderID).Error; err != nil {
-		return nil, newDbErr(ErrCodeOrderNotFound, "工单不存在")
-	}
-	if order.Status != model.OrderPending {
-		return nil, newDbErr(ErrCodeOrderInvalid, "工单不在待审核状态")
-	}
-	// goInception 接入点：环境就绪后在此调用审核引擎，结果写 audit_result 并推进状态
-	return nil, newDbErr(ErrCodeAuditNotConfigured, "SQL 审核引擎（goInception）未配置，无法审核")
-}
+// AuditOrder 已迁移至 inception.go（goInception 接入，M6 收官）
 
 // CancelOrder 取消工单（待审核可取消）
 func (s *DbopsService) CancelOrder(orderID uint, operator string) error {

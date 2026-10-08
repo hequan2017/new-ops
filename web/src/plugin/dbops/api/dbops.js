@@ -11,4 +11,10 @@ export const testInstance = (params) => service({ url: '/dbops/instance/test', m
 export const createOrder = (data) => service({ url: '/dbops/order', method: 'post', data })
 export const auditOrder = (params) => service({ url: '/dbops/order/audit', method: 'post', params })
 export const cancelOrder = (params) => service({ url: '/dbops/order/cancel', method: 'post', params })
+export const executeOrder = (params) => service({ url: '/dbops/order/execute', method: 'post', params })
 export const getOrderList = (data) => service({ url: '/dbops/order/list', method: 'post', data })
+
+// goInception 审核引擎配置
+export const getInceptionConfig = () => service({ url: '/dbops/inception', method: 'get' })
+export const saveInceptionConfig = (data) => service({ url: '/dbops/inception', method: 'post', data })
+export const testInception = () => service({ url: '/dbops/inception/test', method: 'post' })
