@@ -64,24 +64,32 @@ func (s *AssetHostService) DeleteAssetHost(id uint, operator string) error {
 	})
 }
 
-// DeleteAssetHostByIds 批量删除主机资产
+// DeleteAssetHostByIds 批量删除主机资产（一次载入 + 批量清关联/软删/记历史，消除逐台 N+1）
 func (s *AssetHostService) DeleteAssetHostByIds(ids []uint, operator string) error {
+	if len(ids) == 0 {
+		return nil
+	}
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
-		for _, id := range ids {
-			var host model.AssetHost
-			if err := tx.First(&host, id).Error; err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					continue
-				}
-				return err
-			}
-			if err := tx.Model(&host).Association("ProductLines").Clear(); err != nil {
-				return err
-			}
-			if err := tx.Delete(&host).Error; err != nil {
-				return err
-			}
-			recordHostHistory(tx, host.ID, model.HostHistoryDelete, host, operator)
+		var hosts []model.AssetHost
+		// 软删除/不存在的主机自然排除（与逐台 First+跳过语义一致）
+		if err := tx.Find(&hosts, ids).Error; err != nil {
+			return err
+		}
+		if len(hosts) == 0 {
+			return nil
+		}
+		foundIDs := make([]uint, 0, len(hosts))
+		for _, h := range hosts {
+			foundIDs = append(foundIDs, h.ID)
+		}
+		if err := tx.Exec("DELETE FROM asset_host_product_lines WHERE asset_host_id IN ?", foundIDs).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&model.AssetHost{}, foundIDs).Error; err != nil {
+			return err
+		}
+		for _, h := range hosts {
+			recordHostHistory(tx, h.ID, model.HostHistoryDelete, h, operator)
 		}
 		return nil
 	})

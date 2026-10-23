@@ -107,18 +107,56 @@ type AssetGroupWithRelations struct {
 	UserNum  int64  `json:"userNum"`
 }
 
-// GetAssetGroupList 资产组全量列表（含关联 ID 与计数）
+// groupMappingRows 关联行（扫描用）
+type groupMappingRow struct {
+	GroupID uint
+	HostID  uint
+	UserID  uint
+}
+
+// groupHostIDsByGroup 把组-主机行按组聚合（纯逻辑：优化前为每组一次 Pluck 的 N+1）
+func groupHostIDsByGroup(rows []groupMappingRow) map[uint][]uint {
+	out := make(map[uint][]uint)
+	for _, r := range rows {
+		out[r.GroupID] = append(out[r.GroupID], r.HostID)
+	}
+	return out
+}
+
+// groupUserIDsByGroup 把组-用户行按组聚合（纯逻辑）
+func groupUserIDsByGroup(rows []groupMappingRow) map[uint][]uint {
+	out := make(map[uint][]uint)
+	for _, r := range rows {
+		out[r.GroupID] = append(out[r.GroupID], r.UserID)
+	}
+	return out
+}
+
+// GetAssetGroupList 资产组全量列表（含关联 ID 与计数；两次批量查询消除 N+1）
 func (s *AssetGroupService) GetAssetGroupList() (list []*AssetGroupWithRelations, err error) {
 	var groups []model.AssetGroup
 	if err = global.GVA_DB.Order("id DESC").Find(&groups).Error; err != nil {
 		return nil, err
 	}
+	var hostRows, userRows []groupMappingRow
+	if err = global.GVA_DB.Model(&model.AssetGroupHost{}).Select("group_id, host_id").Find(&hostRows).Error; err != nil {
+		return nil, err
+	}
+	if err = global.GVA_DB.Model(&model.AssetGroupUser{}).Select("group_id, user_id").Find(&userRows).Error; err != nil {
+		return nil, err
+	}
+	hostIndex := groupHostIDsByGroup(hostRows)
+	userIndex := groupUserIDsByGroup(userRows)
 	for i := range groups {
 		item := &AssetGroupWithRelations{AssetGroup: groups[i]}
-		global.GVA_DB.Model(&model.AssetGroupHost{}).Where("group_id = ?", groups[i].ID).
-			Pluck("host_id", &item.HostIDs)
-		global.GVA_DB.Model(&model.AssetGroupUser{}).Where("group_id = ?", groups[i].ID).
-			Pluck("user_id", &item.UserIDs)
+		item.HostIDs = hostIndex[groups[i].ID]
+		item.UserIDs = userIndex[groups[i].ID]
+		if item.HostIDs == nil {
+			item.HostIDs = []uint{}
+		}
+		if item.UserIDs == nil {
+			item.UserIDs = []uint{}
+		}
 		item.HostNum = int64(len(item.HostIDs))
 		item.UserNum = int64(len(item.UserIDs))
 		list = append(list, item)
