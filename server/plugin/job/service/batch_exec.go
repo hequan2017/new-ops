@@ -109,11 +109,19 @@ func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, i
 	}
 	req.ExecBackend = backend
 
-	// 拉取主机快照（软删除/不存在的主机直接报参数错）
+	// 拉取主机快照（批量一次查询；软删除/不存在的主机直接报参数错）
+	var found []assetModel.AssetHost
+	if err := global.GVA_DB.Find(&found, hostIDs).Error; err != nil {
+		return nil, err
+	}
+	snapshotByID := make(map[uint]*assetModel.AssetHost, len(found))
+	for i := range found {
+		snapshotByID[found[i].ID] = &found[i]
+	}
 	hosts := make([]*assetModel.AssetHost, 0, len(hostIDs))
 	for _, id := range hostIDs {
-		h, err := assetSvc.Service.AssetHostService.GetAssetHost(id)
-		if err != nil {
+		h, ok := snapshotByID[id]
+		if !ok {
 			return nil, newJobErr(ErrCodeParamInvalid, fmt.Sprintf("主机 id=%d 不存在", id))
 		}
 		hosts = append(hosts, h)
@@ -150,10 +158,25 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 	// 变量注入：显式变量组已在批次快照统一渲染；未选时按主机→资产组→变量组自动逐主机渲染
 	autoInject := record.VariableGroupID == nil || *record.VariableGroupID == 0
 	var vgIndex map[uint]model.JobVariableGroup
+	groupsByHost := map[uint][]uint{}
 	if autoInject {
 		var vgs []model.JobVariableGroup
 		if err := global.GVA_DB.Find(&vgs).Error; err == nil {
 			vgIndex = variableGroupsByAssetGroupID(vgs)
+		}
+		// 批量预载主机→资产组映射（一次查询，替代逐主机 Pluck 的 N+1）
+		hostIDList := make([]uint, 0, len(hosts))
+		for _, h := range hosts {
+			hostIDList = append(hostIDList, h.ID)
+		}
+		var rows []struct {
+			HostID  uint
+			GroupID uint
+		}
+		global.GVA_DB.Table("asset_group_hosts").Where("host_id IN ?", hostIDList).
+			Order("group_id ASC").Select("host_id, group_id").Find(&rows)
+		for _, r := range rows {
+			groupsByHost[r.HostID] = append(groupsByHost[r.HostID], r.GroupID)
 		}
 	}
 
@@ -164,7 +187,7 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 		hostByID[h.ID] = h
 		cmd := record.Command
 		if autoInject {
-			if rendered, rerr := s.renderForHostByAssetGroup(record.Command, vgIndex, h.ID); rerr == nil {
+			if rendered, rerr := renderCommandForHost(record.Command, h.ID, groupsByHost, vgIndex); rerr == nil {
 				cmd = rendered
 			}
 		}
@@ -217,14 +240,9 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 	}
 }
 
-// renderForHostByAssetGroup 按主机所在资产组解析变量组并渲染命令（取首个所在组；无组原样）
-func (s *jobService) renderForHostByAssetGroup(base string, vgIndex map[uint]model.JobVariableGroup, hostID uint) (string, error) {
-	groupIDs := []uint{}
-	if err := global.GVA_DB.Table("asset_group_hosts").Where("host_id = ?", hostID).
-		Pluck("group_id", &groupIDs).Error; err != nil {
-		return base, err
-	}
-	for _, gid := range groupIDs {
+// renderCommandForHost 按主机所在资产组顺序取首个命中变量组渲染命令（纯逻辑；无组/未命中原样返回）
+func renderCommandForHost(base string, hostID uint, groupsByHost map[uint][]uint, vgIndex map[uint]model.JobVariableGroup) (string, error) {
+	for _, gid := range groupsByHost[hostID] {
 		if vg, ok := vgIndex[gid]; ok {
 			return RenderTemplate(base, vg.Variables)
 		}
