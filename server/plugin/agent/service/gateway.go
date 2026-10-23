@@ -64,7 +64,7 @@ var registry = struct {
 // ---- 消息信封（agent ⇄ server JSON 帧） ----
 
 type agentFrame struct {
-	Type   string       `json:"type"` // register / heartbeat / metric / register_ok / register_fail / task / task_result / file_push / file_chunk / file_end
+	Type   string       `json:"type"` // register / heartbeat / metric / register_ok / register_fail / task / task_result / file_push / file_chunk / file_end / docker_req / docker_resp
 	Token  string       `json:"token,omitempty"`
 	TS     int64        `json:"ts,omitempty"`
 	Msg    string       `json:"msg,omitempty"`
@@ -82,6 +82,14 @@ type agentFrame struct {
 	FileSHA256 string `json:"fileSha256,omitempty"`
 	FileMode   string `json:"fileMode,omitempty"`
 	FileData   string `json:"fileData,omitempty"` // base64 分块
+	// A4 Docker HTTP 代理（docker_req/docker_resp）
+	ReqMethod  string              `json:"reqMethod,omitempty"`
+	ReqPath    string              `json:"reqPath,omitempty"` // 含 query
+	ReqHeader  map[string][]string `json:"reqHeader,omitempty"`
+	ReqBody    string              `json:"reqBody,omitempty"`    // base64
+	RespStatus int                 `json:"respStatus,omitempty"` // 0=代理层错误（见 Msg）
+	RespHeader map[string][]string `json:"respHeader,omitempty"`
+	RespBody   string              `json:"respBody,omitempty"` // base64
 }
 
 type agentMeta struct {
@@ -281,6 +289,8 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 			global.GVA_DB.Model(&inst).Update("last_heartbeat", &now)
 			s.storeMetrics(inst.AssetID, f.Points)
 		case "task_result":
+			resolveTaskResult(f.TaskNo, f)
+		case "docker_resp":
 			resolveTaskResult(f.TaskNo, f)
 		default:
 			// 未知类型忽略（向前兼容）

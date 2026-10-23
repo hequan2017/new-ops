@@ -41,6 +41,14 @@ type frame struct {
 	FileSHA256 string `json:"fileSha256,omitempty"`
 	FileMode   string `json:"fileMode,omitempty"`
 	FileData   string `json:"fileData,omitempty"` // base64 分块
+	// A4 Docker HTTP 代理（docker_req/docker_resp）
+	ReqMethod  string              `json:"reqMethod,omitempty"`
+	ReqPath    string              `json:"reqPath,omitempty"` // 含 query
+	ReqHeader  map[string][]string `json:"reqHeader,omitempty"`
+	ReqBody    string              `json:"reqBody,omitempty"`    // base64
+	RespStatus int                 `json:"respStatus,omitempty"` // 0=代理层错误（见 Msg）
+	RespHeader map[string][]string `json:"respHeader,omitempty"`
+	RespBody   string              `json:"respBody,omitempty"` // base64
 }
 
 type agentMeta struct {
@@ -77,8 +85,10 @@ func main() {
 	backoff := time.Second
 	executor := newTaskExecutor(4, 4096) // 并发 4；任务号去重表上限 4096（超限整体清空防泄漏）
 	files := newFileReceiver(2, 512)     // 文件接收并发 2
+	dockerAddr := resolveDockerAddr(dockerSockCandidates)
+	log.Printf("docker daemon 代理地址: %s", dockerAddr)
 	for {
-		err := runSession(wsURL, *flagToken, meta, *flagInterval, executor, files)
+		err := runSession(wsURL, *flagToken, meta, *flagInterval, executor, files, dockerAddr)
 		if rr, ok := err.(*registerRejectedError); ok {
 			// 令牌被拒不会自愈：打印后退出（等人工换令牌再启动）
 			log.Fatalf("注册被拒（%s），退出——请在资产页重新签发令牌", rr.reason)
@@ -109,7 +119,7 @@ func buildWSURL(server string) string {
 }
 
 // runSession 一次完整会话：拨号 → 注册 → 心跳/指标循环；连接断开返回 error
-func runSession(wsURL, token string, meta agentMeta, interval time.Duration, executor *taskExecutor, files *fileReceiver) error {
+func runSession(wsURL, token string, meta agentMeta, interval time.Duration, executor *taskExecutor, files *fileReceiver, dockerAddr string) error {
 	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
 	conn, _, err := dialer.Dial(wsURL, nil)
 	if err != nil {
@@ -155,6 +165,8 @@ func runSession(wsURL, token string, meta agentMeta, interval time.Duration, exe
 				executor.dispatch(f, send)
 			case "file_push", "file_chunk", "file_end":
 				files.handle(f, send)
+			case "docker_req":
+				go handleDockerReq(f, send, dockerAddr)
 			}
 		}
 	}()
