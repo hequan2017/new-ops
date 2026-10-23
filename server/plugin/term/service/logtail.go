@@ -83,10 +83,11 @@ func (t *termService) StartLogTail(ws *websocket.Conn, p LogTailParams) error {
 		for {
 			n, readErr := stdout.Read(buf)
 			if n > 0 {
+				// 写超时须在写入前生效（对齐 webssh 修复）
+				_ = ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
 				if werr := ws.WriteMessage(websocket.BinaryMessage, buf[:n]); werr != nil {
 					return
 				}
-				_ = ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			}
 			if readErr != nil {
 				if readErr != io.EOF {

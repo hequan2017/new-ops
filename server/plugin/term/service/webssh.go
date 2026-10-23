@@ -103,6 +103,22 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 	}
 	defer closeAll()
 
+	// WS 单写者保护：输出协程与读循环（pong 应答）并发写被 gorilla 禁止
+	// （与容器 exec/PodShell 的写互斥同类修复）
+	var wsWriteMu sync.Mutex
+	wsWrite := func(msgType int, data []byte) error {
+		wsWriteMu.Lock()
+		defer wsWriteMu.Unlock()
+		_ = ws.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		return ws.WriteMessage(msgType, data)
+	}
+	wsWriteControl := func(code int, text string) error {
+		wsWriteMu.Lock()
+		defer wsWriteMu.Unlock()
+		_ = ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		return ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, text), time.Now().Add(5*time.Second))
+	}
+
 	// 会话审计：元数据落库 + 流镜像 + 命令抽取（审计不可用不阻断终端）
 	auditSvc := new(TermAuditService)
 	sess := &model.TermSession{
@@ -139,19 +155,17 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 		for {
 			n, readErr := stdout.Read(buf)
 			if n > 0 {
-				deadline := time.Now().Add(5 * time.Second)
-				if werr := ws.WriteMessage(websocket.BinaryMessage, buf[:n]); werr != nil {
+				// 写超时须在写入前生效（原顺序写在之后，本次写入无超时、客户端卡死会永久阻塞输出协程）
+				if werr := wsWrite(websocket.BinaryMessage, buf[:n]); werr != nil {
 					break
 				}
-				_ = ws.SetWriteDeadline(deadline)
 				if sessionID > 0 {
 					recordStream(model.StreamDirDown, string(buf[:n]))
 				}
 			}
 			if readErr != nil {
 				if readErr != io.EOF {
-					_ = ws.WriteControl(websocket.CloseMessage,
-						websocket.FormatCloseMessage(4000, "SSH 连接已断开"), time.Now().Add(5*time.Second))
+					_ = wsWriteControl(4000, "SSH 连接已断开")
 				}
 				break
 			}
@@ -177,7 +191,7 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 				case "resize":
 					_ = session.WindowChange(ctl.Rows, ctl.Cols)
 				case "ping":
-					_ = ws.WriteMessage(websocket.TextMessage, []byte(`{"type":"pong"}`))
+					_ = wsWrite(websocket.TextMessage, []byte(`{"type":"pong"}`))
 				case "close":
 					return nil
 				}
