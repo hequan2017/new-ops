@@ -18,11 +18,17 @@ const (
 
 // 主机执行结果状态
 const (
-	ResultSuccess = "成功"
-	ResultFailed  = "失败"
-	ResultTimeout = "超时"
+	ResultSuccess  = "成功"
+	ResultFailed   = "失败"
+	ResultTimeout  = "超时"
 	ResultCanceled = "取消"
-	ResultSkipped = "跳过"
+	ResultSkipped  = "跳过"
+)
+
+// 执行后端（M9 A2 双通道：SSH 直连 / Agent 通道）
+const (
+	ExecBackendSSH   = "ssh"
+	ExecBackendAgent = "agent"
 )
 
 // JobExecRecord 批量执行批次
@@ -33,6 +39,7 @@ type JobExecRecord struct {
 	TimeoutSec  int        `json:"timeoutSec" gorm:"comment:单机超时秒"`
 	CredentialID *uint     `json:"credentialId" gorm:"comment:统一凭据ID(空则用主机绑定凭据)"`
 	VariableGroupID *uint  `json:"variableGroupId" gorm:"comment:显式变量组ID(空则按主机资产组自动注入)"`
+	ExecBackend  string    `json:"execBackend" gorm:"size:16;default:ssh;comment:执行后端(ssh/agent)"`
 	Total       int        `json:"total" gorm:"comment:主机总数"`
 	Success     int        `json:"success" gorm:"comment:成功数"`
 	Failed      int        `json:"failed" gorm:"comment:失败数"`
@@ -52,6 +59,7 @@ type JobExecResult struct {
 	Command   string `json:"command" gorm:"type:text;comment:该主机实际执行的命令(变量渲染后)"`
 	IP        string `json:"ip" gorm:"comment:IP快照"`
 	Status    string `json:"status" gorm:"comment:结果状态"`
+	Backend   string `json:"backend" gorm:"size:16;comment:执行后端(ssh/agent)"`
 	Output    string `json:"output" gorm:"type:text;comment:输出"`
 	Error     string `json:"error" gorm:"type:text;comment:错误信息"`
 	ElapsedMs int64  `json:"elapsedMs" gorm:"comment:耗时毫秒"`

@@ -14,6 +14,7 @@ import (
 	"github.com/hequan2017/new-ops/server/model/common/request"
 	assetModel "github.com/hequan2017/new-ops/server/plugin/asset/model"
 	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
+	agentSvc "github.com/hequan2017/new-ops/server/plugin/agent/service"
 	"github.com/hequan2017/new-ops/server/plugin/job/model"
 	jobRequest "github.com/hequan2017/new-ops/server/plugin/job/model/request"
 )
@@ -101,6 +102,12 @@ func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, i
 	if req.TimeoutSec > maxTimeoutSec {
 		req.TimeoutSec = maxTimeoutSec
 	}
+	// 执行后端归一（M9 A2：ssh 直连 / agent 通道）
+	backend, berr := normalizeExecBackend(req.ExecBackend)
+	if berr != nil {
+		return nil, berr
+	}
+	req.ExecBackend = backend
 
 	// 拉取主机快照（软删除/不存在的主机直接报参数错）
 	hosts := make([]*assetModel.AssetHost, 0, len(hostIDs))
@@ -117,6 +124,7 @@ func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, i
 		Concurrency:  req.Concurrency,
 		TimeoutSec:   req.TimeoutSec,
 		CredentialID: req.CredentialID,
+		ExecBackend:  backend,
 		Total:        len(hosts),
 		Status:       model.ExecStatusRunning,
 		Operator:     operator,
@@ -161,7 +169,11 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 			}
 		}
 		cmdByHost[h.ID] = cmd
-		tasks = append(tasks, PoolTask{HostID: h.ID, Run: s.sshRunTask(ctx, h, record.CredentialID, cmd)})
+		if record.ExecBackend == model.ExecBackendAgent {
+			tasks = append(tasks, PoolTask{HostID: h.ID, Run: s.agentRunTask(h, cmd, record.ID, record.TimeoutSec)})
+		} else {
+			tasks = append(tasks, PoolTask{HostID: h.ID, Run: s.sshRunTask(ctx, h, record.CredentialID, cmd)})
+		}
 	}
 	results := runPool(ctx, tasks, record.Concurrency, time.Duration(record.TimeoutSec)*time.Second)
 
@@ -180,7 +192,7 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 		row := &model.JobExecResult{
 			RecordID: record.ID, HostID: r.HostID,
 			Status: st, Output: r.Output, ElapsedMs: r.Elapsed.Milliseconds(),
-			Command: cmdByHost[r.HostID],
+			Command: cmdByHost[r.HostID], Backend: record.ExecBackend,
 		}
 		if h != nil {
 			row.Hostname, row.IP = h.Hostname, h.IP
@@ -273,6 +285,53 @@ func (s *jobService) sshRunTask(ctx context.Context, host *assetModel.AssetHost,
 			return string(r.out), r.err
 		case <-ctx.Done():
 			_ = session.Close() // 中断阻塞的 CombinedOutput
+			return "", ctx.Err()
+		}
+	}
+}
+
+// normalizeExecBackend 执行后端归一（纯逻辑）：空=ssh；仅支持 ssh/agent
+func normalizeExecBackend(s string) (string, error) {
+	switch s {
+	case "", model.ExecBackendSSH:
+		return model.ExecBackendSSH, nil
+	case model.ExecBackendAgent:
+		return model.ExecBackendAgent, nil
+	default:
+		return "", newJobErr(ErrCodeParamInvalid, "execBackend 仅支持 ssh/agent")
+	}
+}
+
+// agentRunTask 构造单主机 Agent 通道执行体（M9 A2）：经 WS 长连接下发、agent 侧限时执行。
+// 批次取消/单机超时经 ctx 感知立即放弃等待（agent 侧任务继续跑完，结果因任务号幂等不会二次执行）；
+// agent 未在线/执行超时/非零退出码均映射为该主机失败，输出随结果保留。
+func (s *jobService) agentRunTask(host *assetModel.AssetHost, command string, recordID uint, timeoutSec int) func(context.Context) (string, error) {
+	return func(ctx context.Context) (string, error) {
+		type agentOut struct {
+			out string
+			err error
+		}
+		ch := make(chan agentOut, 1)
+		go func() {
+			r, err := agentSvc.AgentSvc.RunTask(fmt.Sprintf("job批次#%d", recordID), host.ID, command, timeoutSec)
+			if err != nil {
+				ch <- agentOut{err: err}
+				return
+			}
+			if r.ErrMsg != "" {
+				ch <- agentOut{out: r.Output, err: fmt.Errorf("%s", r.ErrMsg)}
+				return
+			}
+			if r.ExitCode != 0 {
+				ch <- agentOut{out: r.Output, err: fmt.Errorf("exit status %d", r.ExitCode)}
+				return
+			}
+			ch <- agentOut{out: r.Output}
+		}()
+		select {
+		case o := <-ch:
+			return o.out, o.err
+		case <-ctx.Done():
 			return "", ctx.Err()
 		}
 	}

@@ -73,6 +73,14 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
+            <el-form-item label="执行后端">
+              <el-radio-group v-model="form.execBackend">
+                <el-radio-button value="ssh">SSH 直连</el-radio-button>
+                <el-radio-button value="agent">Agent 通道</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
             <el-form-item label-width="0">
               <el-button type="primary" :loading="submitting" @click="onSubmitExec">
                 批量执行（{{ form.hostIds.length }} 台）
@@ -144,6 +152,7 @@
       <el-descriptions :column="3" size="small" border style="margin-bottom: 12px">
         <el-descriptions-item label="命令" :span="3">{{ detailRecord?.command }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ detailRecord?.status }}</el-descriptions-item>
+        <el-descriptions-item label="执行后端">{{ detailRecord?.execBackend || 'ssh' }}</el-descriptions-item>
         <el-descriptions-item label="成功">{{ detailRecord?.success }}</el-descriptions-item>
         <el-descriptions-item label="失败">{{ detailRecord?.failed }}</el-descriptions-item>
       </el-descriptions>
@@ -190,7 +199,8 @@
     variableGroupId: null,
     concurrency: 10,
     timeoutSec: 30,
-    credentialId: null
+    credentialId: null,
+    execBackend: 'ssh'
   })
   const hostOptions = ref([])
   const credOptions = ref([])
@@ -240,7 +250,8 @@
         variableGroupId: form.variableGroupId || undefined,
         concurrency: form.concurrency,
         timeoutSec: form.timeoutSec,
-        credentialId: form.credentialId || undefined
+        credentialId: form.credentialId || undefined,
+        execBackend: form.execBackend
       })
       if (res.code === 0) {
         ElMessage.success(`批次 #${res.data.ID} 已创建，后台执行中`)

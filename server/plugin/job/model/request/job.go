@@ -10,4 +10,5 @@ type BatchExecReq struct {
 	Concurrency      int    `json:"concurrency"`                // 并发上限 1-50，默认 10
 	TimeoutSec       int    `json:"timeoutSec"`                 // 单机超时 5-600 秒，默认 30
 	CredentialID     *uint  `json:"credentialId"`               // 统一凭据（空则用各主机绑定凭据）
+	ExecBackend      string `json:"execBackend"`                // 执行后端（ssh/agent，空=ssh；M9 A2）
 }
