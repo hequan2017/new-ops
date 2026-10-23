@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -38,6 +39,27 @@ func readControl(ws *websocket.Conn) (ctl wsCtl, data []byte, err error) {
 }
 
 // LogsWS 容器日志流桥接（docker logs -f → WS；阻塞直到任一端断开）
+// wsSingleWriter WS 单写者封装：gorilla 禁止并发写（输出协程数据帧与读循环 pong 并发场景必须互斥），
+// 写超时在写入前生效（与 term 场74 修复同口径）
+type wsSingleWriter struct {
+	ws *websocket.Conn
+	mu sync.Mutex
+}
+
+func (w *wsSingleWriter) write(msgType int, data []byte) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	_ = w.ws.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	return w.ws.WriteMessage(msgType, data)
+}
+
+func (w *wsSingleWriter) writeControl(code int, text string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	_ = w.ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	return w.ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, text), time.Now().Add(5*time.Second))
+}
+
 func (s *EndpointService) LogsWS(ws *websocket.Conn, endpointID uint, containerID string, tail int) {
 	if tail <= 0 {
 		tail = 200
@@ -97,16 +119,16 @@ func (s *EndpointService) LogsWS(ws *websocket.Conn, endpointID uint, containerI
 	}
 
 	done := make(chan struct{})
+	w := &wsSingleWriter{ws: ws}
 	go func() {
 		defer close(done)
 		buf := make([]byte, 8192)
 		for {
 			n, readErr := streamR.Read(buf)
 			if n > 0 {
-				if wErr := ws.WriteMessage(websocket.BinaryMessage, buf[:n]); wErr != nil {
+				if wErr := w.write(websocket.BinaryMessage, buf[:n]); wErr != nil {
 					return
 				}
-				_ = ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			}
 			if readErr != nil {
 				return
@@ -123,7 +145,7 @@ func (s *EndpointService) LogsWS(ws *websocket.Conn, endpointID uint, containerI
 		case "close":
 			cancel()
 		case "ping":
-			_ = ws.WriteMessage(websocket.TextMessage, []byte(`{"type":"pong"}`))
+			_ = w.write(websocket.TextMessage, []byte(`{"type":"pong"}`))
 		}
 	}
 	<-done
@@ -178,13 +200,14 @@ func (s *EndpointService) ExecWS(ws *websocket.Conn, endpointID uint, containerI
 	defer attach.Close()
 
 	done := make(chan struct{})
+	w := &wsSingleWriter{ws: ws}
 	go func() {
 		defer close(done)
 		buf := make([]byte, 8192)
 		for {
 			n, readErr := attach.Reader.Read(buf)
 			if n > 0 {
-				if wErr := ws.WriteMessage(websocket.BinaryMessage, buf[:n]); wErr != nil {
+				if wErr := w.write(websocket.BinaryMessage, buf[:n]); wErr != nil {
 					return
 				}
 			}
@@ -207,7 +230,7 @@ func (s *EndpointService) ExecWS(ws *websocket.Conn, endpointID uint, containerI
 				Width: uint(cols), Height: uint(rows),
 			})
 		case "ping":
-			_ = ws.WriteMessage(websocket.TextMessage, []byte(`{"type":"pong"}`))
+			_ = w.write(websocket.TextMessage, []byte(`{"type":"pong"}`))
 		case "close":
 			cancel()
 		default:
