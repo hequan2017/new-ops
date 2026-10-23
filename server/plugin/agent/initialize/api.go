@@ -19,6 +19,7 @@ func Api(ctx context.Context) {
 		{Path: "/agent/task/exec", Description: "Agent 任务下发执行", ApiGroup: "Agent通道", Method: "POST"},
 		{Path: "/agent/task/list", Description: "Agent 任务记录列表", ApiGroup: "Agent通道", Method: "GET"},
 		{Path: "/agent/file/push", Description: "Agent 文件分发", ApiGroup: "Agent通道", Method: "POST"},
+		{Path: "/agent/k8s/deployment-yaml", Description: "集群内Agent接入YAML生成", ApiGroup: "Agent通道", Method: "POST"},
 	}
 	utils.RegisterApis(apis...)
 }
@@ -40,6 +41,7 @@ func Casbin(ctx context.Context) {
 		{"/agent/task/exec", "POST"},
 		{"/agent/task/list", "GET"},
 		{"/agent/file/push", "POST"},
+		{"/agent/k8s/deployment-yaml", "POST"},
 	}
 	readonly := []struct {
 		Path   string

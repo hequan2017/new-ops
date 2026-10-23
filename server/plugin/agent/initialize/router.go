@@ -20,6 +20,7 @@ func Router(engine *gin.Engine) {
 	private.POST("agent/task/exec", agentV1.AgentApi.TaskExec)
 	private.GET("agent/task/list", agentV1.AgentApi.TaskList)
 	private.POST("agent/file/push", agentV1.AgentApi.FilePush)
+	private.POST("agent/k8s/deployment-yaml", agentV1.AgentApi.K8sAgentYAML)
 
 	// Agent 为非 JWT 主体（单文件二进制，注册令牌鉴权）：直接挂 http handler，不经 JWT 中间件组
 	engine.GET(global.GVA_CONFIG.System.RouterPrefix+"/agent/ws", gin.WrapF(agentSvc.AgentSvc.HandleWS))

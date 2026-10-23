@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const agentVersion = "0.1.0"
+const agentVersion = "0.2.0"
 
 type agentPoint struct {
 	Name  string  `json:"name"`

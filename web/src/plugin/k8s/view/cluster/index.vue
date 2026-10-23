@@ -21,6 +21,11 @@
         <el-table-column prop="server" label="API Server" min-width="200">
           <template #default="{ row }">{{ row.server || '-' }}</template>
         </el-table-column>
+        <el-table-column label="接入" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.viaAgent ? 'warning' : 'info'" size="small">{{ row.viaAgent ? 'Agent' : '直连' }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="version" label="版本" width="180">
           <template #default="{ row }">{{ row.version || '-' }}</template>
         </el-table-column>
@@ -49,19 +54,48 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" title="注册集群" width="560px">
+    <el-dialog v-model="dialogVisible" title="注册集群" width="620px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="如 生产集群" />
         </el-form-item>
-        <el-form-item label="kubeconfig" prop="kubeconfig">
-          <el-input
-            v-model="form.kubeconfig"
-            type="textarea"
-            :rows="10"
-            placeholder="粘贴 kubeconfig YAML 内容（服务端加密存储，接口不回显）"
-          />
+        <el-form-item label="接入方式">
+          <el-radio-group v-model="form.mode">
+            <el-radio-button value="kubeconfig">kubeconfig</el-radio-button>
+            <el-radio-button value="agent">Agent 通道</el-radio-button>
+          </el-radio-group>
         </el-form-item>
+        <template v-if="form.mode === 'kubeconfig'">
+          <el-form-item label="kubeconfig" prop="kubeconfig">
+            <el-input
+              v-model="form.kubeconfig"
+              type="textarea"
+              :rows="10"
+              placeholder="粘贴 kubeconfig YAML 内容（服务端加密存储，接口不回显）"
+            />
+          </el-form-item>
+        </template>
+        <template v-else>
+          <warning-bar title="Agent 模式以集群内 ServiceAccount（只读）代理 API：列表/详情/YAML/扩缩容/总览可用；Helm 与 Pod WebShell 不支持。重复生成 YAML 将重置该资产令牌。" />
+          <el-form-item label="关联资产" prop="assetId">
+            <el-select v-model="form.assetId" filterable placeholder="选择集群内任一节点对应的主机资产" style="width: 100%">
+              <el-option v-for="h in hostOptions" :key="h.ID" :label="`${h.hostname}（${h.ip}）`" :value="h.ID" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="Server 地址">
+            <el-input v-model="form.serverAddr" placeholder="agent 回连 server 的基地址，如 http://192.168.112.138:8888" />
+          </el-form-item>
+          <el-form-item>
+            <el-button :loading="yamlLoading" @click="onGenYaml">生成接入 YAML（签发令牌）</el-button>
+          </el-form-item>
+          <el-form-item v-if="agentYaml" label="接入 YAML">
+            <el-input :model-value="agentYaml" type="textarea" :rows="8" readonly class="agent-yaml-box" />
+            <div style="margin-top: 6px; width: 100%">
+              <el-button size="small" type="primary" @click="copyYaml">复制 YAML</el-button>
+              <span class="ops-text-muted" style="margin-left: 8px">kubectl apply 后 agent 上线即完成纳管</span>
+            </div>
+          </el-form-item>
+        </template>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="2" />
         </el-form-item>
@@ -117,6 +151,8 @@
     testK8sCluster
   } from '@/plugin/k8s/api/k8sCluster'
   import { getNsVisibility, getNsGrantList, createNsGrant, deleteNsGrant } from '@/plugin/k8s/api/k8sResource'
+  import { getK8sAgentYaml } from '@/plugin/agent/api/agentInstance'
+  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
   import { getUserList } from '@/api/user'
   import ResourceBrowser from '@/plugin/k8s/components/ResourceBrowser.vue'
   import OverviewDrawer from '@/plugin/k8s/components/OverviewDrawer.vue'
@@ -131,11 +167,49 @@
   const testingId = ref(0)
   const dialogVisible = ref(false)
   const formRef = ref(null)
-  const emptyForm = () => ({ ID: 0, name: '', kubeconfig: '', remark: '' })
+  const emptyForm = () => ({
+    ID: 0, name: '', kubeconfig: '', remark: '',
+    mode: 'kubeconfig', viaAgent: false, assetId: null, serverAddr: ''
+  })
   const form = reactive(emptyForm())
   const rules = {
     name: [{ required: true, message: '请输入集群名称', trigger: 'blur' }],
-    kubeconfig: [{ required: true, message: '请粘贴 kubeconfig 内容', trigger: 'blur' }]
+    kubeconfig: [{ required: true, message: '请粘贴 kubeconfig 内容', trigger: 'blur' }],
+    assetId: [{ required: true, message: '请选择关联资产', trigger: 'change' }]
+  }
+
+  // K4 agent 模式：资产行选 + 一键接入 YAML 生成（签发令牌随 YAML 注入）
+  const hostOptions = ref([])
+  const yamlLoading = ref(false)
+  const agentYaml = ref('')
+  const loadHostOptions = async () => {
+    const res = await getAssetHostList({ page: 1, pageSize: 500 })
+    if (res.code === 0) hostOptions.value = res.data.list || []
+  }
+  const onGenYaml = async () => {
+    if (!form.assetId) {
+      ElMessage.warning('请先选择关联资产')
+      return
+    }
+    if (!/^https?:\/\//.test(form.serverAddr || '')) {
+      ElMessage.warning('请填写 http(s):// 开头的 server 地址')
+      return
+    }
+    yamlLoading.value = true
+    try {
+      const res = await getK8sAgentYaml({ assetId: form.assetId, serverAddr: form.serverAddr })
+      if (res.code === 0) agentYaml.value = res.data.yaml
+    } finally {
+      yamlLoading.value = false
+    }
+  }
+  const copyYaml = async () => {
+    try {
+      await navigator.clipboard.writeText(agentYaml.value)
+      ElMessage.success('已复制到剪贴板')
+    } catch {
+      ElMessage.warning('复制失败，请手动选择文本复制')
+    }
   }
 
   const getList = async () => {
@@ -233,7 +307,10 @@
   const submitForm = () => {
     formRef.value.validate(async (valid) => {
       if (!valid) return
-      const res = await createK8sCluster(form)
+      const payload = form.mode === 'agent'
+        ? { name: form.name, remark: form.remark, viaAgent: true, assetId: form.assetId, kubeconfig: '' }
+        : { name: form.name, remark: form.remark, kubeconfig: form.kubeconfig }
+      const res = await createK8sCluster(payload)
       if (res.code === 0) {
         ElMessage.success('注册成功（连接测试通过）')
         dialogVisible.value = false
@@ -264,5 +341,8 @@
     })
   }
 
-  onMounted(getList)
+  onMounted(() => {
+    getList()
+    loadHostOptions()
+  })
 </script>

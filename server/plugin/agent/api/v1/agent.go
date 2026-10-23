@@ -167,3 +167,38 @@ func (a *agentApi) FilePush(c *gin.Context) {
 	}
 	response.OkWithData(r, c)
 }
+
+// k8sYamlReq 集群内接入 YAML 请求
+type k8sYamlReq struct {
+	AssetID    uint   `json:"assetId" binding:"required"`
+	ServerAddr string `json:"serverAddr" binding:"required"`
+	Image      string `json:"image"`
+}
+
+// K8sAgentYAML 签发令牌并渲染集群内一键接入 YAML（K4；写操作仅 888；重复生成将重置该资产令牌）
+// @Tags AgentTask
+// @Summary 生成集群内 Agent 一键接入 YAML（SA+只读 RBAC+Deployment，令牌随 YAML 注入）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body k8sYamlReq true "资产ID/server基地址/镜像(可选)"
+// @Success 200 {object} response.Response{data=object} "生成成功"
+// @Router /agent/k8s/deployment-yaml [post]
+func (a *agentApi) K8sAgentYAML(c *gin.Context) {
+	var req k8sYamlReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage("参数无效: "+err.Error(), c)
+		return
+	}
+	_, token, err := agentSvc.AgentSvc.IssueAgentToken(req.AssetID, "")
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	y, err := agentSvc.RenderK8sAgentDeployment(req.ServerAddr, req.Image, token)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithData(gin.H{"yaml": y, "tokenHint": token[len(token)-4:]}, c)
+}

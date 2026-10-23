@@ -10,3 +10,5 @@ export const revokeAgentInstance = (params) => service({ url: '/agent/instance',
 export const pushAgentFile = (data) => service({ url: '/agent/file/push', method: 'post', data })
 // Agent 任务留痕分页
 export const getAgentTaskList = (params) => service({ url: '/agent/task/list', method: 'get', params })
+// 集群内 Agent 一键接入 YAML（签发令牌随 YAML 注入）
+export const getK8sAgentYaml = (data) => service({ url: '/agent/k8s/deployment-yaml', method: 'post', data })
