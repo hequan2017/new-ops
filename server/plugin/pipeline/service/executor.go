@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hequan2017/new-ops/server/global"
+	agentSvc "github.com/hequan2017/new-ops/server/plugin/agent/service"
 	assetModel "github.com/hequan2017/new-ops/server/plugin/asset/model"
 	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
 	"github.com/hequan2017/new-ops/server/plugin/pipeline/model"
@@ -41,6 +42,7 @@ type snapshotStep struct {
 	Name         string `json:"name"`
 	Type         string `json:"type"`
 	HostID       uint   `json:"hostId"`
+	ExecBackend  string `json:"execBackend,omitempty"` // ssh/agent（M9 A3）
 	ShellContent string `json:"shellContent,omitempty"`
 	HTTPMethod   string `json:"httpMethod,omitempty"`
 	HTTPURL      string `json:"httpUrl,omitempty"`
@@ -97,6 +99,7 @@ func (s *PipelineBuildService) CreateBuild(pipelineID uint, params map[string]st
 				Name:         sp.Name,
 				Type:         sp.Type,
 				HostID:       sp.HostID,
+				ExecBackend:  sp.ExecBackend,
 				ShellContent: renderVars(sp.ShellContent, params),
 				HTTPMethod:   sp.HTTPMethod,
 				HTTPURL:      renderVars(sp.HTTPURL, params),
@@ -295,8 +298,46 @@ func (s *PipelineBuildService) runStep(ctx context.Context, buildID uint, stageN
 	}
 }
 
-// runShellStep 经 SSH 在绑定资产上执行 shell（指纹校验/TOFU，取消即中断会话）
+// 执行后端（M9 A3：SSH 直连 / Agent 通道）
+const (
+	StepBackendSSH   = "ssh"
+	StepBackendAgent = "agent"
+)
+
+// stepBackend 步骤执行后端归一（纯逻辑）：空=ssh；仅支持 ssh/agent
+func stepBackend(s string) (string, error) {
+	switch s {
+	case "", StepBackendSSH:
+		return StepBackendSSH, nil
+	case StepBackendAgent:
+		return StepBackendAgent, nil
+	default:
+		return "", fmt.Errorf("执行后端仅支持 ssh/agent（当前 %q）", s)
+	}
+}
+
+// workspaceFor 构建工作空间：按构建隔离（POSIX 路径；构建产物留存 /tmp 供排障，不自动清理）
+func workspaceFor(buildID uint) string {
+	return fmt.Sprintf("/tmp/baize-pipeline/build-%d", buildID)
+}
+
+// pipelineShellCommand 工作空间包装命令（纯逻辑）：建目录+进入后以 POSIX 子Shell执行原内容，
+// 退出码=子Shell退出码；圆括号子Shell在 bash/dash 均合法（agent 侧 /bin/sh 为 dash）
+func pipelineShellCommand(workspace, content string) string {
+	return fmt.Sprintf("mkdir -p %q && cd %q && (\n%s\n)", workspace, workspace, content)
+}
+
+// runShellStep 在绑定资产上执行 shell（M9 A3 双后端：SSH 直连经指纹校验/TOFU；Agent 通道经 WS 下发）。
+// 两后端统一以「构建工作空间」包装执行（mkdir+cd+子Shell），实现工作空间按构建隔离。
 func (s *PipelineBuildService) runShellStep(ctx context.Context, buildID uint, stageName string, sp snapshotStep) error {
+	backend, berr := stepBackend(sp.ExecBackend)
+	if berr != nil {
+		return berr
+	}
+	command := pipelineShellCommand(workspaceFor(buildID), sp.ShellContent)
+	if backend == StepBackendAgent {
+		return s.runShellStepViaAgent(buildID, stageName, sp, command)
+	}
 	host, err := assetSvc.Service.AssetHostService.GetAssetHost(sp.HostID)
 	if err != nil {
 		return fmt.Errorf("目标主机不存在(id=%d)", sp.HostID)
@@ -335,7 +376,7 @@ func (s *PipelineBuildService) runShellStep(ctx context.Context, buildID uint, s
 		return err
 	}
 	session.Stderr = session.Stdout
-	if err := session.Start(sp.ShellContent); err != nil {
+	if err := session.Start(command); err != nil {
 		return fmt.Errorf("启动命令失败: %w", err)
 	}
 	type result struct {
@@ -359,6 +400,25 @@ func (s *PipelineBuildService) runShellStep(ctx context.Context, buildID uint, s
 		<-ch
 		return ctx.Err()
 	}
+}
+
+// runShellStepViaAgent 经 Agent 通道执行 shell 步骤（M9 A3）：无需 SSH 凭据，agent 未在线/执行超时即步骤失败；
+// 构建取消不中断已下发任务（agent 侧任务号幂等跑完即弃，结果不再采纳）；输出上限 60KB 与通道口径一致
+func (s *PipelineBuildService) runShellStepViaAgent(buildID uint, stageName string, sp snapshotStep, command string) error {
+	r, err := agentSvc.AgentSvc.RunTask(fmt.Sprintf("流水线构建#%d", buildID), sp.HostID, command, sp.TimeoutSec)
+	if err != nil {
+		return err
+	}
+	if out := strings.TrimSpace(r.Output); out != "" {
+		s.appendLog(buildID, stageName, sp.Name, model.LogStdout, out)
+	}
+	if r.ErrMsg != "" {
+		return fmt.Errorf("%s", r.ErrMsg)
+	}
+	if r.ExitCode != 0 {
+		return fmt.Errorf("exit status %d", r.ExitCode)
+	}
+	return nil
 }
 
 // runHTTPStep 发起 HTTP 请求（4xx/5xx 视为失败）

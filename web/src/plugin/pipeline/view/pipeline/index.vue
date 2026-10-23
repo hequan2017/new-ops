@@ -121,6 +121,29 @@
                 <el-input v-else v-model="row.httpUrl" placeholder="http(s)://…" />
               </template>
             </el-table-column>
+            <el-table-column label="目标主机" min-width="170">
+              <template #default="{ row }">
+                <el-select
+                  v-if="row.type === 'shell'"
+                  v-model="row.hostId"
+                  filterable
+                  placeholder="选择执行主机"
+                  style="width: 100%"
+                >
+                  <el-option v-for="h in hostOptions" :key="h.ID" :label="`${h.hostname}（${h.ip}）`" :value="h.ID" />
+                </el-select>
+                <span v-else class="ops-text-muted">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="执行后端" width="170">
+              <template #default="{ row }">
+                <el-radio-group v-if="row.type === 'shell'" v-model="row.execBackend" size="small">
+                  <el-radio-button value="ssh">SSH</el-radio-button>
+                  <el-radio-button value="agent">Agent</el-radio-button>
+                </el-radio-group>
+                <span v-else class="ops-text-muted">—</span>
+              </template>
+            </el-table-column>
             <el-table-column label="超时s" width="90">
               <template #default="{ row }"><el-input-number v-model="row.timeoutSec" :min="0" :max="3600" style="width: 76px" /></template>
             </el-table-column>
@@ -203,6 +226,7 @@
     createPipeline, updatePipeline, deletePipeline, getPipelineList,
     startBuild, cancelBuild, approveBuild, getBuildList, getBuildLogs, restartBuild
   } from '@/plugin/pipeline/api/pipeline'
+  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
 
   defineOptions({ name: 'pipelineList' })
 
@@ -220,8 +244,15 @@
     }
   }
 
-  const emptyStep = () => ({ name: '', type: 'shell', shellContent: '', httpUrl: '', timeoutSec: 0 })
+  const emptyStep = () => ({ name: '', type: 'shell', hostId: null, execBackend: 'ssh', shellContent: '', httpUrl: '', timeoutSec: 0 })
   const emptyStage = () => ({ name: '', approval: false, continueOnError: false, parallel: false, steps: [emptyStep()] })
+
+  // 步骤执行主机选项（M9 A3：shell 步骤可经 SSH 或 Agent 通道在资产上执行）
+  const hostOptions = ref([])
+  const loadHostOptions = async () => {
+    const res = await getAssetHostList({ page: 1, pageSize: 500 })
+    if (res.code === 0) hostOptions.value = res.data.list || []
+  }
 
   const dialogVisible = ref(false)
   const saving = ref(false)
@@ -437,7 +468,10 @@
     ElMessage.success('webhook 地址已复制')
   }
 
-  onMounted(getList)
+  onMounted(() => {
+    getList()
+    loadHostOptions()
+  })
   onUnmounted(() => {
     if (buildTimer) clearInterval(buildTimer)
     closeStream()

@@ -50,7 +50,8 @@ type PipelineStep struct {
 	Name         string `json:"name" gorm:"comment:步骤名称" binding:"required"`
 	Sort         int    `json:"sort" gorm:"comment:顺序"`
 	Type         string `json:"type" gorm:"comment:类型(shell/http)"`
-	HostID       uint   `json:"hostId" gorm:"comment:目标主机ID(shell步骤在资产上SSH执行)"`
+	HostID       uint   `json:"hostId" gorm:"comment:目标主机ID(shell步骤在资产上执行)"`
+	ExecBackend  string `json:"execBackend" gorm:"size:16;default:ssh;comment:执行后端(ssh/agent,M9 A3)"`
 	ShellContent string `json:"shellContent" gorm:"type:text;comment:shell内容"`
 	HTTPMethod   string `json:"httpMethod" gorm:"comment:HTTP方法"`
 	HTTPURL      string `json:"httpUrl" gorm:"comment:HTTP地址"`
