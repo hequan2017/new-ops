@@ -7,12 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/hequan2017/new-ops/server/global"
+	agentSvc "github.com/hequan2017/new-ops/server/plugin/agent/service"
 	assetModel "github.com/hequan2017/new-ops/server/plugin/asset/model"
 	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
 	"github.com/hequan2017/new-ops/server/plugin/container/model"
@@ -21,12 +23,14 @@ import (
 
 // container 插件错误码段：1400-1499（DEV_PLAN 3.6）
 const (
-	ErrCodeEpNameRequired  = 1401
-	ErrCodeEpDuplicate     = 1402
-	ErrCodeEpAddrInvalid   = 1403
-	ErrCodeEpNotFound      = 1404
-	ErrCodeEpTLSInvalid    = 1405
-	ErrCodeEpConnectFailed = 1406
+	ErrCodeEpNameRequired       = 1401
+	ErrCodeEpDuplicate          = 1402
+	ErrCodeEpAddrInvalid        = 1403
+	ErrCodeEpNotFound           = 1404
+	ErrCodeEpTLSInvalid         = 1405
+	ErrCodeEpConnectFailed      = 1406
+	ErrCodeEpAgentAssetRequired = 1412
+	ErrCodeEpAgentUnsupported   = 1413
 )
 
 // ContainerService 容器管理服务
@@ -63,12 +67,30 @@ func validateEndpoint(ep *model.DockerEndpoint) error {
 	if strings.HasPrefix(ep.Addr, "tcp://") && ep.TLSCredentialID != nil && *ep.TLSCredentialID == 0 {
 		ep.TLSCredentialID = nil
 	}
+	if ep.ViaAgent && ep.AssetID == 0 {
+		return newCtErr(ErrCodeEpAgentAssetRequired, "agent 模式必须关联资产（该主机上需运行 Agent）")
+	}
 	return nil
 }
 
-// NewDockerClient 按接入点构造 Docker 客户端（TCP+TLS 时从凭据保险库取证书）
+// requireDirect agent 通道接入点的能力守卫：流式端点（日志/exec/事件）与 compose CLI 不支持
+func requireDirect(ep *model.DockerEndpoint) error {
+	if ep.ViaAgent {
+		return newCtErr(ErrCodeEpAgentUnsupported, "agent 模式暂不支持该操作（流式端点/compose CLI）")
+	}
+	return nil
+}
+
+// NewDockerClient 按接入点构造 Docker 客户端（TCP+TLS 时从凭据保险库取证书；
+// agent 模式经 AgentDockerTransport 把 HTTP 请求转发到 agent 所在主机 daemon，M9 A4）
 func (s *EndpointService) NewDockerClient(ep *model.DockerEndpoint) (*client.Client, error) {
 	opts := []client.Opt{client.WithAPIVersionNegotiation()}
+	if ep.ViaAgent {
+		// M9 A4：HTTP 请求经 agent WS 通道转发至 agent 所在主机 daemon；
+		// 不设 WithHost（SDK 会尝试改写 *http.Transport），默认 host 仅参与 URL 拼装、被 transport 忽略
+		opts = append(opts, client.WithHTTPClient(&http.Client{Transport: &agentSvc.AgentDockerTransport{AssetID: ep.AssetID}}))
+		return client.NewClientWithOpts(opts...)
+	}
 	if strings.HasPrefix(ep.Addr, "unix://") {
 		opts = append(opts, client.WithHost(ep.Addr))
 	} else {
@@ -203,7 +225,8 @@ func (s *EndpointService) UpdateEndpoint(ep *model.DockerEndpoint) error {
 		return newCtErr(ErrCodeEpDuplicate, fmt.Sprintf("接入点已存在: %s", ep.Name))
 	}
 	return global.GVA_DB.Model(&model.DockerEndpoint{}).Where("id = ?", ep.ID).Updates(map[string]any{
-		"name": ep.Name, "addr": ep.Addr, "tls_credential_id": ep.TLSCredentialID, "notes": ep.Notes,
+		"name": ep.Name, "addr": ep.Addr, "tls_credential_id": ep.TLSCredentialID,
+		"via_agent": ep.ViaAgent, "asset_id": ep.AssetID, "notes": ep.Notes,
 	}).Error
 }
 

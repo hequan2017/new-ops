@@ -52,9 +52,20 @@
           <el-input v-model="form.name" placeholder="如 本机Docker" />
         </el-form-item>
         <el-form-item label="地址" prop="addr">
-          <el-input v-model="form.addr" placeholder="unix:///var/run/docker.sock 或 tcp://host:2376" />
+          <el-input v-model="form.addr" placeholder="unix:///var/run/docker.sock 或 tcp://host:2376（agent 模式仅作备注）" />
         </el-form-item>
-        <el-form-item label="TLS 凭据">
+        <el-form-item label="接入方式">
+          <el-switch v-model="form.viaAgent" active-text="经 Agent 通道" inactive-text="直连" />
+          <span v-if="form.viaAgent" class="ops-text-muted" style="margin-left: 8px">
+            HTTP 管理面经 WS 通道转发（日志流/exec/镜像导入导出/Compose 不支持）
+          </span>
+        </el-form-item>
+        <el-form-item v-if="form.viaAgent" label="关联资产">
+          <el-select v-model="form.assetId" filterable placeholder="选择运行 Agent 的主机" style="width: 100%">
+            <el-option v-for="h in hostOptions" :key="h.ID" :label="`${h.hostname}（${h.ip}）`" :value="h.ID" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="!form.viaAgent" label="TLS 凭据">
           <el-select v-model="form.tlsCredentialId" clearable placeholder="tcp+tls 时选择 docker_tls 凭据" style="width: 100%">
             <el-option
               v-for="c in tlsCredOptions"
@@ -391,6 +402,7 @@
   import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
   import ContainerLogs from '@/plugin/container/components/ContainerLogs.vue'
   import { getCredentialList } from '@/plugin/asset/api/credential'
+  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
 
   defineOptions({ name: 'containerEndpoint' })
 
@@ -434,8 +446,13 @@
 
   const dialogVisible = ref(false)
   const formRef = ref(null)
-  const emptyForm = () => ({ ID: 0, name: '', addr: '', tlsCredentialId: null, notes: '' })
+  const emptyForm = () => ({ ID: 0, name: '', addr: '', tlsCredentialId: null, viaAgent: false, assetId: null, notes: '' })
   const form = reactive(emptyForm())
+  const hostOptions = ref([])
+  const loadHostOptions = async () => {
+    const res = await getAssetHostList({ page: 1, pageSize: 500 })
+    if (res.code === 0) hostOptions.value = res.data.list || []
+  }
   const rules = {
     name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
     addr: [{ required: true, message: '请输入地址', trigger: 'blur' }]
@@ -914,6 +931,7 @@
 
   onMounted(() => {
     loadCreds()
+    loadHostOptions()
     getList()
     pollTimer = setInterval(getList, 35000) // 跟随 30s 巡检周期轻刷新
   })

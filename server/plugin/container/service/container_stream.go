@@ -51,6 +51,11 @@ func (s *EndpointService) LogsWS(ws *websocket.Conn, endpointID uint, containerI
 			websocket.FormatCloseMessage(4000, err.Error()), time.Now().Add(5*time.Second))
 		return
 	}
+	if err := requireDirect(ep); err != nil {
+		_ = ws.WriteControl(websocket.CloseMessage,
+			websocket.FormatCloseMessage(4000, err.Error()), time.Now().Add(5*time.Second))
+		return
+	}
 	cl, err := s.NewDockerClient(ep)
 	if err != nil {
 		_ = ws.WriteControl(websocket.CloseMessage,
@@ -134,6 +139,11 @@ func (s *EndpointService) ExecWS(ws *websocket.Conn, endpointID uint, containerI
 	}
 	ep, err := s.GetEndpoint(endpointID)
 	if err != nil {
+		_ = ws.WriteControl(websocket.CloseMessage,
+			websocket.FormatCloseMessage(4000, err.Error()), time.Now().Add(5*time.Second))
+		return
+	}
+	if err := requireDirect(ep); err != nil {
 		_ = ws.WriteControl(websocket.CloseMessage,
 			websocket.FormatCloseMessage(4000, err.Error()), time.Now().Add(5*time.Second))
 		return

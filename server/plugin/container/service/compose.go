@@ -61,6 +61,9 @@ func dockerBin() (string, error) {
 // runCompose 执行一次 docker compose 子命令（写入 compose 文件与 TLS 临时目录，结束后清理）
 // 返回合并输出；超时 Kill。参数全为字面量，不经 shell。
 func (s *ComposeService) runCompose(ep *model.DockerEndpoint, project, args string, timeout time.Duration) (string, error) {
+	if err := requireDirect(ep); err != nil {
+		return "", err // compose CLI 走 server 本机 docker，agent 模式 daemon 不可达
+	}
 	bin, err := dockerBin()
 	if err != nil {
 		return "", err

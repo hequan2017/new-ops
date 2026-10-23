@@ -21,6 +21,8 @@ type DockerEndpoint struct {
 	Name            string     `json:"name" gorm:"comment:接入点名称;unique" binding:"required"`
 	Addr            string     `json:"addr" gorm:"comment:地址(unix:///… 或 tcp://host:port)" binding:"required"`
 	TLSCredentialID *uint      `json:"tlsCredentialId" gorm:"comment:TLS凭据ID(docker_tls, tcp+tls时必填)"`
+	ViaAgent        bool       `json:"viaAgent" gorm:"comment:经Agent通道接入(M9 A4,daemon地址由agent侧探测)"`
+	AssetID         uint       `json:"assetId" gorm:"index;comment:关联资产ID(viaAgent时必填)"`
 	Status          string     `json:"status" gorm:"comment:巡检状态;default:未知;index"`
 	DockerVersion   string     `json:"dockerVersion" gorm:"comment:Docker版本"`
 	LastCheckAt     *time.Time `json:"lastCheckAt" gorm:"comment:最近巡检时间"`

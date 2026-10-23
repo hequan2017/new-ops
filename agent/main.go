@@ -63,6 +63,7 @@ var (
 	flagToken    = flag.String("token", "", "接入令牌（资产页 Agent 接入签发）")
 	flagInterval = flag.Duration("interval", 30*time.Second, "心跳与指标上报周期")
 	flagHostname = flag.String("hostname", "", "上报主机名（默认取 os.Hostname）")
+	flagDocker   = flag.String("docker-addr", "", "docker daemon 地址覆盖（unix://… 或 tcp://…，默认自动探测 socket）")
 )
 
 func main() {
@@ -86,6 +87,9 @@ func main() {
 	executor := newTaskExecutor(4, 4096) // 并发 4；任务号去重表上限 4096（超限整体清空防泄漏）
 	files := newFileReceiver(2, 512)     // 文件接收并发 2
 	dockerAddr := resolveDockerAddr(dockerSockCandidates)
+	if *flagDocker != "" {
+		dockerAddr = *flagDocker // 测试/特殊部署场景手动指定
+	}
 	log.Printf("docker daemon 代理地址: %s", dockerAddr)
 	for {
 		err := runSession(wsURL, *flagToken, meta, *flagInterval, executor, files, dockerAddr)

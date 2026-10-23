@@ -31,6 +31,9 @@ const eventPullTimeout = 8 * time.Second
 // v28 SDK 语义：daemon 发完 until 窗口数据后关流，SDK 把 io.EOF 发到 errCh 且不关 msgCh
 // ——EOF 视为正常收尾（落库+推水位）；ctx 超时视为异常（已收事件仍落库但不推水位，下轮重拉容忍重复）。
 func (s *EndpointService) PullEvents(ep *model.DockerEndpoint) {
+	if ep.ViaAgent {
+		return // agent 模式不订阅事件流（A4 v1 边界）
+	}
 	cl, err := s.NewDockerClient(ep)
 	if err != nil {
 		return

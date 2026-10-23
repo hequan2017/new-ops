@@ -104,6 +104,9 @@ func (s *EndpointService) PullImage(endpointID uint, ref string) error {
 	if err != nil {
 		return err
 	}
+	if err := requireDirect(ep); err != nil {
+		return err
+	}
 	imagePulls.set(key, "拉取中")
 	go func() {
 		cl, err := s.NewDockerClient(ep)
@@ -162,6 +165,9 @@ func (s *EndpointService) SaveImage(endpointID uint, refs []string, w io.Writer)
 	if err != nil {
 		return err
 	}
+	if err := requireDirect(ep); err != nil {
+		return err
+	}
 	cl, err := s.NewDockerClient(ep)
 	if err != nil {
 		return err
@@ -182,6 +188,9 @@ func (s *EndpointService) SaveImage(endpointID uint, refs []string, w io.Writer)
 func (s *EndpointService) LoadImage(endpointID uint, src io.Reader) (string, error) {
 	ep, err := s.GetEndpoint(endpointID)
 	if err != nil {
+		return "", err
+	}
+	if err := requireDirect(ep); err != nil {
 		return "", err
 	}
 	cl, err := s.NewDockerClient(ep)
