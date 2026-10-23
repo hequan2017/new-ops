@@ -12,7 +12,7 @@ const (
 	K8sStatusUnknown = "未知"
 )
 
-// K8sCluster 集群注册（kubeconfig AES-256-GCM 加密落库）
+// K8sCluster 集群注册（kubeconfig AES-256-GCM 加密落库；viaAgent 走集群内 agent 代理，K4）
 type K8sCluster struct {
 	global.GVA_MODEL
 	Name             string `json:"name" gorm:"comment:集群名称;unique" binding:"required"`
@@ -22,4 +22,6 @@ type K8sCluster struct {
 	Version          string `json:"version" gorm:"comment:集群版本"`
 	NodeCount        int    `json:"nodeCount" gorm:"comment:节点数"`
 	Status           string `json:"status" gorm:"comment:状态;default:未知"`
+	ViaAgent         bool   `json:"viaAgent" gorm:"comment:经集群内Agent接入(K4,ServiceAccount身份)"`
+	AssetID          uint   `json:"assetId" gorm:"index;comment:关联资产ID(viaAgent时必填)"`
 }

@@ -75,6 +75,9 @@ func helmActionConfig(clusterID uint, namespace string) (*action.Configuration, 
 	if err := global.GVA_DB.First(&c, clusterID).Error; err != nil {
 		return nil, fmt.Errorf("集群不存在: %w", err)
 	}
+	if c.ViaAgent {
+		return nil, newK8sErr(ErrCodeK8sAgentUnsupported, "agent 模式集群暂不支持 Helm（chart 拉取需直连凭据）")
+	}
 	kubeconfig, err := crypto.Decrypt(c.KubeconfigCipher)
 	if err != nil {
 		return nil, fmt.Errorf("kubeconfig 解密失败: %w", err)

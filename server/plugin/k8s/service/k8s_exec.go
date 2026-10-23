@@ -118,9 +118,13 @@ func (s *K8sClusterService) PodExecWS(ws *websocket.Conn, clusterID uint, namesp
 		_ = ws.WriteControl(websocket.CloseMessage,
 			websocket.FormatCloseMessage(4000, msg), time.Now().Add(5*time.Second))
 	}
-	cfg, _, err := restConfigForCluster(clusterID)
+	cfg, c, err := restConfigForCluster(clusterID)
 	if err != nil {
 		fail(err.Error())
+		return
+	}
+	if c.ViaAgent {
+		fail("agent 模式集群暂不支持 WebShell（SPDY 升级不可经 WS 代理）")
 		return
 	}
 	cs, err := kubernetes.NewForConfig(cfg)

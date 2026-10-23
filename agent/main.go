@@ -91,8 +91,12 @@ func main() {
 		dockerAddr = *flagDocker // 测试/特殊部署场景手动指定
 	}
 	log.Printf("docker daemon 代理地址: %s", dockerAddr)
+	k8sIC := detectK8sInCluster()
+	if k8sIC != nil {
+		log.Printf("k8s in-cluster 代理: %s", k8sIC.APIAddr)
+	}
 	for {
-		err := runSession(wsURL, *flagToken, meta, *flagInterval, executor, files, dockerAddr)
+		err := runSession(wsURL, *flagToken, meta, *flagInterval, executor, files, dockerAddr, k8sIC)
 		if rr, ok := err.(*registerRejectedError); ok {
 			// 令牌被拒不会自愈：打印后退出（等人工换令牌再启动）
 			log.Fatalf("注册被拒（%s），退出——请在资产页重新签发令牌", rr.reason)
@@ -123,7 +127,7 @@ func buildWSURL(server string) string {
 }
 
 // runSession 一次完整会话：拨号 → 注册 → 心跳/指标循环；连接断开返回 error
-func runSession(wsURL, token string, meta agentMeta, interval time.Duration, executor *taskExecutor, files *fileReceiver, dockerAddr string) error {
+func runSession(wsURL, token string, meta agentMeta, interval time.Duration, executor *taskExecutor, files *fileReceiver, dockerAddr string, k8sIC *k8sInCluster) error {
 	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
 	conn, _, err := dialer.Dial(wsURL, nil)
 	if err != nil {
@@ -171,6 +175,8 @@ func runSession(wsURL, token string, meta agentMeta, interval time.Duration, exe
 				files.handle(f, send)
 			case "docker_req":
 				go handleDockerReq(f, send, dockerAddr)
+			case "k8s_req":
+				go handleK8sReq(f, send, k8sIC)
 			}
 		}
 	}()

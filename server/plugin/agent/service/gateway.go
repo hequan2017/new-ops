@@ -290,7 +290,7 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 			s.storeMetrics(inst.AssetID, f.Points)
 		case "task_result":
 			resolveTaskResult(f.TaskNo, f)
-		case "docker_resp":
+		case "docker_resp", "k8s_resp":
 			resolveTaskResult(f.TaskNo, f)
 		default:
 			// 未知类型忽略（向前兼容）

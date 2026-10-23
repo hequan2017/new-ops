@@ -28,9 +28,18 @@ const dockerProxyWait = 70 * time.Second
 // dockerProxyBodyLimit 请求体上限（docker 管理 API 请求体为小 JSON）
 const dockerProxyBodyLimit = 4 << 20
 
-// AgentDockerTransport 经 agent WS 通道的 Docker HTTP 传输
+// AgentDockerTransport 经 agent WS 通道的 HTTP 代理传输（docker_req 默认；FrameType=k8s_req 时
+// 由集群内 agent 以 ServiceAccount 身份代理 K8s API，K4）
 type AgentDockerTransport struct {
-	AssetID uint
+	AssetID   uint
+	FrameType string // 空=docker_req；k8s_req=集群内 agent 代理
+}
+
+func (t *AgentDockerTransport) frameType() string {
+	if t.FrameType == "" {
+		return "docker_req"
+	}
+	return t.FrameType
 }
 
 // RoundTrip 实现 http.RoundTripper（SDK 每次调用即一次 WS 往返）
@@ -59,7 +68,7 @@ func (t *AgentDockerTransport) RoundTrip(req *http.Request) (*http.Response, err
 		header[k] = vs
 	}
 	if err := WriteToAgent(t.AssetID, agentFrame{
-		Type: "docker_req", TS: time.Now().Unix(), TaskNo: taskNo,
+		Type: t.frameType(), TS: time.Now().Unix(), TaskNo: taskNo,
 		ReqMethod: req.Method, ReqPath: req.URL.RequestURI(), ReqHeader: header,
 		ReqBody: base64.StdEncoding.EncodeToString(body),
 	}); err != nil {

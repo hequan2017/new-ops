@@ -23,7 +23,7 @@
 - [ ] E2E 补验（进行中：本地全链功能 E2E 已过 场67——本机起全新 SQLite server+darwin agent 真进程跑通 7 断言：task/exec 三态、文件分发（嵌套目录+0600+内容一致）、job execBackend=agent 批次、流水线 agent 步骤+工作空间 pwd 实证；剩 deploy-test.sh 部署冒烟与 C3 模板化部署全链，待测试机 192.168.112.138 可达后立即做）。
 - [ ] M9 A2 执行代理：job 批量命令/脚本支持 SSH / Agent 双执行后端（可选下发），Agent 消息幂等（任务 ID 去重）与超时重试；文件分发。（进行中：双后端+幂等+超时+文件分发通道及 job 页分发卡片已交付 场62-65，剩真机 E2E）
 - [ ] M9 A3 流水线远程执行器：Pipeline step 可指定在资产/Agent 主机执行，工作空间按构建隔离（对齐 new-jenkins README 声明边界的升级）。（已交付 场66，剩真机 E2E，并入全局 E2E 补验项）
-- [ ] A4 + C3/K4 联动：Agent 模式纳管——代理所在主机 Docker socket 与集群内 ServiceAccount（一键 Deployment YAML），作为内网 Docker 节点/K8s 集群接入通道；节点池统一设计（Docker 节点为 asset 资产子类型）。（进行中：Docker 侧已交付 场69/70——通道层+endpoint viaAgent 集成+fake daemon 全链 E2E；剩集群 ServiceAccount 模式与节点池统一设计）
+- [ ] A4 + C3/K4 联动：Agent 模式纳管——代理所在主机 Docker socket 与集群内 ServiceAccount（一键 Deployment YAML），作为内网 Docker 节点/K8s 集群接入通道；节点池统一设计（Docker 节点为 asset 资产子类型）。（进行中：Docker 侧 场69/70 + K8s 集群后端 场71 已交付；剩注册 UI、一键 Deployment YAML 与 k3s 集群内 daemon 级 E2E）
 - [ ] dbops 收尾：soar 优化建议接入审核链（测试机 Docker 可拉镜像时）、SQL 工单多环境配置。
 - [x] M9 验收项：单实例 100 Agent 并发心跳/指标上报压测脚本 + 结果记录进开发日志；断线重连幂等回归。（完成 场68——agent/loadtest 本机实测 100/100 注册、45s 300 次心跳、结束 100 在线、零失败，server 日志零 panic；断线退避重连为 A1 已验+任务号幂等单测覆盖；测试机 canonical 部署后可复跑）
 - [ ] 收官：若 M9 A2/A3 完成，发布 tag v0.3.0 并更新 README 里程碑口径。

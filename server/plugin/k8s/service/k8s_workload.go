@@ -21,6 +21,10 @@ func clientsetForCluster(clusterID uint) (*kubernetes.Clientset, model.K8sCluste
 	if err := global.GVA_DB.First(&c, clusterID).Error; err != nil {
 		return nil, c, fmt.Errorf("集群不存在: %w", err)
 	}
+	if c.ViaAgent {
+		cs, err := kubernetes.NewForConfig(agentRESTConfig(&c))
+		return cs, c, err
+	}
 	kubeconfig, err := crypto.Decrypt(c.KubeconfigCipher)
 	if err != nil {
 		return nil, c, fmt.Errorf("kubeconfig 解密失败: %w", err)

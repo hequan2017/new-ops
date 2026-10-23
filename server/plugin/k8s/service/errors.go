@@ -13,6 +13,8 @@ const (
 	ErrCodeYAMLEmpty            = 1511
 	ErrCodeRepoURLInvalid       = 1512
 	ErrCodeNsForbidden          = 1513
+	ErrCodeK8sAgentUnsupported  = 1514
+	ErrCodeK8sAgentAssetRequired = 1515
 )
 
 // K8sError k8s 插件错误

@@ -25,13 +25,15 @@ func (a *k8sCluster) CreateCluster(c *gin.Context) {
 	var req struct {
 		Name       string `json:"name" binding:"required"`
 		Remark     string `json:"remark"`
-		Kubeconfig string `json:"kubeconfig" binding:"required"`
+		ViaAgent   bool   `json:"viaAgent"`
+		AssetID    uint   `json:"assetId"`
+		Kubeconfig string `json:"kubeconfig"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	c1 := &model.K8sCluster{Name: req.Name, Remark: req.Remark}
+	c1 := &model.K8sCluster{Name: req.Name, Remark: req.Remark, ViaAgent: req.ViaAgent, AssetID: req.AssetID}
 	if err := k8sClusterService.CreateCluster(c1, req.Kubeconfig); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
