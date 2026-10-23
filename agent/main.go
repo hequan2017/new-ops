@@ -31,10 +31,16 @@ type frame struct {
 	Points []agentPoint `json:"points,omitempty"`
 	// A2 任务下发（task）/ 回传（task_result）
 	TaskNo      string `json:"taskNo,omitempty"`
-	Payload     string `json:"payload,omitempty"`     // 下发：命令内容
+	Payload     string `json:"payload,omitempty"`     // 下发：命令内容 / 文件目标绝对路径
 	TaskTimeout int    `json:"taskTimeout,omitempty"` // 下发：执行超时秒
 	ExitCode    int    `json:"exitCode,omitempty"`    // 回传：退出码（0=成功，omitempty 省略不影响解析）
 	Output      string `json:"output,omitempty"`      // 回传：输出（截断后）
+	// A2 文件分发（file_push/file_chunk/file_end）
+	FileName   string `json:"fileName,omitempty"`
+	FileSize   int64  `json:"fileSize,omitempty"`
+	FileSHA256 string `json:"fileSha256,omitempty"`
+	FileMode   string `json:"fileMode,omitempty"`
+	FileData   string `json:"fileData,omitempty"` // base64 分块
 }
 
 type agentMeta struct {
@@ -70,8 +76,9 @@ func main() {
 
 	backoff := time.Second
 	executor := newTaskExecutor(4, 4096) // 并发 4；任务号去重表上限 4096（超限整体清空防泄漏）
+	files := newFileReceiver(2, 512)     // 文件接收并发 2
 	for {
-		err := runSession(wsURL, *flagToken, meta, *flagInterval, executor)
+		err := runSession(wsURL, *flagToken, meta, *flagInterval, executor, files)
 		if rr, ok := err.(*registerRejectedError); ok {
 			// 令牌被拒不会自愈：打印后退出（等人工换令牌再启动）
 			log.Fatalf("注册被拒（%s），退出——请在资产页重新签发令牌", rr.reason)
@@ -102,13 +109,14 @@ func buildWSURL(server string) string {
 }
 
 // runSession 一次完整会话：拨号 → 注册 → 心跳/指标循环；连接断开返回 error
-func runSession(wsURL, token string, meta agentMeta, interval time.Duration, executor *taskExecutor) error {
+func runSession(wsURL, token string, meta agentMeta, interval time.Duration, executor *taskExecutor, files *fileReceiver) error {
 	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
 	conn, _, err := dialer.Dial(wsURL, nil)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
+	defer files.cleanupAll() // 会话断开清理未完成接收的临时文件
 
 	var wmu sync.Mutex
 	send := func(f frame) error {
@@ -142,8 +150,11 @@ func runSession(wsURL, token string, meta agentMeta, interval time.Duration, exe
 				readErr <- err
 				return
 			}
-			if f.Type == "task" {
+			switch f.Type {
+			case "task":
 				executor.dispatch(f, send)
+			case "file_push", "file_chunk", "file_end":
+				files.handle(f, send)
 			}
 		}
 	}()

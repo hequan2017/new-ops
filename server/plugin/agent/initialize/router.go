@@ -19,6 +19,7 @@ func Router(engine *gin.Engine) {
 	private.DELETE("agent/instance", agentV1.AgentApi.RevokeInstance)
 	private.POST("agent/task/exec", agentV1.AgentApi.TaskExec)
 	private.GET("agent/task/list", agentV1.AgentApi.TaskList)
+	private.POST("agent/file/push", agentV1.AgentApi.FilePush)
 
 	// Agent 为非 JWT 主体（单文件二进制，注册令牌鉴权）：直接挂 http handler，不经 JWT 中间件组
 	engine.GET(global.GVA_CONFIG.System.RouterPrefix+"/agent/ws", gin.WrapF(agentSvc.AgentSvc.HandleWS))

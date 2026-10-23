@@ -17,20 +17,18 @@ const maxTaskOutputBytes = 60 * 1024
 // taskErrTimeout 自身执行超时时回传的错误文案（server 据此映射"超时"状态）
 const taskErrTimeout = "执行超时"
 
-// taskExecutor 任务执行器：任务号去重 + 并发上限
-type taskExecutor struct {
+// taskSeen 任务号去重表（幂等）：同号只放行一次；超限整体清空防长驻泄漏
+type taskSeen struct {
 	mu      sync.Mutex
 	seen    map[string]struct{}
 	maxSeen int
-	sem     chan struct{}
 }
 
-func newTaskExecutor(maxConcurrent, maxSeen int) *taskExecutor {
-	return &taskExecutor{seen: map[string]struct{}{}, maxSeen: maxSeen, sem: make(chan struct{}, maxConcurrent)}
+func newTaskSeen(maxSeen int) *taskSeen {
+	return &taskSeen{seen: map[string]struct{}{}, maxSeen: maxSeen}
 }
 
-// shouldRun 任务号去重（幂等）：同号只放行一次；seen 超限整体清空防长驻泄漏
-func (t *taskExecutor) shouldRun(taskNo string) bool {
+func (t *taskSeen) first(taskNo string) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if _, ok := t.seen[taskNo]; ok {
@@ -41,6 +39,21 @@ func (t *taskExecutor) shouldRun(taskNo string) bool {
 	}
 	t.seen[taskNo] = struct{}{}
 	return true
+}
+
+// taskExecutor 任务执行器：任务号去重 + 并发上限
+type taskExecutor struct {
+	seen *taskSeen
+	sem  chan struct{}
+}
+
+func newTaskExecutor(maxConcurrent, maxSeen int) *taskExecutor {
+	return &taskExecutor{seen: newTaskSeen(maxSeen), sem: make(chan struct{}, maxConcurrent)}
+}
+
+// shouldRun 任务号去重（幂等）：同号只放行一次
+func (t *taskExecutor) shouldRun(taskNo string) bool {
+	return t.seen.first(taskNo)
 }
 
 // dispatch 处理下发的 task 帧：重复任务号静默丢弃（幂等）；并发占满即时回执失败；否则后台限时执行

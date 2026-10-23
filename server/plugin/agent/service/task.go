@@ -75,11 +75,11 @@ func (s *AgentService) RunTask(operator string, assetID uint, command string, ti
 			TaskNo: taskNo, ExitCode: f.ExitCode, Output: f.Output, ErrMsg: f.Msg,
 			ElapsedMs: time.Since(start).Milliseconds(),
 		}
-		s.persistTask(operator, assetID, command, taskStatusOf(r.ExitCode, r.ErrMsg), r)
+		s.persistTask(operator, assetID, "exec", command, taskStatusOf(r.ExitCode, r.ErrMsg), r)
 		return r, nil
 	case <-timer.C:
 		r := &TaskResult{TaskNo: taskNo, ErrMsg: "agent 执行超时", ElapsedMs: time.Since(start).Milliseconds()}
-		s.persistTask(operator, assetID, command, TaskStatusTimeout, r)
+		s.persistTask(operator, assetID, "exec", command, TaskStatusTimeout, r)
 		return nil, newAgentErr(ErrCodeAgentTaskTimeout, "agent 执行超时（结果未在限时内回传）")
 	}
 }
@@ -137,13 +137,13 @@ func taskStatusOf(exitCode int, errMsg string) string {
 }
 
 // persistTask 任务留痕（best-effort：留痕失败仅记日志，不阻断调用方）
-func (s *AgentService) persistTask(operator string, assetID uint, command, status string, r *TaskResult) {
+func (s *AgentService) persistTask(operator string, assetID uint, typ, command, status string, r *TaskResult) {
 	if global.GVA_DB == nil {
 		return
 	}
 	now := time.Now()
 	row := model.AgentTask{
-		TaskNo: r.TaskNo, AssetID: assetID, Type: "exec", Command: command, Status: status,
+		TaskNo: r.TaskNo, AssetID: assetID, Type: typ, Command: command, Status: status,
 		ExitCode: r.ExitCode, Output: truncateBytes(r.Output, maxTaskOutputBytes), ErrMsg: r.ErrMsg,
 		ElapsedMs: r.ElapsedMs, Operator: operator, FinishedAt: &now,
 	}

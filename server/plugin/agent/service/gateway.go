@@ -64,7 +64,7 @@ var registry = struct {
 // ---- 消息信封（agent ⇄ server JSON 帧） ----
 
 type agentFrame struct {
-	Type   string       `json:"type"` // register / heartbeat / metric / register_ok / register_fail / task / task_result
+	Type   string       `json:"type"` // register / heartbeat / metric / register_ok / register_fail / task / task_result / file_push / file_chunk / file_end
 	Token  string       `json:"token,omitempty"`
 	TS     int64        `json:"ts,omitempty"`
 	Msg    string       `json:"msg,omitempty"`
@@ -72,10 +72,16 @@ type agentFrame struct {
 	Points []agentPoint `json:"points,omitempty"`
 	// A2 任务下发（task）/ 回传（task_result）
 	TaskNo      string `json:"taskNo,omitempty"`
-	Payload     string `json:"payload,omitempty"`     // 下发：命令内容
+	Payload     string `json:"payload,omitempty"`     // 下发：命令内容 / 文件目标绝对路径
 	TaskTimeout int    `json:"taskTimeout,omitempty"` // 下发：执行超时秒
 	ExitCode    int    `json:"exitCode,omitempty"`    // 回传：退出码（0=成功，omitempty 省略不影响解析）
 	Output      string `json:"output,omitempty"`      // 回传：输出（截断后）
+	// A2 文件分发（file_push/file_chunk/file_end）
+	FileName   string `json:"fileName,omitempty"`
+	FileSize   int64  `json:"fileSize,omitempty"`
+	FileSHA256 string `json:"fileSha256,omitempty"`
+	FileMode   string `json:"fileMode,omitempty"`
+	FileData   string `json:"fileData,omitempty"` // base64 分块
 }
 
 type agentMeta struct {

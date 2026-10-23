@@ -18,6 +18,7 @@ func Api(ctx context.Context) {
 		{Path: "/agent/instance", Description: "吊销 Agent 注册", ApiGroup: "Agent通道", Method: "DELETE"},
 		{Path: "/agent/task/exec", Description: "Agent 任务下发执行", ApiGroup: "Agent通道", Method: "POST"},
 		{Path: "/agent/task/list", Description: "Agent 任务记录列表", ApiGroup: "Agent通道", Method: "GET"},
+		{Path: "/agent/file/push", Description: "Agent 文件分发", ApiGroup: "Agent通道", Method: "POST"},
 	}
 	utils.RegisterApis(apis...)
 }
@@ -38,6 +39,7 @@ func Casbin(ctx context.Context) {
 		{"/agent/instance", "DELETE"},
 		{"/agent/task/exec", "POST"},
 		{"/agent/task/list", "GET"},
+		{"/agent/file/push", "POST"},
 	}
 	readonly := []struct {
 		Path   string

@@ -136,3 +136,34 @@ func (a *agentApi) TaskList(c *gin.Context) {
 		List: list, Total: total, Page: page, PageSize: pageSize,
 	}, "获取成功", c)
 }
+
+// filePushReq 文件分发请求
+type filePushReq struct {
+	AssetID    uint   `json:"assetId" binding:"required"`
+	LocalPath  string `json:"localPath" binding:"required"`
+	RemotePath string `json:"remotePath" binding:"required"`
+	Mode       string `json:"mode"`
+}
+
+// FilePush 向资产上的在线 Agent 分发本地文件（分块 WS 下发+SHA256 校验落盘；写操作仅 888）
+// @Tags AgentTask
+// @Summary Agent 文件分发（server 本地文件 → agent 目标机绝对路径，临时文件+哈希校验+原子改名）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body filePushReq true "资产ID/本地路径/目标绝对路径/权限(八进制,默认0644)"
+// @Success 200 {object} response.Response{data=service.TaskResult} "分发完成"
+// @Router /agent/file/push [post]
+func (a *agentApi) FilePush(c *gin.Context) {
+	var req filePushReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage("参数无效: "+err.Error(), c)
+		return
+	}
+	r, err := agentSvc.AgentSvc.PushFile(utils.GetUserName(c), req.AssetID, req.LocalPath, req.RemotePath, req.Mode)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithData(r, c)
+}
