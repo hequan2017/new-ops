@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hequan2017/new-ops/server/global"
 	agentSvc "github.com/hequan2017/new-ops/server/plugin/agent/service"
@@ -441,10 +442,8 @@ func (s *PipelineBuildService) runHTTPStep(ctx context.Context, buildID uint, st
 		return err
 	}
 	defer resp.Body.Close()
-	snippet := make([]byte, 1024)
-	n, _ := resp.Body.Read(snippet)
 	s.appendLog(buildID, stageName, sp.Name, model.LogSystem,
-		fmt.Sprintf("HTTP %d %s %s", resp.StatusCode, http.StatusText(resp.StatusCode), strings.TrimSpace(string(snippet[:n]))))
+		fmt.Sprintf("HTTP %d %s %s", resp.StatusCode, http.StatusText(resp.StatusCode), strings.TrimSpace(readBodySnippet(resp.Body, 1024))))
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
@@ -502,16 +501,37 @@ func (s *PipelineBuildService) finish(buildID uint, status string) {
 	s.appendLog(buildID, "", "", model.LogSystem, "构建结束："+status)
 }
 
-// appendLog 落一条构建日志（长内容截断 16KB）
+// appendLog 落一条构建日志（长内容按 UTF-8 字符边界截断 16KB）
 func (s *PipelineBuildService) appendLog(buildID uint, stageName, stepName, level, content string) {
 	if len(content) > 16*1024 {
-		content = content[:16*1024] + "\n…(截断)"
+		content = truncateLogRunes(content, 16*1024)
 	}
 	if err := global.GVA_DB.Create(&model.BuildLog{
 		BuildID: buildID, StageName: stageName, StepName: stepName, Level: level, Content: content,
 	}).Error; err != nil {
 		global.GVA_LOG.Error(fmt.Sprintf("构建 %d 日志落库失败: %v", buildID, err))
 	}
+}
+
+// truncateLogRunes 按 UTF-8 字符边界截断（纯逻辑；字节硬切会切出非法 UTF-8 存库乱码）
+func truncateLogRunes(content string, max int) string {
+	if len(content) <= max {
+		return content
+	}
+	i := max
+	for i > 0 && !utf8.RuneStart(content[i]) {
+		i--
+	}
+	return content[:i] + "\n…(截断)"
+}
+
+// readBodySnippet 完整读取响应体前 max 字节（单次 Read 允许短读，会丢日志快照）
+func readBodySnippet(r io.Reader, max int) string {
+	if r == nil {
+		return ""
+	}
+	b, _ := io.ReadAll(io.LimitReader(r, int64(max)))
+	return string(b)
 }
 
 // GetBuildList 构建分页列表（pipelineID/status 过滤；普通用户仅本人）
