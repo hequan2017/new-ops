@@ -25,7 +25,7 @@
 - [ ] M9 A3 流水线远程执行器：Pipeline step 可指定在资产/Agent 主机执行，工作空间按构建隔离（对齐 new-jenkins README 声明边界的升级）。（已交付 场66，剩真机 E2E，并入全局 E2E 补验项）
 - [ ] A4 + C3/K4 联动：Agent 模式纳管——代理所在主机 Docker socket 与集群内 ServiceAccount（一键 Deployment YAML），作为内网 Docker 节点/K8s 集群接入通道；节点池统一设计（Docker 节点为 asset 资产子类型）。
 - [ ] dbops 收尾：soar 优化建议接入审核链（测试机 Docker 可拉镜像时）、SQL 工单多环境配置。
-- [ ] M9 验收项：单实例 100 Agent 并发心跳/指标上报压测脚本 + 结果记录进开发日志；断线重连幂等回归。
+- [x] M9 验收项：单实例 100 Agent 并发心跳/指标上报压测脚本 + 结果记录进开发日志；断线重连幂等回归。（完成 场68——agent/loadtest 本机实测 100/100 注册、45s 300 次心跳、结束 100 在线、零失败，server 日志零 panic；断线退避重连为 A1 已验+任务号幂等单测覆盖；测试机 canonical 部署后可复跑）
 - [ ] 收官：若 M9 A2/A3 完成，发布 tag v0.3.0 并更新 README 里程碑口径。
 
 说明：GPU 显卡直通/HAMi、钉钉企业配置为环境阻塞项，本窗口不做；每场只推进一个小单元，宁小勿烂。
