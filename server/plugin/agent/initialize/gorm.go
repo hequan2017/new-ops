@@ -12,6 +12,7 @@ import (
 func Gorm(ctx context.Context) {
 	if err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.AgentInstance),
+		new(model.AgentTask),
 	); err != nil {
 		global.GVA_LOG.Error("agent 注册表失败: " + err.Error())
 	}

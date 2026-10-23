@@ -23,12 +23,18 @@ type agentPoint struct {
 }
 
 type frame struct {
-	Type   string       `json:"type"`
+	Type   string       `json:"type"` // register / heartbeat / metric / register_ok / register_fail / task / task_result
 	Token  string       `json:"token,omitempty"`
 	TS     int64        `json:"ts,omitempty"`
 	Msg    string       `json:"msg,omitempty"`
 	Agent  agentMeta    `json:"agent,omitempty"`
 	Points []agentPoint `json:"points,omitempty"`
+	// A2 任务下发（task）/ 回传（task_result）
+	TaskNo      string `json:"taskNo,omitempty"`
+	Payload     string `json:"payload,omitempty"`     // 下发：命令内容
+	TaskTimeout int    `json:"taskTimeout,omitempty"` // 下发：执行超时秒
+	ExitCode    int    `json:"exitCode,omitempty"`    // 回传：退出码（0=成功，omitempty 省略不影响解析）
+	Output      string `json:"output,omitempty"`      // 回传：输出（截断后）
 }
 
 type agentMeta struct {
@@ -63,8 +69,9 @@ func main() {
 	log.Printf("baize-agent %s → %s (interval %s)", agentVersion, wsURL, *flagInterval)
 
 	backoff := time.Second
+	executor := newTaskExecutor(4, 4096) // 并发 4；任务号去重表上限 4096（超限整体清空防泄漏）
 	for {
-		err := runSession(wsURL, *flagToken, meta, *flagInterval)
+		err := runSession(wsURL, *flagToken, meta, *flagInterval, executor)
 		if rr, ok := err.(*registerRejectedError); ok {
 			// 令牌被拒不会自愈：打印后退出（等人工换令牌再启动）
 			log.Fatalf("注册被拒（%s），退出——请在资产页重新签发令牌", rr.reason)
@@ -95,7 +102,7 @@ func buildWSURL(server string) string {
 }
 
 // runSession 一次完整会话：拨号 → 注册 → 心跳/指标循环；连接断开返回 error
-func runSession(wsURL, token string, meta agentMeta, interval time.Duration) error {
+func runSession(wsURL, token string, meta agentMeta, interval time.Duration, executor *taskExecutor) error {
 	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
 	conn, _, err := dialer.Dial(wsURL, nil)
 	if err != nil {
@@ -125,14 +132,18 @@ func runSession(wsURL, token string, meta agentMeta, interval time.Duration) err
 	}
 	log.Printf("注册成功: %s@%s", meta.Hostname, meta.Os+"/"+meta.Arch)
 
-	// 读循环：消化 server ping（默认 pong 应答），读超时即判死链
+	// 读循环：消化 server ping（默认 pong 应答）；task 帧分发给执行器，读超时即判死链
 	readErr := make(chan error, 1)
 	go func() {
 		for {
 			_ = conn.SetReadDeadline(time.Now().Add(2 * interval))
-			if _, _, err := conn.ReadMessage(); err != nil {
+			var f frame
+			if err := conn.ReadJSON(&f); err != nil {
 				readErr <- err
 				return
+			}
+			if f.Type == "task" {
+				executor.dispatch(f, send)
 			}
 		}
 	}()

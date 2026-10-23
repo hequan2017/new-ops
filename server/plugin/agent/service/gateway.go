@@ -64,12 +64,18 @@ var registry = struct {
 // ---- 消息信封（agent ⇄ server JSON 帧） ----
 
 type agentFrame struct {
-	Type   string       `json:"type"` // register / heartbeat / metric / register_ok / register_fail
+	Type   string       `json:"type"` // register / heartbeat / metric / register_ok / register_fail / task / task_result
 	Token  string       `json:"token,omitempty"`
 	TS     int64        `json:"ts,omitempty"`
 	Msg    string       `json:"msg,omitempty"`
 	Agent  agentMeta    `json:"agent,omitempty"`
 	Points []agentPoint `json:"points,omitempty"`
+	// A2 任务下发（task）/ 回传（task_result）
+	TaskNo      string `json:"taskNo,omitempty"`
+	Payload     string `json:"payload,omitempty"`     // 下发：命令内容
+	TaskTimeout int    `json:"taskTimeout,omitempty"` // 下发：执行超时秒
+	ExitCode    int    `json:"exitCode,omitempty"`    // 回传：退出码（0=成功，omitempty 省略不影响解析）
+	Output      string `json:"output,omitempty"`      // 回传：输出（截断后）
 }
 
 type agentMeta struct {
@@ -268,6 +274,8 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 		case "metric":
 			global.GVA_DB.Model(&inst).Update("last_heartbeat", &now)
 			s.storeMetrics(inst.AssetID, f.Points)
+		case "task_result":
+			resolveTaskResult(f.TaskNo, f)
 		default:
 			// 未知类型忽略（向前兼容）
 		}
