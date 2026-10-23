@@ -92,6 +92,66 @@
     </div>
 
     <div class="ops-card" style="margin-top: 12px">
+      <div class="file-card-title">文件分发（Agent 通道）</div>
+      <el-form label-width="110px">
+        <el-row :gutter="12">
+          <el-col :span="8">
+            <el-form-item label="Server 文件">
+              <el-input v-model="fileForm.localPath" placeholder="server 本地绝对路径，如 /opt/pkg/app.tar.gz" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="目标路径">
+              <el-input v-model="fileForm.remotePath" placeholder="目标机绝对路径，如 /tmp/app.tar.gz" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="4">
+            <el-form-item label="权限">
+              <el-input v-model="fileForm.mode" placeholder="0644" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="4">
+            <el-form-item label-width="0">
+              <el-button type="primary" :loading="filePushing" :disabled="!fileHostIds.length" @click="onPushFile">
+                分发（{{ fileHostIds.length }} 台）
+              </el-button>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="目标主机">
+              <el-select
+                v-model="fileHostIds"
+                multiple
+                filterable
+                placeholder="仅列出 Agent 在线的主机（勾选后经 WS 通道分发）"
+                style="width: 100%"
+              >
+                <el-option v-for="h in agentOnlineHosts" :key="h.ID" :label="`${h.hostname}（${h.ip}）`" :value="h.ID" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+
+      <el-table v-if="fileResults.length" :data="fileResults" stripe size="small">
+        <el-table-column prop="hostname" label="主机" width="200" show-overflow-tooltip />
+        <el-table-column label="结果" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.ok ? 'success' : 'danger'" size="small">{{ row.ok ? '成功' : '失败' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="耗时" width="100">
+          <template #default="{ row }">{{ row.elapsedMs }}ms</template>
+        </el-table-column>
+        <el-table-column label="详情">
+          <template #default="{ row }">
+            <span :class="row.ok ? 'ops-text-muted' : 'ops-text-danger'">{{ row.detail }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <div class="ops-card" style="margin-top: 12px">
       <el-form inline>
         <el-form-item label="状态">
           <el-select v-model="searchStatus" clearable style="width: 140px" @change="onSearch">
@@ -182,12 +242,13 @@
 </template>
 
 <script setup>
-  import { ref, reactive, onMounted, onUnmounted } from 'vue'
+  import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { createBatchExec, cancelBatchExec, getBatchList, getBatchDetail } from '@/plugin/job/api/batchExec'
   import { getScriptList, getVarGroupList } from '@/plugin/job/api/jobScript'
   import { getAssetHostList } from '@/plugin/asset/api/assetHost'
   import { getCredentialList } from '@/plugin/asset/api/credential'
+  import { getAgentInstanceList, pushAgentFile } from '@/plugin/agent/api/agentInstance'
 
   defineOptions({ name: 'jobBatchExec' })
 
@@ -229,6 +290,63 @@
   const onScriptPick = (id) => {
     const sc = scriptOptions.value.find((x) => x.ID === id)
     if (sc) form.command = sc.content
+  }
+
+  // 文件分发（Agent 通道，M9 A2）：仅可选 Agent 在线的主机，逐台并发调 /agent/file/push
+  const fileForm = reactive({ localPath: '', remotePath: '', mode: '' })
+  const fileHostIds = ref([])
+  const filePushing = ref(false)
+  const fileResults = ref([])
+  const agentOnlineIDs = ref(new Set())
+  const agentOnlineHosts = computed(() => hostOptions.value.filter((h) => agentOnlineIDs.value.has(h.ID)))
+
+  const loadAgentOnline = async () => {
+    const res = await getAgentInstanceList()
+    if (res.code === 0) {
+      agentOnlineIDs.value = new Set((res.data || []).filter((x) => x.status === '在线').map((x) => x.assetId))
+    }
+  }
+
+  const onPushFile = async () => {
+    if (!fileForm.localPath.trim() || !fileForm.remotePath.trim()) {
+      ElMessage.warning('请填写 server 文件路径与目标路径')
+      return
+    }
+    await ElMessageBox.confirm(
+      `确定把 ${fileForm.localPath} 分发到 ${fileHostIds.value.length} 台主机的 ${fileForm.remotePath} 吗？同名文件将被覆盖。`,
+      '文件分发确认',
+      { confirmButtonText: '分发', cancelButtonText: '取消', type: 'warning' }
+    )
+    filePushing.value = true
+    fileResults.value = []
+    const hostMap = Object.fromEntries(hostOptions.value.map((h) => [h.ID, h]))
+    try {
+      await Promise.all(
+        fileHostIds.value.map(async (id) => {
+          const h = hostMap[id] || {}
+          const name = `${h.hostname || id}（${h.ip || '-'}）`
+          const started = Date.now()
+          try {
+            const res = await pushAgentFile({
+              assetId: id,
+              localPath: fileForm.localPath.trim(),
+              remotePath: fileForm.remotePath.trim(),
+              mode: fileForm.mode.trim() || undefined
+            })
+            fileResults.value.push({
+              hostname: name,
+              ok: res.code === 0,
+              elapsedMs: res.code === 0 ? res.data.elapsedMs : Date.now() - started,
+              detail: res.code === 0 ? '已写入（SHA256 校验通过）' : res.msg
+            })
+          } catch (e) {
+            fileResults.value.push({ hostname: name, ok: false, elapsedMs: Date.now() - started, detail: String(e) })
+          }
+        })
+      )
+    } finally {
+      filePushing.value = false
+    }
   }
 
   const onSubmitExec = async () => {
@@ -348,6 +466,7 @@
 
   onMounted(() => {
     loadOptions()
+    loadAgentOnline()
     getList()
     pollTimer = setInterval(pollTick, 3500)
   })
@@ -357,6 +476,11 @@
 </script>
 
 <style scoped>
+  .file-card-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
   .ops-pre {
     margin: 0;
     max-height: 240px;
