@@ -9,8 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
+	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
 	"github.com/hequan2017/new-ops/server/plugin/monitor/model"
 	"github.com/hequan2017/new-ops/server/plugin/monitor/service"
+	"github.com/hequan2017/new-ops/server/utils"
 )
 
 var MonitorApi = new(monitorApi)
@@ -31,6 +33,20 @@ func (a *monitorApi) GetMetrics(c *gin.Context) {
 	assetID, err := strconv.ParseUint(c.Query("assetId"), 10, 64)
 	if err != nil || assetID == 0 {
 		response.FailWithMessage("assetId 无效", c)
+		return
+	}
+	// 数据权限：非超管仅可查询其资产组内主机的指标（与资产列表同口径）
+	scope := &assetSvc.HostUserScope{
+		IsSuperAdmin: utils.GetUserAuthorityId(c) == 888,
+		UserID:       utils.GetUserID(c),
+	}
+	ok, err := new(assetSvc.AssetHostService).CheckHostInScope(uint(assetID), scope)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if !ok {
+		response.FailWithMessage("主机不存在或无权访问", c)
 		return
 	}
 	var names []string

@@ -12,6 +12,7 @@ import (
 	"github.com/hequan2017/new-ops/server/model/common/response"
 	"github.com/hequan2017/new-ops/server/plugin/monitor/model"
 	"github.com/hequan2017/new-ops/server/plugin/monitor/service"
+	"github.com/hequan2017/new-ops/server/utils"
 )
 
 type alertApi struct{}
@@ -104,6 +105,14 @@ func (a *alertApi) DeleteRule(c *gin.Context) {
 func (a *alertApi) ListRules(c *gin.Context) {
 	var list []model.MonitorAlertRule
 	global.GVA_DB.Order("id DESC").Limit(500).Find(&list)
+	// webhook 查询串含钉钉 access_token：非超管截掉，防拿到即可伪造群推送
+	if utils.GetUserAuthorityId(c) != 888 {
+		for i := range list {
+			if u := list[i].WebhookURL; u != "" {
+				list[i].WebhookURL = strings.SplitN(u, "?", 2)[0]
+			}
+		}
+	}
 	response.OkWithDetailed(list, "获取成功", c)
 }
 
