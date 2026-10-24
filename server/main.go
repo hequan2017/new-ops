@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/hequan2017/new-ops/server/core"
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/initialize"
@@ -41,6 +43,12 @@ func initializeSystem() {
 	initialize.OtherInit()
 	global.GVA_LOG = core.Zap() // 初始化zap日志库
 	zap.ReplaceGlobals(global.GVA_LOG)
+	// 生产环境弱签名键硬守卫（qmPlus/空键=可伪造任意身份 JWT，拒绝启动）
+	if refuse, reason := initialize.JWTKeyGuard(global.GVA_VP.GetString("system.env"), global.GVA_CONFIG.JWT.SigningKey); refuse {
+		global.GVA_LOG.Error(reason)
+		zap.L().Error("JWT 弱签名键守卫触发，拒绝启动: " + reason)
+		os.Exit(1)
+	}
 	global.GVA_DB = initialize.Gorm() // gorm连接数据库
 	initialize.Timer()
 	initialize.DBList()
