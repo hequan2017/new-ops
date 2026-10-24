@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"gorm.io/gorm"
 
@@ -190,7 +191,7 @@ func (s *AiopsServiceStruct) Chat(ctx context.Context, providerID uint, system, 
 	var cr chatResponse
 	if err := json.Unmarshal(raw, &cr); err != nil {
 		return "", p.Name, p.Model, fmt.Errorf("[%d]LLM 响应非 JSON(HTTP %d): %s",
-			ErrCodeLLMCallFailed, resp.StatusCode, strings.TrimSpace(string(raw))[:min(len(raw), 200)])
+			ErrCodeLLMCallFailed, resp.StatusCode, errSnippet(raw))
 	}
 	if cr.Error != nil && cr.Error.Message != "" {
 		return "", p.Name, p.Model, fmt.Errorf("[%d]LLM 返回错误: %s", ErrCodeLLMCallFailed, cr.Error.Message)
@@ -199,6 +200,20 @@ func (s *AiopsServiceStruct) Chat(ctx context.Context, providerID uint, system, 
 		return "", p.Name, p.Model, fmt.Errorf("[%d]LLM 响应无 choices(HTTP %d)", ErrCodeLLMCallFailed, resp.StatusCode)
 	}
 	return cr.Choices[0].Message.Content, p.Name, p.Model, nil
+}
+
+// errSnippet 非 JSON 响应的错误快照（UTF-8 字符边界截断）——原实现对 TrimSpace 后的串按
+// TrimSpace 前长度切片：纯空白响应体 ≥201 字节时 trimmed 为空串，[:200] 直接越界 panic
+func errSnippet(raw []byte) string {
+	const max = 200
+	if len(raw) <= max {
+		return strings.TrimSpace(string(raw))
+	}
+	i := max
+	for i > 0 && !utf8.RuneStart(raw[i]) {
+		i--
+	}
+	return strings.TrimSpace(string(raw[:i]))
 }
 
 func min(a, b int) int {
