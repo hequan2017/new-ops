@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"io"
@@ -23,6 +24,9 @@ func (a *Import) Parse(filename string, writer io.Writer) (file *ast.File, err e
 func (a *Import) Rollback(file *ast.File) error {
 	if a.ImportPath == "" {
 		return nil
+	}
+	if file == nil {
+		return fmt.Errorf("ast: Import 回滚目标文件未解析（file 为 nil）")
 	}
 	for i := 0; i < len(file.Decls); i++ {
 		v1, o1 := file.Decls[i].(*ast.GenDecl)
@@ -48,6 +52,10 @@ func (a *Import) Rollback(file *ast.File) error {
 func (a *Import) Injection(file *ast.File) error {
 	if a.ImportPath == "" {
 		return nil
+	}
+	if file == nil {
+		// 上游 Parse 失败（文件缺失等）时调用方可能仍传入 nil——不判空会在下方取 file.Decls 时空指针 panic
+		return fmt.Errorf("ast: Import 注入目标文件未解析（file 为 nil）")
 	}
 	var has bool
 	for i := 0; i < len(file.Decls); i++ {

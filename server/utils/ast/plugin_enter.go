@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"io"
@@ -36,6 +37,9 @@ func (a *PluginEnter) Parse(filename string, writer io.Writer) (file *ast.File, 
 }
 
 func (a *PluginEnter) Rollback(file *ast.File) error {
+	if file == nil {
+		return fmt.Errorf("ast: PluginEnter 回滚目标文件未解析（file 为 nil）")
+	}
 	//回滚结构体内内容
 	var structType *ast.StructType
 	ast.Inspect(file, func(n ast.Node) bool {
@@ -85,6 +89,10 @@ func (a *PluginEnter) Rollback(file *ast.File) error {
 }
 
 func (a *PluginEnter) Injection(file *ast.File) error {
+	if file == nil {
+		// Parse 失败（如目标 enter.go 缺失）时 file 为 nil——不判空会经 Import.Injection 空指针 panic
+		return fmt.Errorf("ast: PluginEnter 注入目标文件未解析（file 为 nil）")
+	}
 	_ = NewImport(a.ImportPath).Injection(file)
 
 	has := false

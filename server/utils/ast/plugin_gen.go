@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"io"
@@ -30,6 +31,9 @@ func (a *PluginGen) Parse(filename string, writer io.Writer) (file *ast.File, er
 	return a.Base.Parse(filename, writer)
 }
 func (a *PluginGen) Rollback(file *ast.File) error {
+	if file == nil {
+		return fmt.Errorf("ast: PluginGen 回滚目标文件未解析（file 为 nil）")
+	}
 	for i := 0; i < len(file.Decls); i++ {
 		v1, o1 := file.Decls[i].(*ast.FuncDecl)
 		if o1 {
@@ -95,6 +99,10 @@ func (a *PluginGen) Rollback(file *ast.File) error {
 }
 
 func (a *PluginGen) Injection(file *ast.File) error {
+	if file == nil {
+		// Parse 失败（目标 gen/main.go 缺失等）时调用方可能仍传入 nil——取 file.Decls 前不判空会 panic
+		return fmt.Errorf("ast: PluginGen 注入目标文件未解析（file 为 nil）")
+	}
 	_ = NewImport(a.ImportPath).Injection(file)
 	for i := 0; i < len(file.Decls); i++ {
 		v1, o1 := file.Decls[i].(*ast.FuncDecl)

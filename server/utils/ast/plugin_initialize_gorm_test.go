@@ -7,6 +7,7 @@ import (
 )
 
 func TestPluginInitializeGorm_Injection(t *testing.T) {
+	skipWithoutGvaPlugin(t)
 	type fields struct {
 		Type        Type
 		Path        string
@@ -78,6 +79,7 @@ func TestPluginInitializeGorm_Injection(t *testing.T) {
 }
 
 func TestPluginInitializeGorm_Rollback(t *testing.T) {
+	skipWithoutGvaPlugin(t)
 	type fields struct {
 		Type        Type
 		Path        string

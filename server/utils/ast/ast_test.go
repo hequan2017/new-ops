@@ -12,6 +12,7 @@ import (
 )
 
 func TestAst(t *testing.T) {
+	skipWithoutGvaPlugin(t)
 	if testing.Short() {
 		t.Skip("跳过依赖全局配置的集成测试")
 	}
