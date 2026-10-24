@@ -152,14 +152,22 @@ fi
 echo "[6/7] 冒烟验证"
 sleep 2
 WEB_CODE=$(ssh "$HOST" "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$WEB_PORT/")
-API_OK=$(ssh "$HOST" "curl -s -X POST http://127.0.0.1:$API_PORT/init/checkdb" | grep -c '"code":0' || true)
+# checkdb 带重试：server 冷启动（systemd 拉起+迁移+插件注册）偶发慢于固定 sleep，避免冒烟偶发假失败
+API_OK=0
+for _ in 1 2 3 4 5; do
+  API_OK=$(ssh "$HOST" "curl -s -X POST http://127.0.0.1:$API_PORT/init/checkdb" | grep -c '"code":0' || true)
+  [ "$API_OK" = "1" ] && break
+  sleep 3
+done
+# systemd 服务活性（restart 后可能处于 crash 循环，is-active 比 checkdb 更早暴露）
+UNIT_ACTIVE=$(ssh "$HOST" "systemctl is-active $UNIT" 2>/dev/null || echo inactive)
 LOGIN_OK="skipped"
 if [ -n "$PW" ]; then
   LOGIN_OK=$(ssh "$HOST" "curl -s -X POST http://127.0.0.1:$API_PORT/base/login -H 'Content-Type: application/json' \
     -d '{\"username\":\"admin\",\"password\":\"$PW\",\"captcha\":\"\",\"captchaId\":\"\"}'" | grep -c '"code":0' || true)
 fi
-echo "    web HTTP: $WEB_CODE | checkdb: $API_OK | login: $LOGIN_OK"
-if [ "$WEB_CODE" != "200" ] || [ "$API_OK" != "1" ]; then
+echo "    web HTTP: $WEB_CODE | checkdb: $API_OK | login: $LOGIN_OK | unit: $UNIT_ACTIVE"
+if [ "$WEB_CODE" != "200" ] || [ "$API_OK" != "1" ] || [ "$UNIT_ACTIVE" != "active" ]; then
   echo "!! 冒烟未通过，请查看: ssh $HOST 'journalctl -u $UNIT -n 50 --no-pager'"
   exit 1
 fi
