@@ -30,6 +30,19 @@ func ClearTable(db *gorm.DB) error {
 		Interval:     "168h",
 	})
 
+	// 白泽扩展：term 会话审计流镜像/命令抽取（每条 WS 消息一行，无界增长）——按审计记录惯例留 90 天
+	ClearTableDetail = append(ClearTableDetail, common.ClearDB{
+		TableName:    "term_session_streams",
+		CompareField: "created_at",
+		Interval:     "2160h",
+	})
+
+	ClearTableDetail = append(ClearTableDetail, common.ClearDB{
+		TableName:    "term_session_commands",
+		CompareField: "created_at",
+		Interval:     "2160h",
+	})
+
 	if db == nil {
 		return errors.New("db Cannot be empty")
 	}
