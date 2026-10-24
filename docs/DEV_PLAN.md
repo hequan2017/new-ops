@@ -642,4 +642,5 @@ web/src/plugin/asset/
 | 2026-10-24 | 113 | **文档一致性（场113，plugin-dev-guide 全文重读）**：三处更新——①测试指引改全量 `go test ./...` 必须绿（场85-87 后不依赖 -short 隔离，CI 已同步）；②骨架状态表从 M0 时代更新到当前实况（各插件交付阶段标注）；③核验 config.prod.yaml.example 引用有效（并行会话场89-90 创建，JWT/凭据/验证码安全红线齐全） | 场114：窗口收尾总结或抽查续；测试机可达则优先补 E2E |
 | 2026-10-24 | 114 | **Makefile 同步（场114，对齐 CI 场103）**：test 目标放开 -short（全量 go test，注释更新）；新增 test-agent（agent 模块 build/vet/test）与 build-agent（交叉编译 linux/amd64 二进制）目标——agent 独立模块此前无本地 make 入口；make test-agent 实测过 | 场115：窗口收尾总结或抽查续；测试机可达则优先补 E2E |
 | 2026-10-24 | 115 | **抽查长尾（场115，web/core/config.js）**：品牌配置（appName 白泽/版本展示/keepAliveTabs 开关/vite logo）核验无问题；测试机仍不可达，本轮轻量收尾 | 场116：抽查续或收尾；测试机可达则优先补 E2E |
+| 2026-10-24 | 116 | **抽查长尾（场116，getBaseUrl/扫码回连一致性）**：核验 QR 手机上传链路的地址自洽性——getBaseUrl 取构建期 VITE_BASE_API（'/' 归一为同源相对），手机端与页面同源经 nginx 反代可达；QR URL 生成与页面同源一致 ✓ 无问题；机器仍不可达，轻量轮转 | 场117：抽查续或收尾；测试机可达则优先补 E2E |
 
