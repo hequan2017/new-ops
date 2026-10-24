@@ -56,3 +56,8 @@ func terminateProcess(pid int) error {
 
 	return err
 }
+
+// processCommandLine Windows 暂不实现命令行归属校验（返回不可得，存活判断兜底）
+func processCommandLine(pid int) (string, bool) {
+	return "", false
+}

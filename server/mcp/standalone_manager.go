@@ -90,7 +90,7 @@ func GetManagedStandaloneStatus(ctx context.Context) ManagedStandaloneStatus {
 	reachable, reachErr := checkMCPHealth(ctx)
 	meta, _ := readManagedProcessMeta()
 
-	if meta != nil && meta.PID > 0 && !processExists(meta.PID) {
+	if meta != nil && meta.PID > 0 && !managedProcessAlive(meta) {
 		_ = removeManagedProcessMeta()
 		meta = nil
 	}
@@ -115,7 +115,7 @@ func GetManagedStandaloneStatus(ctx context.Context) ManagedStandaloneStatus {
 	case meta != nil && reachable:
 		status.State = "running"
 		status.Message = "MCP 独立服务运行中"
-	case meta != nil && processExists(meta.PID):
+	case meta != nil && managedProcessAlive(meta):
 		status.State = "starting"
 		status.Managed = true
 		status.Starting = true
@@ -147,7 +147,7 @@ func StartManagedStandalone(ctx context.Context) (ManagedStandaloneStatus, error
 	}
 
 	meta, _ := readManagedProcessMeta()
-	if meta != nil && meta.PID > 0 && processExists(meta.PID) {
+	if meta != nil && meta.PID > 0 && managedProcessAlive(meta) {
 		return waitForManagedProcess(ctx, meta)
 	}
 
@@ -215,10 +215,13 @@ func StopManagedStandalone(ctx context.Context) (ManagedStandaloneStatus, error)
 		return status, nil
 	}
 
-	if meta.PID > 0 && processExists(meta.PID) {
+	if meta.PID > 0 && managedProcessAlive(meta) {
 		if err := terminateProcess(meta.PID); err != nil {
 			return GetManagedStandaloneStatus(context.Background()), fmt.Errorf("停用 MCP 独立服务失败: %w", err)
 		}
+	} else {
+		// 托管进程已退出（或 PID 已被复用为无关进程）——只清登记，不动该 PID
+		_ = removeManagedProcessMeta()
 	}
 
 	deadline := time.NewTimer(mcpStopWaitTimeout)
@@ -234,7 +237,7 @@ func StopManagedStandalone(ctx context.Context) (ManagedStandaloneStatus, error)
 			_ = removeManagedProcessMeta()
 			return GetManagedStandaloneStatus(context.Background()), nil
 		case <-ticker.C:
-			if meta.PID <= 0 || !processExists(meta.PID) {
+			if meta.PID <= 0 || !managedProcessAlive(meta) {
 				_ = removeManagedProcessMeta()
 				status := GetManagedStandaloneStatus(context.Background())
 				if status.Reachable {
@@ -293,7 +296,7 @@ func waitForManagedProcess(ctx context.Context, meta *managedProcessMeta) (Manag
 			if current.Reachable {
 				return current, nil
 			}
-			if meta.PID > 0 && !processExists(meta.PID) {
+			if !managedProcessAlive(meta) {
 				return current, fmt.Errorf("MCP 独立进程已退出，请查看日志: %s", meta.LogPath)
 			}
 		}
@@ -456,6 +459,25 @@ func resolveMCPProjectRoot() string {
 	}
 
 	return serverRoot
+}
+
+// managedProcessAlive 托管进程归属校验：PID 存活且命令行仍指向托管命令。
+// 托管进程退出后 PID 被系统复用时，仅凭存活判断会把无关进程当成"我们的"——
+// 状态误报"启动中"，停用动作更会向复用 PID 的无关进程发 SIGTERM
+func managedProcessAlive(meta *managedProcessMeta) bool {
+	return managedProcessAliveWith(meta, processExists, processCommandLine)
+}
+
+// managedProcessAliveWith 归属判定核心（注入存活/命令行探针，可单测）
+func managedProcessAliveWith(meta *managedProcessMeta, alive func(int) bool, cmdline func(int) (string, bool)) bool {
+	if meta == nil || meta.PID <= 0 || !alive(meta.PID) {
+		return false
+	}
+	line, ok := cmdline(meta.PID)
+	if !ok {
+		return true // 平台不可得命令行时退回仅存活判断
+	}
+	return strings.Contains(line, filepath.Base(meta.Command))
 }
 
 func readManagedProcessMeta() (*managedProcessMeta, error) {
