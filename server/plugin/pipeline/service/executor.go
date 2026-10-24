@@ -132,8 +132,20 @@ func (s *PipelineBuildService) CreateBuild(pipelineID uint, params map[string]st
 		Operator:     operator,
 		UserID:       userID,
 	}
+	// 取号为先读 MAX 后写，并发触发会撞号：模型有 (pipeline_id, build_no) 唯一索引兜底，
+	// 撞号时 Create 报错，重取一次（webhook/手动/cron 并发窗口内概率极低，重试一次足够）
 	if err := global.GVA_DB.Create(build).Error; err != nil {
-		return nil, err
+		var retryNo int
+		if rErr := global.GVA_DB.Model(&model.PipelineBuild{}).
+			Where("pipeline_id = ?", pipelineID).
+			Select("COALESCE(MAX(build_no),0)+1").Scan(&retryNo).Error; rErr == nil && retryNo > buildNo {
+			build.BuildNo = retryNo
+			if err2 := global.GVA_DB.Create(build).Error; err2 != nil {
+				return nil, err2
+			}
+		} else {
+			return nil, err
+		}
 	}
 	go s.run(build.ID)
 	return build, nil
@@ -337,7 +349,7 @@ func (s *PipelineBuildService) runShellStep(ctx context.Context, buildID uint, s
 	}
 	command := pipelineShellCommand(workspaceFor(buildID), sp.ShellContent)
 	if backend == StepBackendAgent {
-		return s.runShellStepViaAgent(buildID, stageName, sp, command)
+		return s.runShellStepViaAgent(ctx, buildID, stageName, sp, command)
 	}
 	host, err := assetSvc.Service.AssetHostService.GetAssetHost(sp.HostID)
 	if err != nil {
@@ -404,11 +416,27 @@ func (s *PipelineBuildService) runShellStep(ctx context.Context, buildID uint, s
 }
 
 // runShellStepViaAgent 经 Agent 通道执行 shell 步骤（M9 A3）：无需 SSH 凭据，agent 未在线/执行超时即步骤失败；
-// 构建取消不中断已下发任务（agent 侧任务号幂等跑完即弃，结果不再采纳）；输出上限 60KB 与通道口径一致
-func (s *PipelineBuildService) runShellStepViaAgent(buildID uint, stageName string, sp snapshotStep, command string) error {
-	r, err := agentSvc.AgentSvc.RunTask(fmt.Sprintf("流水线构建#%d", buildID), sp.HostID, command, sp.TimeoutSec)
-	if err != nil {
-		return err
+// ctx 感知（原签名不含 ctx，取消与步骤超时均无法中断等待，与 job 的 agentRunTask 不一致）——取消/超时即返回，
+// agent 侧任务靠任务号幂等跑完即弃，迟到结果不再采纳；输出上限 60KB 与通道口径一致
+func (s *PipelineBuildService) runShellStepViaAgent(ctx context.Context, buildID uint, stageName string, sp snapshotStep, command string) error {
+	type agentOut struct {
+		result *agentSvc.TaskResult
+		err    error
+	}
+	ch := make(chan agentOut, 1)
+	go func() {
+		r, err := agentSvc.AgentSvc.RunTask(fmt.Sprintf("流水线构建#%d", buildID), sp.HostID, command, sp.TimeoutSec)
+		ch <- agentOut{result: r, err: err}
+	}()
+	var r *agentSvc.TaskResult
+	select {
+	case o := <-ch:
+		if o.err != nil {
+			return o.err
+		}
+		r = o.result
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 	if out := strings.TrimSpace(r.Output); out != "" {
 		s.appendLog(buildID, stageName, sp.Name, model.LogStdout, out)
@@ -450,19 +478,27 @@ func (s *PipelineBuildService) runHTTPStep(ctx context.Context, buildID uint, st
 	return nil
 }
 
-// ApproveBuild 审批放行（仅等待审批状态有效）
+// ApproveBuild 审批放行（仅等待审批状态有效；先查 DB 状态防执行长阶段时信号提前入队、
+// 被下一道审批 gate 瞬间消费放行）
 func (s *PipelineBuildService) ApproveBuild(buildID uint, operator string) error {
 	v, ok := buildRegistry.Load(buildID)
 	if !ok {
 		return newPlErr(ErrCodePlNotFound, "构建不存在或已结束")
 	}
 	rt := v.(*buildRuntime)
+	var build model.PipelineBuild
+	if err := global.GVA_DB.Select("status").First(&build, buildID).Error; err != nil {
+		return newPlErr(ErrCodePlNotFound, "构建不存在或已结束")
+	}
+	if build.Status != model.BuildAwaiting {
+		return newPlErr(ErrCodePlStructInvalid, "构建不在等待审批状态")
+	}
 	select {
 	case rt.approveCh <- struct{}{}:
 		s.appendLog(buildID, "", "", model.LogSystem, "人工审批放行（"+operator+"）")
 		return nil
 	default:
-		return newPlErr(ErrCodePlStructInvalid, "构建不在等待审批状态或已放行")
+		return newPlErr(ErrCodePlStructInvalid, "已放行，请勿重复操作")
 	}
 }
 
@@ -494,11 +530,12 @@ func (s *PipelineBuildService) updateStatus(buildID uint, status string, extra m
 	global.GVA_DB.Model(&model.PipelineBuild{}).Where("id = ?", buildID).Updates(updates)
 }
 
-// finish 收档（成功/失败/取消统一结束时间）
+// finish 收档（成功/失败/取消统一结束时间；先落"构建结束"日志再写终态，
+// 保证 SSE 侧按终态收流前能读到这条日志——原反序会丢尾部日志行）
 func (s *PipelineBuildService) finish(buildID uint, status string) {
 	now := time.Now()
-	s.updateStatus(buildID, status, map[string]any{"finished_at": &now})
 	s.appendLog(buildID, "", "", model.LogSystem, "构建结束："+status)
+	s.updateStatus(buildID, status, map[string]any{"finished_at": &now})
 }
 
 // appendLog 落一条构建日志（长内容按 UTF-8 字符边界截断 16KB）
@@ -562,9 +599,23 @@ func (s *PipelineBuildService) GetBuildList(page, pageSize int, pipelineID *uint
 	return list, total, err
 }
 
+// CheckBuildOwner 构建属主校验（日志读取等按 ID 直查的入口用）：
+// 888 放行；其他用户仅可访问自己的构建——原日志接口只做角色级 casbin，
+// 9528 可枚举 buildId 读他人构建的全部 shell 输出（列表接口有 user_id 过滤，此处补齐同口径）
+func (s *PipelineBuildService) CheckBuildOwner(buildID uint, userID uint, isSuperAdmin bool) error {
+	if isSuperAdmin {
+		return nil
+	}
+	var count int64
+	global.GVA_DB.Model(&model.PipelineBuild{}).Where("id = ? AND user_id = ?", buildID, userID).Count(&count)
+	if count == 0 {
+		return newPlErr(ErrCodePlNotFound, "构建不存在或无权访问")
+	}
+	return nil
+}
+
 // GetBuildLogs 构建日志（升序分页）
-func (s *PipelineBuildService) GetBuildLogs(buildID uint, page, pageSize int) (list []*model.BuildLog, total int64, err error) {
-	db := global.GVA_DB.Model(&model.BuildLog{}).Where("build_id = ?", buildID)
+func (s *PipelineBuildService) GetBuildLogs(buildID uint, page, pageSize int) (list []*model.BuildLog, total int64, err error) {	db := global.GVA_DB.Model(&model.BuildLog{}).Where("build_id = ?", buildID)
 	if err = db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}

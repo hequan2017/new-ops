@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/model/common/request"
@@ -86,6 +87,9 @@ func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, i
 				return nil, newJobErr(ErrCodeHostNotAuthorized, fmt.Sprintf("主机 id=%d 不在你的授权资产范围内", id))
 			}
 		}
+		// 凭据越权面：凭据管理仅超管可见，非 888 的统一凭据覆盖一律忽略
+		// （只能用各主机自身绑定凭据），防止受限用户在授权主机上以库内任意凭据（含 root）执行
+		req.CredentialID = nil
 	}
 	if req.Concurrency <= 0 {
 		req.Concurrency = defaultConcurrency
@@ -128,16 +132,17 @@ func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, i
 	}
 
 	record := &model.JobExecRecord{
-		Command:      command, // 渲染后的快照
-		Concurrency:  req.Concurrency,
-		TimeoutSec:   req.TimeoutSec,
-		CredentialID: req.CredentialID,
-		ExecBackend:  backend,
-		Total:        len(hosts),
-		Status:       model.ExecStatusRunning,
-		Operator:     operator,
-		UserID:       userID,
-		StartedAt:    time.Now(),
+		Command:         command, // 渲染后的快照
+		Concurrency:     req.Concurrency,
+		TimeoutSec:      req.TimeoutSec,
+		CredentialID:    req.CredentialID,
+		VariableGroupID: req.VariableGroupID, // 原漏写：autoInject 判定恒真，显式变量组后仍二次按主机资产组渲染（变量跨组泄漏）
+		ExecBackend:     backend,
+		Total:           len(hosts),
+		Status:          model.ExecStatusRunning,
+		Operator:        operator,
+		UserID:          userID,
+		StartedAt:       time.Now(),
 	}
 	if err := global.GVA_DB.Create(record).Error; err != nil {
 		return nil, err
@@ -214,14 +219,16 @@ func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.A
 		h := hostByID[r.HostID]
 		row := &model.JobExecResult{
 			RecordID: record.ID, HostID: r.HostID,
-			Status: st, Output: r.Output, ElapsedMs: r.Elapsed.Milliseconds(),
-			Command: cmdByHost[r.HostID], Backend: record.ExecBackend,
+			// 输出按 UTF-8 边界截断：Output 列为 text 上限 64KB，超限 INSERT 报错会整行丢失且计数失真
+			Status: st, Output: truncateRunes(r.Output, maxExecOutputBytes),
+			ElapsedMs: r.Elapsed.Milliseconds(),
+			Command:   cmdByHost[r.HostID], Backend: record.ExecBackend,
 		}
 		if h != nil {
 			row.Hostname, row.IP = h.Hostname, h.IP
 		}
 		if r.Err != nil {
-			row.Error = r.Err.Error()
+			row.Error = truncateRunes(r.Err.Error(), 4096)
 		}
 		if err := global.GVA_DB.Create(row).Error; err != nil {
 			global.GVA_LOG.Error(fmt.Sprintf("job 批次 %d 主机 %d 结果落库失败: %v", record.ID, r.HostID, err))
@@ -249,6 +256,41 @@ func renderCommandForHost(base string, hostID uint, groupsByHost map[uint][]uint
 	}
 	return base, nil
 }
+
+// maxExecOutputBytes 单主机执行输出留存上限（Output 列为 text 上限 64KB，留截断标记余量）
+const maxExecOutputBytes = 60 * 1024
+
+// truncateRunes 按 UTF-8 字符边界截断到 max 字节内（与 pipeline truncateLogRunes 同口径；纯逻辑）
+func truncateRunes(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	i := max
+	for i > 0 && !utf8.RuneStart(s[i]) {
+		i--
+	}
+	return s[:i]
+}
+
+// boundedWriter 有界输出缓冲（head-only）：内存恒定 ≤ max，防大输出命令 OOM
+type boundedWriter struct {
+	buf []byte
+	max int
+}
+
+func (w *boundedWriter) Write(p []byte) (int, error) {
+	room := w.max - len(w.buf)
+	if room <= 0 {
+		return len(p), nil
+	}
+	if len(p) > room {
+		p = p[:room]
+	}
+	w.buf = append(w.buf, p...)
+	return len(p), nil
+}
+
+func (w *boundedWriter) Bytes() []byte { return w.buf }
 
 // sshRunTask 构造单主机 SSH 执行体：直连 + 指纹校验/TOFU + ctx 感知中断
 // （跳板级联为 term 通道能力，批量执行暂直连，级联支持登记 DEV_PLAN 待办）
@@ -293,16 +335,20 @@ func (s *jobService) sshRunTask(ctx context.Context, host *assetModel.AssetHost,
 			out []byte
 			err error
 		}
+		// 有界输出：CombinedOutput 全量缓冲，50 并发下大输出命令可在超时窗口内打爆 server 内存
+		out := &boundedWriter{max: maxExecOutputBytes + 1}
+		session.Stdout = out
+		session.Stderr = out
 		ch := make(chan runOut, 1)
 		go func() {
-			out, e := session.CombinedOutput(command)
-			ch <- runOut{out, e}
+			e := session.Run(command)
+			ch <- runOut{out.Bytes(), e}
 		}()
 		select {
 		case r := <-ch:
 			return string(r.out), r.err
 		case <-ctx.Done():
-			_ = session.Close() // 中断阻塞的 CombinedOutput
+			_ = session.Close() // 中断阻塞的执行
 			return "", ctx.Err()
 		}
 	}

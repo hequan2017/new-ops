@@ -137,6 +137,11 @@ func (p *pipelineBuild) GetBuildLogs(c *gin.Context) {
 	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "100"))
+	// 属主校验：非 888 仅可读自己的构建（与列表 user_id 过滤同口径，防枚举读他人 shell 输出）
+	if err := buildSvc.CheckBuildOwner(uint(id), utils.GetUserID(c), utils.GetUserAuthorityId(c) == 888); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
 	list, total, err := buildSvc.GetBuildLogs(uint(id), page, pageSize)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
@@ -219,6 +224,11 @@ func (p *pipelineBuild) StreamBuildLogs(c *gin.Context) {
 		c.String(http.StatusBadRequest, "id 无效")
 		return
 	}
+	// 属主校验：非 888 仅可读自己的构建（query token 场景从 claims 取身份）
+	if err := buildSvc.CheckBuildOwner(uint(id), claims.BaseClaims.ID, claims.AuthorityId == 888); err != nil {
+		c.String(http.StatusForbidden, err.Error())
+		return
+	}
 	lastID, _ := strconv.ParseUint(c.DefaultQuery("lastId", "0"), 10, 64)
 
 	flusher, ok := c.Writer.(http.Flusher)
@@ -260,6 +270,15 @@ func (p *pipelineBuild) StreamBuildLogs(c *gin.Context) {
 		status, _ = buildSvc.GetBuildStatus(uint(id))
 		finished := status == model.BuildSuccess || status == model.BuildFailed || status == model.BuildCanceled
 		if finished {
+			// 终态判定后、发 done 前再补拉一次：把终态写入与本次读取之间落库的尾部日志（含"构建结束"行）推完
+			if tail, tErr := buildSvc.GetBuildLogsAfter(uint(id), uint(lastID)); tErr == nil {
+				for _, l := range tail {
+					if !writeEvent("log", l) {
+						return
+					}
+					lastID = uint64(l.ID)
+				}
+			}
 			_ = writeEvent("status", gin.H{"status": status})
 			_ = writeEvent("done", gin.H{"buildId": id, "status": status})
 			return
