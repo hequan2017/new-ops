@@ -80,6 +80,26 @@ func (s *AssetHostService) ImportAssetHosts(file io.Reader, operator string) (re
 		return v
 	}
 
+	// 批量预取已存在主机（按 IP）：原逐行 First 存在性查询为 N+1（创建/更新仍逐行——
+	// 逐行失败明细与事务语义需要保留）
+	ips := make([]string, 0, len(rows))
+	for _, row := range rows[1:] {
+		if ip := cellStr(row, "内网IP"); ip != "" {
+			ips = append(ips, ip)
+		}
+	}
+	existingByIP := map[string]model.AssetHost{}
+	if len(ips) > 0 {
+		var existing []model.AssetHost
+		if err := global.GVA_DB.Unscoped().Where("ip IN ?", ips).Find(&existing).Error; err == nil {
+			for i := range existing {
+				if existing[i].DeletedAt.Time.IsZero() { // 活行才算"已存在"；软删行走创建（CreateAssetHost 会先物理清理）
+					existingByIP[existing[i].IP] = existing[i]
+				}
+			}
+		}
+	}
+
 	for line, row := range rows[1:] {
 		h := &model.AssetHost{
 			Hostname:  cellStr(row, "主机名"),
@@ -103,24 +123,21 @@ func (s *AssetHostService) ImportAssetHosts(file io.Reader, operator string) (re
 			res.Failed = append(res.Failed, fmt.Sprintf("第%d行: %s", line+2, err.Error()))
 			continue
 		}
-		var exist model.AssetHost
-		dbErr := global.GVA_DB.Where("ip = ?", h.IP).First(&exist).Error
+		exist, found := existingByIP[h.IP]
 		switch {
-		case dbErr == nil:
+		case found:
 			h.ID = exist.ID
 			if err := s.UpdateAssetHost(h, operator); err != nil {
 				res.Failed = append(res.Failed, fmt.Sprintf("第%d行: 更新失败 %s", line+2, err.Error()))
 				continue
 			}
 			res.Updated++
-		case strings.Contains(dbErr.Error(), "record not found"):
+		default:
 			if err := s.CreateAssetHost(h, operator); err != nil {
 				res.Failed = append(res.Failed, fmt.Sprintf("第%d行: 创建失败 %s", line+2, err.Error()))
 				continue
 			}
 			res.Created++
-		default:
-			res.Failed = append(res.Failed, fmt.Sprintf("第%d行: 查询失败 %s", line+2, dbErr.Error()))
 		}
 	}
 	return res, nil

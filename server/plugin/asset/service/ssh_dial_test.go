@@ -109,3 +109,30 @@ func TestDialSSH_FingerprintMismatch(t *testing.T) {
 		t.Fatalf("拒绝时应返回实际指纹: want %s got %s", wantFP, actualFP)
 	}
 }
+
+// 密码型凭据的调用方会把同一 secret 填进 Password+PrivateKey，私钥解析失败须回退密码而非整链失败
+func TestBuildSSHClientConfigPasswordFallback(t *testing.T) {
+	cfg, err := BuildSSHClientConfig(SSHAuth{
+		Username: "root", Password: "plain-secret", PrivateKey: "plain-secret",
+	}, nil)
+	if err != nil {
+		t.Fatalf("密码凭据（同值误填私钥）不应失败: %v", err)
+	}
+	if cfg.User != "root" {
+		t.Fatalf("用户名不符: %s", cfg.User)
+	}
+	// 仅密码认证被注册
+	if n := len(cfg.Auth); n == 0 {
+		t.Fatal("应至少注册密码认证")
+	}
+	// 真私钥 + 密码共存：两类认证都在
+	cfg2, err := BuildSSHClientConfig(SSHAuth{Username: "u", Password: "p"}, nil)
+	if err != nil {
+		t.Fatalf("纯密码应成功: %v", err)
+	}
+	_ = cfg2
+	// 非法私钥且无密码：保持报错
+	if _, err := BuildSSHClientConfig(SSHAuth{Username: "u", PrivateKey: "not-a-key"}, nil); err == nil {
+		t.Fatal("非法私钥且无密码应报错")
+	}
+}

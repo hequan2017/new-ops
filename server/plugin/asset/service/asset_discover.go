@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/asset/model"
+	"gorm.io/gorm"
 )
 
 // discover 插件内错误码（沿用 asset 1000-1099 段）
@@ -136,38 +138,83 @@ func (s *AssetHostService) DiscoverHosts(ctx context.Context, cidr string, port,
 }
 
 // ImportDiscoveredHosts 将发现的主机导入为资产（已存在跳过；主机名先取 IP，后续可人工改）
-// 返回新建数与跳过数
+// 返回新建数与跳过数。
+// 批量口径：入参先内存去重/校验，一次 IN 查询预取已存在 IP（含软删行按已占用计），
+// 新增主机单事务 CreateInBatches + 批量写历史——原逐台「First 存在性 + CreateAssetHost
+// (清理/计数/事务/历史)」约 6 次查询/台，4096 台上限最坏 2 万+ 条串行 SQL
 func (s *AssetHostService) ImportDiscoveredHosts(hosts []DiscoveredHost, operator string) (created, skipped int, err error) {
+	// 入参去重与校验
+	seen := make(map[string]struct{}, len(hosts))
+	valid := hosts[:0:0]
 	for _, h := range hosts {
 		if net.ParseIP(h.IP) == nil {
 			skipped++
 			continue
 		}
-		var exist model.AssetHost
-		dbErr := global.GVA_DB.Where("ip = ?", h.IP).First(&exist).Error
-		if dbErr == nil {
-			skipped++ // 已存在（含未软删）
+		if _, dup := seen[h.IP]; dup {
+			skipped++
+			continue
+		}
+		seen[h.IP] = struct{}{}
+		valid = append(valid, h)
+	}
+	if len(valid) == 0 {
+		return 0, skipped, nil
+	}
+	// 一次预取已占用 IP（活行与软删行都算占用，与 CreateAssetHost 的唯一性口径一致）
+	ips := make([]string, 0, len(valid))
+	for _, h := range valid {
+		ips = append(ips, h.IP)
+	}
+	var existing []model.AssetHost
+	if err := global.GVA_DB.Unscoped().Where("ip IN ?", ips).Find(&existing).Error; err != nil {
+		return 0, skipped, err
+	}
+	taken := make(map[string]struct{}, len(existing))
+	for i := range existing {
+		taken[existing[i].IP] = struct{}{}
+	}
+	newHosts := make([]*model.AssetHost, 0, len(valid))
+	for _, h := range valid {
+		if _, used := taken[h.IP]; used {
+			skipped++
 			continue
 		}
 		note := "网段发现导入"
 		if h.Banner != "" {
 			note += "，SSH横幅: " + h.Banner
 		}
-		host := &model.AssetHost{
+		newHosts = append(newHosts, &model.AssetHost{
 			Hostname: h.IP,
 			IP:       h.IP,
 			Status:   model.AssetStatusRunning,
 			Notes:    note,
+		})
+	}
+	if len(newHosts) == 0 {
+		return 0, skipped, nil
+	}
+	err = global.GVA_DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.CreateInBatches(newHosts, 500).Error; err != nil {
+			return err
 		}
-		if err := s.CreateAssetHost(host, operator); err != nil {
-			// 并发重复等场景按跳过计，不中断整体导入
-			if se, ok := err.(*ServiceError); ok && se.Code == ErrCodeIPDuplicate {
-				skipped++
+		histories := make([]model.AssetHostHistory, 0, len(newHosts))
+		for _, h := range newHosts {
+			b, mErr := json.Marshal(h)
+			if mErr != nil {
 				continue
 			}
-			return created, skipped, err
+			histories = append(histories, model.AssetHostHistory{
+				HostID: h.ID, Action: model.HostHistoryCreate, Snapshot: string(b), Operator: operator,
+			})
 		}
-		created++
+		if len(histories) == 0 {
+			return nil
+		}
+		return tx.Create(&histories).Error
+	})
+	if err != nil {
+		return 0, skipped, err
 	}
-	return created, skipped, nil
+	return len(newHosts), skipped, nil
 }

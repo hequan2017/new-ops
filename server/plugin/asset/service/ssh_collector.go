@@ -123,9 +123,15 @@ func BuildSSHClientConfig(auth SSHAuth, fpOut *string) (*cssh.ClientConfig, erro
 	if auth.PrivateKey != "" {
 		signer, err := cssh.ParsePrivateKey([]byte(auth.PrivateKey))
 		if err != nil {
-			return nil, fmt.Errorf("私钥解析失败: %w", err)
+			// 多数调用方不区分凭据类型，把同一 secret 同时填进 Password/PrivateKey——
+			// 密码串必然非 PEM，原实现直接整条链路失败（密码型凭据的采集/监控/term/SFTP/job
+			// 全不可用）；解析失败且密码可用时跳过公钥认证走密码即可
+			if auth.Password == "" {
+				return nil, fmt.Errorf("私钥解析失败: %w", err)
+			}
+		} else {
+			authMethods = append(authMethods, cssh.PublicKeys(signer))
 		}
-		authMethods = append(authMethods, cssh.PublicKeys(signer))
 	}
 	if auth.Password != "" {
 		authMethods = append(authMethods, cssh.Password(auth.Password))

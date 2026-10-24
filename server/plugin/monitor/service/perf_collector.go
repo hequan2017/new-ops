@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hequan2017/new-ops/server/global"
@@ -206,15 +207,38 @@ func (s *MonitorService) CollectPerf(host *assetModel.AssetHost) (*PerfSample, e
 		return nil, err
 	}
 	defer session.Close()
-	out, err := session.CombinedOutput(perfCmd)
-	if err != nil {
-		return nil, fmt.Errorf("采样命令失败: %w", err)
+	// 采样命令限时 15s（原 CombinedOutput 无超时：TCP 通而网络黑洞时 goroutine 永久阻塞，
+	// 拖死整轮 wg.Wait，且定时任务每 5 分钟再叠加一轮全量拨号）
+	type cmdOut struct {
+		b   []byte
+		err error
 	}
-	return ParsePerfOutput(string(out))
+	ch := make(chan cmdOut, 1)
+	go func() {
+		b, e := session.CombinedOutput(perfCmd)
+		ch <- cmdOut{b, e}
+	}()
+	select {
+	case r := <-ch:
+		if r.err != nil {
+			return nil, fmt.Errorf("采样命令失败: %w", r.err)
+		}
+		return ParsePerfOutput(string(r.b))
+	case <-time.After(15 * time.Second):
+		_ = session.Close() // 中断阻塞的执行
+		return nil, fmt.Errorf("采样命令超时(15s)")
+	}
 }
+
+// collectMu 防重入锁：上一轮未结束（存在挂死主机）时跳过本轮，避免 goroutine/连接叠加
+var collectMu sync.Mutex
 
 // CollectAll 全量采集：对所有绑定 SSH 凭据且非报废的主机并发采样（上限 5）并落库
 func (s *MonitorService) CollectAll() {
+	if !collectMu.TryLock() {
+		return
+	}
+	defer collectMu.Unlock()
 	var hosts []*assetModel.AssetHost
 	global.GVA_DB.Where("credential_id IS NOT NULL AND status != ?", assetModel.AssetStatusRetired).
 		Find(&hosts)
@@ -264,8 +288,31 @@ func (s *MonitorService) GetMetrics(assetID uint, names []string, since time.Tim
 	return list, err
 }
 
-// PruneOld 清理过期指标（保留 30 天）
+// lastPruneUnix 清理降频水位（每小时最多一次；采集轮 5 分钟一次无需每轮清）
+var lastPruneUnix int64
+
+// PruneOld 清理过期指标（保留 30 天）。agent 接入后写入量日增百万行级，原实现两个问题：
+// ①ts 在复合索引中非前导列，WHERE ts < ? 走全表扫描；②整表 DELETE 为大事务。
+// 现走 ts 单列索引（模型已补）+ 按主键分批删（每批 5000），并按小时降频
 func (s *MonitorService) PruneOld() {
-	global.GVA_DB.Where("ts < ?", time.Now().Add(-30*24*time.Hour)).
-		Delete(&model.MonitorMetric{})
+	now := time.Now().Unix()
+	last := atomic.LoadInt64(&lastPruneUnix)
+	if now-last < 3600 {
+		return
+	}
+	if !atomic.CompareAndSwapInt64(&lastPruneUnix, last, now) {
+		return // 并发调用里已有赢家在清
+	}
+	cutoff := time.Now().Add(-30 * 24 * time.Hour)
+	for {
+		res := global.GVA_DB.Where("id IN (SELECT id FROM monitor_metrics WHERE ts < ? LIMIT 5000)", cutoff).
+			Delete(&model.MonitorMetric{})
+		if res.Error != nil {
+			global.GVA_LOG.Error("monitor 指标清理分批删除失败: " + res.Error.Error())
+			return
+		}
+		if res.RowsAffected == 0 {
+			return
+		}
+	}
 }

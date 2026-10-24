@@ -33,5 +33,6 @@ type MonitorMetric struct {
 	AssetID uint      `json:"assetId" gorm:"comment:资产ID;index:idx_metric_asset_name_ts,priority:1"`
 	Name    string    `json:"name" gorm:"size:32;comment:指标名;index:idx_metric_asset_name_ts,priority:2"`
 	Value   float64   `json:"value" gorm:"comment:指标值"`
-	TS      time.Time `json:"ts" gorm:"comment:采集时间;index:idx_metric_asset_name_ts,priority:3"`
+	// TS 复合索引非前导列，30 天清理按 ts 范围删时走不了复合索引——补单列索引
+	TS time.Time `json:"ts" gorm:"comment:采集时间;index;index:idx_metric_asset_name_ts,priority:3"`
 }
