@@ -211,6 +211,10 @@ func readAllResultsets(rows *sql.Rows) ([]auditRow, error) {
 			row.ErrMsg = get(rec, "error_message", "errormessage")
 			out = append(out, row)
 		}
+		// 迭代被连接错误中断时 rows.Next 静默返回 false——不查 Err 会把半截结果集当成功
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 		if !rows.NextResultSet() {
 			break
 		}
@@ -278,10 +282,15 @@ func (s *DbopsService) AuditOrder(orderID uint, operator string) (*model.DbopsOr
 	if hasError {
 		status = model.OrderPending
 	}
-	if err := global.GVA_DB.Model(&model.DbopsOrder{}).Where("id = ?", orderID).Updates(map[string]any{
-		"status": status, "audit_result": resultBytes,
-	}).Error; err != nil {
-		return nil, err
+	// 乐观锁：仅待审核状态可更新（防审核与执行/取消并发互相覆盖）
+	res := global.GVA_DB.Model(&model.DbopsOrder{}).
+		Where("id = ? AND status = ?", orderID, model.OrderPending).
+		Updates(map[string]any{"status": status, "audit_result": resultBytes})
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, newDbErr(ErrCodeOrderInvalid, "工单状态已变化，请刷新后重试")
 	}
 	global.GVA_DB.First(&order, orderID)
 	return &order, nil
@@ -296,10 +305,21 @@ func (s *DbopsService) ExecuteOrder(orderID uint, operator string) (*model.Dbops
 	if order.Status != model.OrderApproved {
 		return nil, newDbErr(ErrCodeOrderInvalid, "工单不在审核通过状态，无法执行")
 	}
-	global.GVA_DB.Model(&order).Update("status", model.OrderExecuting)
+	// 乐观锁：仅审核通过状态可转入执行中——双击/并发执行会让 goInception 对生产库重复执行 SQL
+	res := global.GVA_DB.Model(&model.DbopsOrder{}).
+		Where("id = ? AND status = ?", orderID, model.OrderApproved).
+		Update("status", model.OrderExecuting)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, newDbErr(ErrCodeOrderInvalid, "工单状态已变化，请刷新后重试")
+	}
 	rows, err := s.runInceptionBlock(&order, true)
 	if err != nil {
-		global.GVA_DB.Model(&order).Update("status", model.OrderApproved)
+		global.GVA_DB.Model(&model.DbopsOrder{}).
+			Where("id = ? AND status = ?", orderID, model.OrderExecuting).
+			Update("status", model.OrderApproved)
 		return nil, err
 	}
 	hasError := false
@@ -356,6 +376,8 @@ func (s *DbopsService) fetchRollbacks(order *model.DbopsOrder, rows []auditRow) 
 	sqlDB, gerr := backup.DB()
 	if gerr == nil {
 		sqlDB.SetConnMaxLifetime(time.Minute)
+		// 逐工单临时连接池，用完即关（否则每次执行泄漏一个池直至进程重启）
+		defer sqlDB.Close()
 	}
 	out := []map[string]string{}
 	type rollbackRec struct {

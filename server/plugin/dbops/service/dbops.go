@@ -195,7 +195,7 @@ func (s *DbopsService) CreateOrder(instID uint, title, sqlText, creator string, 
 
 // AuditOrder 已迁移至 inception.go（goInception 接入，M6 收官）
 
-// CancelOrder 取消工单（待审核可取消）
+// CancelOrder 取消工单（待审核可取消；乐观锁防与审核/执行并发互相覆盖）
 func (s *DbopsService) CancelOrder(orderID uint, operator string) error {
 	var order model.DbopsOrder
 	if err := global.GVA_DB.First(&order, orderID).Error; err != nil {
@@ -205,9 +205,16 @@ func (s *DbopsService) CancelOrder(orderID uint, operator string) error {
 		return newDbErr(ErrCodeOrderInvalid, "仅待审核工单可取消")
 	}
 	now := time.Now()
-	return global.GVA_DB.Model(&model.DbopsOrder{}).Where("id = ?", orderID).Updates(map[string]any{
-		"status": model.OrderCanceled, "finished_at": &now,
-	}).Error
+	res := global.GVA_DB.Model(&model.DbopsOrder{}).
+		Where("id = ? AND status = ?", orderID, model.OrderPending).
+		Updates(map[string]any{"status": model.OrderCanceled, "finished_at": &now})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return newDbErr(ErrCodeOrderInvalid, "工单状态已变化，请刷新后重试")
+	}
+	return nil
 }
 
 // GetOrderList 工单分页（普通用户仅本人）
