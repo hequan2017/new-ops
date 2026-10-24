@@ -22,8 +22,16 @@ dev-web: ## 本地启动前端 (:8080)
 	cd $(WEB_DIR) && npm run serve
 
 .PHONY: test
-test: ## 后端快速验证：build + vet + 单测(-short，不触碰源码)
-	cd $(SERVER_DIR) && go build ./... && go vet ./... && go test -short ./...
+test: ## 后端验证：build + vet + 全量单测（场85-87 后不依赖 -short）
+	cd $(SERVER_DIR) && go build ./... && go vet ./... && go test ./...
+
+.PHONY: test-agent
+test-agent: ## agent 模块验证：build + vet + 单测
+	cd $(REPO_DIR)/agent && go build ./... && go vet ./... && go test ./...
+
+.PHONY: build-agent
+build-agent: ## 交叉编译 linux/amd64 agent 二进制
+	cd $(REPO_DIR)/agent && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o baize-agent .
 
 .PHONY: build-web
 build-web: ## 构建前端 dist
