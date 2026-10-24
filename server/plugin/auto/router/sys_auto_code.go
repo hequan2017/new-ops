@@ -4,9 +4,8 @@ import "github.com/gin-gonic/gin"
 
 type AutoCodeRouter struct{}
 
-func (s *AutoCodeRouter) InitAutoCodeRouter(Router *gin.RouterGroup, RouterPublic *gin.RouterGroup) {
+func (s *AutoCodeRouter) InitAutoCodeRouter(Router *gin.RouterGroup, _ *gin.RouterGroup) {
 	autoCodeRouter := Router.Group("autoCode")
-	publicAutoCodeRouter := RouterPublic.Group("autoCode")
 	{
 		autoCodeRouter.GET("getDB", autoCodeApi.GetDB)
 		autoCodeRouter.GET("getTables", autoCodeApi.GetTables)
@@ -46,10 +45,12 @@ func (s *AutoCodeRouter) InitAutoCodeRouter(Router *gin.RouterGroup, RouterPubli
 		autoCodeRouter.GET("getPluginList", autoCodePluginApi.GetPluginList)
 	}
 	{
-		publicAutoCodeRouter.POST("llmAuto", autoCodeApi.LLMAuto)
-		publicAutoCodeRouter.POST("llmAutoSSE", autoCodeApi.LLMAutoSSE)
-		publicAutoCodeRouter.POST("initMenu", autoCodePluginApi.InitMenu)
-		publicAutoCodeRouter.POST("initAPI", autoCodePluginApi.InitAPI)
-		publicAutoCodeRouter.POST("initDictionary", autoCodePluginApi.InitDictionary)
+		// 与 router/system 同步收敛：LLM 代理与插件初始化原挂 public 组（无 JWT/casbin），
+		// 是未鉴权攻击面的第二个注册点（巡检二轮 P0-1 只收敛了 system 侧，此处漏网）
+		autoCodeRouter.POST("llmAuto", autoCodeApi.LLMAuto)
+		autoCodeRouter.POST("llmAutoSSE", autoCodeApi.LLMAutoSSE)
+		autoCodeRouter.POST("initMenu", autoCodePluginApi.InitMenu)
+		autoCodeRouter.POST("initAPI", autoCodePluginApi.InitAPI)
+		autoCodeRouter.POST("initDictionary", autoCodePluginApi.InitDictionary)
 	}
 }
