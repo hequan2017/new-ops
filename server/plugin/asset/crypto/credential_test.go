@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"encoding/base64"
 	"os"
 	"strings"
 	"sync"
@@ -56,6 +57,25 @@ func TestDecryptWrongKey(t *testing.T) {
 	}
 }
 
+// 密文篡改必须被 GCM 认证拦截（存储层被拖库后密文不可被伪造/替换）
+func TestDecryptTampered(t *testing.T) {
+	t.Setenv(MasterKeyEnv, "unit-test-master-key")
+	syncReset()
+	enc, err := Encrypt("s3cret-data")
+	if err != nil {
+		t.Fatalf("加密失败: %v", err)
+	}
+	raw, derr := base64.StdEncoding.DecodeString(enc)
+	if derr != nil {
+		t.Fatalf("base64 解码失败: %v", derr)
+	}
+	raw[len(raw)-1] ^= 0xFF // 翻转密文末字节（含 GCM tag 区）
+	tampered := base64.StdEncoding.EncodeToString(raw)
+	if _, err := Decrypt(tampered); err == nil {
+		t.Fatal("篡改密文应解密失败（GCM 认证）")
+	}
+}
+
 func TestLast4(t *testing.T) {
 	if got := Last4("abcdefg"); got != "defg" {
 		t.Fatalf("Last4 = %s, want defg", got)
@@ -65,7 +85,10 @@ func TestLast4(t *testing.T) {
 	}
 }
 
-// syncReset 重置包内惰性加载缓存（测试用）
+// syncReset 重置包内惰性加载缓存（测试用；须同时清 key 与 err——once 重跑成功时
+// 闭包不清 masterKeyErr，残留错误会让后续用例误报"主密钥未配置"）
 func syncReset() {
 	masterKeyOnce = sync.Once{}
+	masterKey = nil
+	masterKeyErr = nil
 }
