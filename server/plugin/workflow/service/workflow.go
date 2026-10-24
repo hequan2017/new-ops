@@ -169,10 +169,17 @@ func (s *WorkflowService) SubmitAction(instanceID uint, action, comment, operato
 	if action == "cancel" {
 		now := time.Now()
 		return &ins, global.GVA_DB.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Model(&model.WfInstance{}).Where("id = ?", instanceID).Updates(map[string]any{
-				"status": model.InstanceCanceled, "finished_at": &now,
-			}).Error; err != nil {
-				return err
+			// 乐观锁：仅 running 状态可撤回（并发流转/收档竞态防护）
+			res := tx.Model(&model.WfInstance{}).
+				Where("id = ? AND status = ?", instanceID, model.InstanceRunning).
+				Updates(map[string]any{
+					"status": model.InstanceCanceled, "finished_at": &now,
+				})
+			if res.Error != nil {
+				return res.Error
+			}
+			if res.RowsAffected == 0 {
+				return newWfErr(ErrCodeWfActionInvalid, "工单状态已变化，请刷新后重试")
 			}
 			return tx.Create(&model.WfActionLog{
 				InstanceID: instanceID, FromState: ins.State, Action: "cancel",
@@ -225,8 +232,16 @@ func (s *WorkflowService) SubmitAction(instanceID uint, action, comment, operato
 		updates["finished_at"] = &now
 	}
 	err = global.GVA_DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.WfInstance{}).Where("id = ?", instanceID).Updates(updates).Error; err != nil {
-			return err
+		// 乐观锁：Where 携带读取时的 state/status，并发流转（两人同时审批/审批与撤回竞态）
+		// 只有一个提交生效，其余报"状态已变化"——同时防发版钩子重复触发
+		res := tx.Model(&model.WfInstance{}).
+			Where("id = ? AND state = ? AND status = ?", instanceID, ins.State, model.InstanceRunning).
+			Updates(updates)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return newWfErr(ErrCodeWfActionInvalid, "工单状态已变化，请刷新后重试")
 		}
 		return tx.Create(&model.WfActionLog{
 			InstanceID: instanceID, FromState: ins.State, Action: action,

@@ -44,7 +44,8 @@
 8. 进度记录：**pipeline 已巡检（场76）**——修两处日志链路缺陷：①appendLog 字节硬切 16KB 会切出非法 UTF-8 存库（SSH 输出超限时日志乱码）→ truncateLogRunes 字符边界截断（单测：CJK 边界/ASCII/标记）；②runHTTPStep 用单次 Read 读响应体快照（允许短读，日志常为空/不完整）→ readBodySnippet 完整读取上限字节（io.ReadAll+LimitReader）；执行器并发/审批 gate/取消收档逻辑审查无问题（-race 过）。
 9. 进度记录：**container 已巡检（场77）**——LogsWS/ExecWS 与 term 同病的两处修复：①日志流输出写入无任何超时（客户端卡死永久阻塞输出协程）→ wsSingleWriter 统一写入前设 10s 超时；②读循环 pong 与输出协程二进制帧**并发写 WS**（gorilla 禁止）→ 单写者互斥（场74 term 同口径）；统计采样/事件水位/生命周期/端口转发审查无问题（agent 模式接入点自动兼容管理面采样）；-race 全过。下一模块：k8s。
 10. 进度记录：**k8s 已巡检（场78）**——模块质量整体良好：PodShell 写互斥（k8sWsIO）场55 已做对；GuardNamespace 覆盖核验完整（Pod 日志/YAML/Pod 详情/Helm 历史四端点+agent 集群守卫）；namespaceVisible 出错 fail-closed；scopedList 普通用户多授权 ns 串行扇出为已知低价值点（授权量人工控制，不改）；实施一处加固：k8sWsIO.writeJSON（pong）补写超时（与数据帧同口径，防对端卡死阻塞 stdin 泵）；-race 全过。下一模块：monitor。
-11. 进度记录：**monitor 已巡检（场79）**——实施一处优化：EvalAllRules 端口探活规则从串行改有界并发评估（上限 10）——原 N 条不可达端口把采集轮拖长 N×2s；解析纯函数/采集轮并发 5/静默去重/恢复关闭/留存清理/agent 心跳指标复用链路审查无问题；记录功能缺口：钉钉机器人加签方式未支持（仅自定义关键词 webhook），待环境后按需补；-race 全过。下一模块：workflow。下一模块：pipeline。
+11. 进度记录：**monitor 已巡检（场79）**——实施一处优化：EvalAllRules 端口探活规则从串行改有界并发评估（上限 10）——原 N 条不可达端口把采集轮拖长 N×2s；解析纯函数/采集轮并发 5/静默去重/恢复关闭/留存清理/agent 心跳指标复用链路审查无问题；记录功能缺口：钉钉机器人加签方式未支持（仅自定义关键词 webhook），待环境后按需补；-race 全过。下一模块：workflow。
+12. 进度记录：**workflow 已巡检（场80）**——修一处并发数据完整性缺陷：SubmitAction 先读状态后更新且无并发保护，两人同时审批同一工单会双写流转（approve+reject 竞态决定终态、release 发版钩子可能重复触发）→ 乐观锁修复（UPDATE 携带读取时 state+status，RowsAffected=0 报"工单状态已变化，请刷新后重试"），cancel 路径同口径；行为变化：并发冲突从静默双写改为显式报错，真机回归随测试机恢复；状态机引擎/审批约束/钩子失败不阻断收档审查无问题；-race 全过。下一模块：dbops。下一模块：pipeline。
 
 ## 三、每场 DoD（硬性）
 
