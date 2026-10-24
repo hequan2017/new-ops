@@ -79,19 +79,26 @@ func (s *GpuService) UpdateNode(n *model.GpuNode) error {
 	if n == nil || n.ID == 0 {
 		return newGpuErr(ErrCodeGpuNameRequired, "节点ID不能为空")
 	}
-	// 总量不可低于当前运行中占用
-	gpuUsed, cpuUsed, memUsed, err := nodeUsage(global.GVA_DB, n.ID)
-	if err != nil {
-		return err
-	}
-	if n.GpuTotal < gpuUsed || n.CpuTotal < cpuUsed || n.MemTotalGb < memUsed {
-		return newGpuErr(ErrCodeGpuOversold, "总量不可低于运行中实例的已分配量")
-	}
-	return global.GVA_DB.Model(&model.GpuNode{}).Where("id = ?", n.ID).Updates(map[string]any{
-		"name": n.Name, "gpu_model": n.GpuModel, "gpu_total": n.GpuTotal,
-		"cpu_total": n.CpuTotal, "mem_total_gb": n.MemTotalGb,
-		"status": n.Status, "notes": n.Notes,
-	}).Error
+	// 缩容校验须与 StartInstance 同一把行锁互斥：原 SUM 为无锁读，校验与更新之间存在窗口——
+	// 并发开通插入新实例并提交后，仍可把总量改到低于实际已用量，打破防超卖不变量
+	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
+		var row model.GpuNode
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, n.ID).Error; err != nil {
+			return newGpuErr(ErrCodeGpuNotFound, "节点不存在")
+		}
+		gpuUsed, cpuUsed, memUsed, err := nodeUsage(tx, n.ID)
+		if err != nil {
+			return err
+		}
+		if n.GpuTotal < gpuUsed || n.CpuTotal < cpuUsed || n.MemTotalGb < memUsed {
+			return newGpuErr(ErrCodeGpuOversold, "总量不可低于运行中实例的已分配量")
+		}
+		return tx.Model(&model.GpuNode{}).Where("id = ?", n.ID).Updates(map[string]any{
+			"name": n.Name, "gpu_model": n.GpuModel, "gpu_total": n.GpuTotal,
+			"cpu_total": n.CpuTotal, "mem_total_gb": n.MemTotalGb,
+			"status": n.Status, "notes": n.Notes,
+		}).Error
+	})
 }
 
 // DeleteNode 删除节点（有运行中实例拒绝）

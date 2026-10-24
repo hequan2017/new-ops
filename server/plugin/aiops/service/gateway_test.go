@@ -27,3 +27,27 @@ func TestErrSnippet(t *testing.T) {
 		t.Fatalf("短体应去空白保留: %q", got)
 	}
 }
+
+func TestValidateLLMBaseURL(t *testing.T) {
+	for _, c := range []struct {
+		url string
+		ok  bool
+	}{
+		{"https://api.openai.com/v1", true},
+		{"http://10.0.0.5:11434/v1", true}, // 内网自建网关是核心用法，放行
+		{"file:///etc/passwd", false},
+		{"gopher://x", false},
+		{"https://example.com/v1?token=1", false},
+		{"https://example.com/v1#frag", false},
+		{"https://user:pass@example.com", false},
+		{"notaurl", false},
+	} {
+		err := validateLLMBaseURL(c.url)
+		if c.ok && err != nil {
+			t.Fatalf("%q 应合法: %v", c.url, err)
+		}
+		if !c.ok && err == nil {
+			t.Fatalf("%q 应被拒绝", c.url)
+		}
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -49,6 +50,9 @@ func (s *AiopsServiceStruct) GetProviders() ([]model.AiopsLlmProvider, error) {
 func (s *AiopsServiceStruct) SaveProvider(p *model.AiopsLlmProvider) error {
 	if p == nil || p.Name == "" || p.BaseUrl == "" || p.Model == "" {
 		return fmt.Errorf("[%d]名称/地址/模型不能为空", ErrCodeProviderInvalid)
+	}
+	if err := validateLLMBaseURL(p.BaseUrl); err != nil {
+		return err
 	}
 	if p.TimeoutSec <= 0 || p.TimeoutSec > 600 {
 		p.TimeoutSec = 60
@@ -147,6 +151,32 @@ type chatResponse struct {
 	} `json:"error"`
 }
 
+// llmHTTPClient 共享连接池（每供应商超时经请求 ctx 派生，不走 client.Timeout）
+var llmHTTPClient = &http.Client{}
+
+// validateLLMBaseURL 供应商地址基础校验：必须 http(s) 且带主机名，拒绝查询串/锚点与其他
+// scheme（收敛奇异 scheme 的请求面）。内网地址与明文 http 不拦截——自建内网 LLM 网关
+// （ollama/vllm 等）是本平台核心用法，且配置面仅 888 超管
+func validateLLMBaseURL(raw string) error {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return fmt.Errorf("[%d]地址解析失败: %v", ErrCodeProviderInvalid, err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("[%d]地址必须为 http(s):// 开头", ErrCodeProviderInvalid)
+	}
+	if u.Hostname() == "" {
+		return fmt.Errorf("[%d]地址缺少主机名", ErrCodeProviderInvalid)
+	}
+	if u.User != nil {
+		return fmt.Errorf("[%d]地址不应携带 userinfo", ErrCodeProviderInvalid)
+	}
+	if u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("[%d]地址不应包含查询串或锚点", ErrCodeProviderInvalid)
+	}
+	return nil
+}
+
 // Chat 统一 LLM 调用（OpenAI 兼容 chat/completions；system 可空）
 func (s *AiopsServiceStruct) Chat(ctx context.Context, providerID uint, system, user string) (string, string, string, error) {
 	p, key, err := s.resolveProvider(providerID)
@@ -178,8 +208,12 @@ func (s *AiopsServiceStruct) Chat(ctx context.Context, providerID uint, system, 
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
-	client := &http.Client{Timeout: timeout}
-	resp, err := client.Do(req)
+	// 共享连接池客户端（原每次调用新建 client/Transport，TLS 握手与连接无法复用，
+	// 批量诊断多 Pod 时延迟与 CPU 放大）；超时经 ctx 派生控制
+	tctx, tcancel := context.WithTimeout(ctx, timeout)
+	defer tcancel()
+	req = req.WithContext(tctx)
+	resp, err := llmHTTPClient.Do(req)
 	if err != nil {
 		return "", p.Name, p.Model, fmt.Errorf("[%d]LLM 调用失败: %w", ErrCodeLLMCallFailed, err)
 	}
