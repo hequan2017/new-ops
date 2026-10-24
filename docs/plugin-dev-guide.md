@@ -53,8 +53,8 @@ web/src/plugin/<name>/
 
 ## 5. 测试与验收
 
-- 单元测试：service 层为主，`go test -short ./...` 必须全绿；**禁止在测试中修改仓库源文件**（GVA utils/ast 的注入测试即是反例，已用 TestMain + -short 隔离）。
-- 依赖全局初始化（GVA_DB/GVA_CONFIG）的测试加 `if testing.Short() { t.Skip(...) }`。
+- 单元测试：service 层为主，**全量 `go test ./...` 必须绿**（场85-87 已根治 ast 注入对称性与环境依赖，不再依赖 `-short` 隔离；CI 已同步放开全量）。**禁止在测试中修改仓库源文件**。
+- 依赖全局初始化（GVA_DB/GVA_CONFIG）的测试加环境守卫跳过（不可达 `t.Skip`，参考 mcp/client 与 auto_code 的守卫模式）。
 - 每场完成定义（DoD）：代码+编译+单测+Swagger+初始化脚本+DEV_PLAN 勾选+开发日志+push+**测试环境部署冒烟通过**。
 
 ## 6. 部署
@@ -67,14 +67,16 @@ NEW_OPS_TEST_HOST=root@x.x.x.x make deploy-host   # 其他机器
 
 配置约定：`config.yaml` 在远端是有状态文件（部署脚本不覆盖）；本地仓库的 `server/config.yaml` 是开发默认值；生产差异（env: public、captcha 开启、MySQL、JWT 密钥、凭据主密钥）记录在 `server/config.prod.yaml.example`。
 
-## 7. 当前骨架状态（M0 交付）
+## 7. 骨架状态（M0 交付 → 当前实况 2026-10-24）
 
-| 插件 | 状态 | 目标里程碑 |
+| 插件 | 状态 | 当前阶段 |
 |---|---|---|
-| asset / term / job | 骨架已注册 | M1-M2 |
-| pipeline | 骨架已注册 | M3（以 new-jenkins 为蓝本迁移） |
-| container / k8s | 骨架已注册 | M4 |
-| gpu | 骨架已注册 | M5 |
-| dbops / monitor | 骨架已注册 | M6 |
-| workflow / org / aiops | 骨架已注册 | M7 |
+| asset / term / job / pipeline | **已交付**（M1-M3，含批量执行双后端/流水线远程执行器） | M9 增强（Agent 通道） |
+| container / k8s | **已交付**（M4 全部 + C2/C3 + K3 全部 + AI 诊断） | M9 增强（Agent 模式纳管） |
+| gpu | 防超卖引擎已交付（行锁修正）；直通/HAMi/监控待显卡环境 | M5 收尾 |
+| dbops / monitor | **已交付**（goInception 真机闭环 / 告警引擎全量） | soar/多环境待环境 |
+| workflow / aiops | **已交付**（状态机+发版闭环 / MCP+LLM 网关+Pod AI 诊断） | org 钉钉待企业配置 |
+| agent | **M9 全链交付**（任务/文件分发/Docker-K8s 代理/100 压测） | 集群内 E2E 待测试机 |
 | announcement / email / auto / plugin-tool | GVA 官方插件，保留 | 底座 |
+
+实时进展以 [DEV_PLAN 开发日志](DEV_PLAN.md) 为准。
