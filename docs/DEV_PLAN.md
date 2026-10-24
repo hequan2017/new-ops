@@ -646,4 +646,5 @@ web/src/plugin/asset/
 | 2026-10-25 | 117 | **抽查长尾（场117，monitor_metric 索引核验）**：复合索引 idx_metric_asset_name_ts（asset_id/name/ts 三级优先）声明完整——告警评估（WHERE asset_id AND name ORDER ts DESC）与指标查询正好覆盖，另有 ts 单列索引供 30 天留存清理（并行场二轮补）；无改动；机器仍不可达，轻量轮转 | 场118：抽查续或收尾；测试机可达则优先补 E2E |
 | 2026-10-25 | 118 | **本地全链回归门禁 R2（场118，4/4 PASS）**——场67 后又落地 30+ 提交（A3/A4/job 双后端/两轮巡检修复），重跑本地真进程链路验证端到端仍健康：①task/exec echo ✓②exit 7 透传 ✓③文件分发（嵌套目录+内容 diff）✓④job execBackend=agent 批次（backend=agent/成功/输出正确）✓；验证数据已清（进程+目录） | 场119：抽查续或收尾；测试机可达则优先补 E2E |
 | 2026-10-25 | 119 | **抽查长尾（场119，Pinia app store）**：主题/UI 配置存储核验——originSetting 回灌按 config 既有键白名单迭代（用户信息接口不可注入任意配置键）、primaryColor 仅入 CSS 变量（自设值自影响）、darkMode auto 跟随系统 ✓ 无问题；机器仍不可达，轻量轮转 | 场120：抽查续或收尾；测试机可达则优先补 E2E |
+| 2026-10-25 | 120 | **workflow 乐观锁并发真实验证（场120，本地 E2E 4/4 逻辑 PASS）**——场80 修复后的行为级验证：建定义（submitted→approve→done/reject）+ 发起工单 + **两路并发 approve**，结果恰好一成功一被拒（并发窗口落在"已结束"前置检查或乐观锁 RowsAffected 路径，两种拦截都符合设计），流转记录仅一条 start+一条 approve **无双写**；验证数据已清 | 场121：抽查续或收尾；测试机可达则优先补 E2E |
 
