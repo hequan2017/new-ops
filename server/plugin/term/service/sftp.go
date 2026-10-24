@@ -3,6 +3,7 @@
 package service
 
 import (
+	"strings"
 	"fmt"
 	"io"
 	"path"
@@ -57,6 +58,7 @@ type SftpEntry struct {
 
 // normalizeSftpPath 规范化路径（默认 /root，禁止越级逃逸）
 func normalizeSftpPath(p string) string {
+	p = strings.TrimSpace(p)
 	if p == "" {
 		return "/root"
 	}
