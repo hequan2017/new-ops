@@ -34,8 +34,10 @@ func (a *PackageInitializeGorm) Parse(filename string, writer io.Writer) (file *
 }
 
 func (a *PackageInitializeGorm) Rollback(file *ast.File) error {
-	packageNameNum := 0
-	// 寻找目标结构
+	if file == nil {
+		return fmt.Errorf("ast: PackageInitializeGorm 回滚目标文件未解析（file 为 nil）")
+	}
+	// 删除结构体参数
 	ast.Inspect(file, func(n ast.Node) bool {
 		// 总调用的db变量根据business来决定
 		varDB := a.Business + "Db"
@@ -61,17 +63,13 @@ func (a *PackageInitializeGorm) Rollback(file *ast.File) error {
 			return true
 		}
 
-		// 删除结构体参数
 		for i := 0; i < len(callExpr.Args); i++ {
 			if com, comok := callExpr.Args[i].(*ast.CompositeLit); comok {
 				if selector, exprok := com.Type.(*ast.SelectorExpr); exprok {
 					if x, identok := selector.X.(*ast.Ident); identok {
-						if x.Name == a.PackageName {
-							packageNameNum++
-							if selector.Sel.Name == a.StructName {
-								callExpr.Args = append(callExpr.Args[:i], callExpr.Args[i+1:]...)
-								i--
-							}
+						if x.Name == a.PackageName && selector.Sel.Name == a.StructName {
+							callExpr.Args = append(callExpr.Args[:i], callExpr.Args[i+1:]...)
+							i--
 						}
 					}
 				}
@@ -80,18 +78,30 @@ func (a *PackageInitializeGorm) Rollback(file *ast.File) error {
 		return true
 	})
 
-	if packageNameNum == 1 {
+	// 移除后全文件复查该包引用，无引用才摘 import——原 packageNameNum==1 判定在同包多
+	// 结构体/重复注入场景下永远不成立，注入-回滚往返会残留未使用 import 弄脏工作区
+	used := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok {
+			if x, ok := sel.X.(*ast.Ident); ok && x.Name == a.PackageName {
+				used = true
+				return false
+			}
+		}
+		return true
+	})
+	if !used {
 		_ = NewImport(a.ImportPath).Rollback(file)
 	}
 	return nil
 }
 
 func (a *PackageInitializeGorm) Injection(file *ast.File) error {
-	_ = NewImport(a.ImportPath).Injection(file)
 	bizModelDecl := FindFunction(file, "bizModel")
 	if bizModelDecl != nil {
 		a.addDbVar(bizModelDecl.Body)
 	}
+	injected := false
 	// 寻找目标结构
 	ast.Inspect(file, func(n ast.Node) bool {
 		// 总调用的db变量根据business来决定
@@ -125,8 +135,14 @@ func (a *PackageInitializeGorm) Injection(file *ast.File) error {
 				Sel: ast.NewIdent(a.StructName),
 			},
 		})
+		injected = true
 		return true
 	})
+	// import 仅随实际注入添加——无条件添加而 Rollback 按注入痕迹移除，
+	// 目标调用缺失时会残留未使用 import（测试跑完即弄脏工作区、破坏构建）
+	if injected {
+		_ = NewImport(a.ImportPath).Injection(file)
+	}
 	return nil
 }
 

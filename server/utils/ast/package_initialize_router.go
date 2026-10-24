@@ -77,6 +77,9 @@ func (a *PackageInitializeRouter) Rollback(file *ast.File) error {
 					// 如果不再存在任何调用，则删除导入和变量。
 					if exprNum == 0 {
 						funcDecl.Body.List = append(funcDecl.Body.List[:i], funcDecl.Body.List[i+1:]...)
+						// 注入块在上一语句与 } 之间留下空行，摘除后 Rbrace 归位 NoPos 让 printer 贴紧，
+						// 否则注入-回滚往返会在函数尾残留一个空行（弄脏工作区）
+						funcDecl.Body.Rbrace = token.NoPos
 					}
 					break
 				}

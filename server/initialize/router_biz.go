@@ -1,8 +1,8 @@
 package initialize
 
 import (
-	"github.com/hequan2017/new-ops/server/router"
 	"github.com/gin-gonic/gin"
+	"github.com/hequan2017/new-ops/server/router"
 )
 
 // 占位方法，保证文件可以正确加载，避免go空变量检测报错，请勿删除。
