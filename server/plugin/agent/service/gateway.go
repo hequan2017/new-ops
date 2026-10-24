@@ -299,9 +299,9 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 		switch f.Type {
 		case "heartbeat":
-			global.GVA_DB.Model(&inst).Update("last_heartbeat", &now)
+			s.touchHeartbeat(&inst, now)
 		case "metric":
-			global.GVA_DB.Model(&inst).Update("last_heartbeat", &now)
+			s.touchHeartbeat(&inst, now)
 			s.storeMetrics(inst.AssetID, f.Points)
 		case "task_result":
 			resolveTaskResult(f.TaskNo, f)
@@ -312,6 +312,21 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 		}
 		_ = conn.SetReadDeadline(time.Now().Add(2 * AgentHeartbeatInterval))
 	}
+}
+
+// hbSyncMap 心跳 UPDATE 节流水位（实例 ID → 上次落库时间；键量受实例数约束）
+var hbSyncMap sync.Map
+
+// touchHeartbeat 更新心跳时间：心跳与指标双帧各自同步 UPDATE（30s 内 2 次/agent 且都在
+// WS 读循环内执行，DB 抖动会反压读循环）——15s 内已更新过则跳过本帧的 UPDATE
+func (s *AgentService) touchHeartbeat(inst *model.AgentInstance, now time.Time) {
+	if v, ok := hbSyncMap.Load(inst.ID); ok {
+		if last, ok2 := v.(time.Time); ok2 && now.Sub(last) < 15*time.Second {
+			return
+		}
+	}
+	hbSyncMap.Store(inst.ID, now)
+	global.GVA_DB.Model(inst).Update("last_heartbeat", &now)
 }
 
 // writeRegisterAck 注册阶段应答（写入前 10s 超时，防僵死对端把网关协程挂死——与业务帧同口径）
@@ -349,7 +364,10 @@ func (s *AgentService) storeMetrics(assetID uint, points []agentPoint) {
 	for _, p := range clean {
 		rows = append(rows, monitorModel.MonitorMetric{AssetID: assetID, Name: p.Name, Value: p.Value, TS: now})
 	}
-	global.GVA_DB.Create(&rows)
+	if err := global.GVA_DB.Create(&rows).Error; err != nil {
+		// 原静默丢弃：指标消失无任何痕迹，排障无从下手
+		global.GVA_LOG.Error(fmt.Sprintf("agent 指标落库失败（asset %d, %d 点）: %v", assetID, len(rows), err))
+	}
 }
 
 // WriteToAgent 向已注册连接下发 JSON 帧（A2 任务下发预留出口；A1 仅心跳链路无服务端推送）

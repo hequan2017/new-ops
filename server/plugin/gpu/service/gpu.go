@@ -235,19 +235,45 @@ func (s *GpuService) ReleaseInstance(id uint) error {
 	if inst.Status != model.InstRunning {
 		return newGpuErr(ErrCodeGpuStructInvalid, "实例非运行中状态")
 	}
+	// 条件更新替代检查后更新：并发重复释放（双击/重试）都过状态检查时，
+	// 后提交者会覆盖前者的 released_at 致审计时间戳失真；携带状态条件天然幂等
 	now := time.Now()
-	return global.GVA_DB.Model(&model.GpuInstance{}).Where("id = ?", id).Updates(map[string]any{
-		"status": model.InstReleased, "released_at": &now,
-	}).Error
+	res := global.GVA_DB.Model(&model.GpuInstance{}).
+		Where("id = ? AND status = ?", id, model.InstRunning).
+		Updates(map[string]any{"status": model.InstReleased, "released_at": &now})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return newGpuErr(ErrCodeGpuStructInvalid, "实例非运行中状态（可能已被并发释放）")
+	}
+	return nil
 }
 
-// GetInstanceList 实例列表（status 过滤）
-func (s *GpuService) GetInstanceList(status string) ([]model.GpuInstance, error) {
+// GetInstanceList 实例台账分页（nodeId/userId/status 过滤；page≤0 视为全量兼容旧调用，上限 500）
+// 原硬编码 Limit(500) 无分页无过滤：台账含已销毁记录持续增长，第 501 条起静默不可见
+func (s *GpuService) GetInstanceList(status string, nodeID, userID uint, page, pageSize int) (list []model.GpuInstance, total int64, err error) {
 	db := global.GVA_DB.Model(&model.GpuInstance{})
 	if status != "" {
 		db = db.Where("status = ?", status)
 	}
-	var list []model.GpuInstance
-	err := db.Order("id DESC").Limit(500).Find(&list).Error
-	return list, err
+	if nodeID > 0 {
+		db = db.Where("node_id = ?", nodeID)
+	}
+	if userID > 0 {
+		db = db.Where("user_id = ?", userID)
+	}
+	if err = db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if page > 0 {
+		if pageSize <= 0 || pageSize > 100 {
+			pageSize = 20
+		}
+		db = db.Offset((page - 1) * pageSize).Limit(pageSize)
+	} else {
+		db = db.Limit(500)
+	}
+	err = db.Order("id DESC").Find(&list).Error
+	return list, total, err
 }

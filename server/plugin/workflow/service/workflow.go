@@ -95,13 +95,21 @@ func (s *WorkflowService) CreateDefinition(d *model.WfDefinition) error {
 	return global.GVA_DB.Create(d).Error
 }
 
-// UpdateDefinition 更新定义（进行中实例不受影响——实例只按定义ID读历史快照语义）
+// UpdateDefinition 更新定义。SubmitAction 每次动作实时读现行定义（并非快照），改定义会
+// 改变在途工单的迁移与审批约束——与 DeleteDefinition 同口径：存在进行中实例时拒绝
+// （原注释声称"进行中实例不受影响"与实现不符）
 func (s *WorkflowService) UpdateDefinition(d *model.WfDefinition) error {
 	if d == nil || d.ID == 0 || strings.TrimSpace(d.Name) == "" {
 		return newWfErr(ErrCodeWfNameRequired, "定义ID与名称不能为空")
 	}
 	if _, _, err := ValidateDefinition(d.States, d.Transitions, d.StartState); err != nil {
 		return err
+	}
+	var running int64
+	global.GVA_DB.Model(&model.WfInstance{}).
+		Where("definition_id = ? AND status = ?", d.ID, model.InstanceRunning).Count(&running)
+	if running > 0 {
+		return newWfErr(ErrCodeWfStructInvalid, fmt.Sprintf("仍有 %d 个进行中工单使用该定义，处理完毕后才能更新", running))
 	}
 	return global.GVA_DB.Model(&model.WfDefinition{}).Where("id = ?", d.ID).Updates(map[string]any{
 		"name": d.Name, "states": d.States, "transitions": d.Transitions,
@@ -277,6 +285,15 @@ func (s *WorkflowService) fireReleaseHook(ins *model.WfInstance, operator string
 	}
 	if err := json.Unmarshal([]byte(ins.Params), &p); err != nil || p.PipelineID == 0 {
 		s.appendHookLog(ins.ID, "发版钩子未触发：参数缺少 pipelineId")
+		return
+	}
+	// 仅经过审批节点的工单才触发发版：原只看"非驳回到达终态"，自定义定义中
+	// abort/跳过等任意动作直达终态同样会触发流水线构建（误发生产）
+	var approved int64
+	global.GVA_DB.Model(&model.WfActionLog{}).
+		Where("instance_id = ? AND action = ?", ins.ID, "approve").Count(&approved)
+	if approved == 0 {
+		s.appendHookLog(ins.ID, "发版钩子未触发：未经过审批（无 approve 流转记录）")
 		return
 	}
 	buildSvc := new(pipelineBuild.PipelineBuildService)

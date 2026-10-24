@@ -119,8 +119,20 @@
     replayId.value = row.ID
     replayHost.value = `${row.hostname}（${row.ip}）`
     replayVisible.value = true
-    const [streamsRes, cmdsRes] = await Promise.all([
-      getTermSessionStreams({ id: row.ID }),
+    const [streams, cmdsRes] = await Promise.all([
+      // 游标循环拉取全部流镜像（后端按 seq 分页，原 20000 条静默截断）
+      (async () => {
+        const all = []
+        let afterSeq = 0
+        for (;;) {
+          const res = await getTermSessionStreams({ id: row.ID, afterSeq })
+          if (res.code !== 0) break
+          all.push(...(res.data.list || []))
+          if (!res.data.hasMore || !(res.data.list || []).length) break
+          afterSeq = res.data.list[res.data.list.length - 1].seq
+        }
+        return all
+      })(),
       getTermSessionCommands({ id: row.ID })
     ])
     commands.value = cmdsRes.data || []
@@ -134,14 +146,14 @@
     })
     replayTerm = term
     term.open(replayEl.value)
-    for (const s of streamsRes.data || []) {
+    for (const s of streams || []) {
       if (s.direction === 0) {
         term.write(`\x1b[33m〔输入〕${s.payload.replace(/\r?\n/g, '')}\x1b[0m`)
       } else {
         term.write(s.payload)
       }
     }
-    if (!streamsRes.data?.length) term.writeln('\x1b[33m（该会话无流数据）\x1b[0m')
+    if (!streams?.length) term.writeln('\x1b[33m（该会话无流数据）\x1b[0m')
   }
 
   onMounted(getList)

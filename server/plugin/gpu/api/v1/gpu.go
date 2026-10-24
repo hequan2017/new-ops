@@ -216,10 +216,18 @@ func (a *gpuApi) ReleaseInstance(c *gin.Context) {
 // @Success 200 {object} response.Response{data=[]gpuModel.GpuInstance} "获取成功"
 // @Router /gpu/instance/list [get]
 func (a *gpuApi) ListInstance(c *gin.Context) {
-	list, err := gpuSvc.GetInstanceList(c.Query("status"))
+	nodeID, _ := strconv.ParseUint(c.Query("nodeId"), 10, 64)
+	userID, _ := strconv.ParseUint(c.Query("userId"), 10, 64)
+	page, _ := strconv.Atoi(c.Query("page"))
+	pageSize, _ := strconv.Atoi(c.Query("pageSize"))
+	list, total, err := gpuSvc.GetInstanceList(c.Query("status"), uint(nodeID), uint(userID), page, pageSize)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	response.OkWithDetailed(list, "获取成功", c)
+	if page > 0 {
+		response.OkWithDetailed(gin.H{"list": list, "total": total, "page": page, "pageSize": pageSize}, "获取成功", c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c) // 不带 page 兼容旧前端全量口径
 }

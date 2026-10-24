@@ -423,31 +423,62 @@ func (s *DbopsService) fetchRollbacks(order *model.DbopsOrder, rows []auditRow) 
 	}
 	out := []map[string]string{}
 	type rollbackRec struct {
+		OpidTime          string
 		RollbackStatement string
 	}
+	// 按 schema 分组批量取回滚语句：原逐语句 2 次查询（信息表+回滚表），500 语句工单即
+	// 1000 次串行往返，备份库慢时把同步的 ExecuteOrder 请求拖到分钟级
+	schemaOfRow := func(r auditRow) string {
+		if r.BackupDbname != "" {
+			return r.BackupDbname
+		}
+		// 引擎命名口径：host 中非字母数字字符（.、- 等）一律转下划线，拼 _端口_库名
+		return strings.Map(func(c rune) rune {
+			if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' {
+				return c
+			}
+			return '_'
+		}, inst.Host) + "_" + strconv.Itoa(inst.Port) + "_" + dbName
+	}
+	seqsBySchema := map[string][]string{}
 	for _, r := range rows {
 		if r.Sequence == "" {
 			continue
 		}
-		schema := r.BackupDbname
-		if schema == "" {
-			// 引擎命名口径：host 中非字母数字字符（.、- 等）一律转下划线，拼 _端口_库名
-			schema = strings.Map(func(r rune) rune {
-				if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' {
-					return r
-				}
-				return '_'
-			}, inst.Host) + "_" + strconv.Itoa(inst.Port) + "_" + dbName
+		sc := schemaOfRow(r)
+		seqsBySchema[sc] = append(seqsBySchema[sc], r.Sequence)
+	}
+	tableBySeq := map[string]string{}
+	for schema, seqs := range seqsBySchema {
+		type infoRow struct {
+			OpidTime  string
+			Tablename string
 		}
-		var tablename string
-		if err := backup.Table(schema + ".$__$Inception_backup_information$_$").Select("tablename").
-			Where("opid_time = ?", r.Sequence).Scan(&tablename).Error; err != nil || tablename == "" {
+		var infos []infoRow
+		if err := backup.Table(schema + ".$_$Inception_backup_information$_$").
+			Select("opid_time, tablename").Where("opid_time IN ?", seqs).Scan(&infos).Error; err != nil {
 			continue
 		}
-		var rec rollbackRec
-		if err := backup.Table(schema+"."+tablename).Select("rollback_statement").
-			Where("opid_time = ?", r.Sequence).Scan(&rec).Error; err == nil && rec.RollbackStatement != "" {
-			out = append(out, map[string]string{"sequence": r.Sequence, "rollback": rec.RollbackStatement})
+		for _, ir := range infos {
+			if ir.Tablename != "" {
+				tableBySeq[ir.OpidTime] = schema + "." + ir.Tablename
+			}
+		}
+	}
+	seqsByTable := map[string][]string{}
+	for seq, table := range tableBySeq {
+		seqsByTable[table] = append(seqsByTable[table], seq)
+	}
+	for table, seqs := range seqsByTable {
+		var recs []rollbackRec
+		if err := backup.Table(table).Select("opid_time, rollback_statement").
+			Where("opid_time IN ?", seqs).Scan(&recs).Error; err != nil {
+			continue
+		}
+		for _, rec := range recs {
+			if rec.RollbackStatement != "" {
+				out = append(out, map[string]string{"sequence": rec.OpidTime, "rollback": rec.RollbackStatement})
+			}
 		}
 	}
 	return out

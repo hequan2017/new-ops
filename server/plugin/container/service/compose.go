@@ -74,7 +74,11 @@ func (s *ComposeService) runCompose(ep *model.DockerEndpoint, project, args stri
 	}
 	defer os.RemoveAll(dir)
 	file := filepath.Join(dir, "docker-compose.yml")
-	if err := os.WriteFile(file, []byte(s.projectContent(project)), 0600); err != nil {
+	content, cerr := s.projectContent(project)
+	if cerr != nil {
+		return "", cerr
+	}
+	if err := os.WriteFile(file, []byte(content), 0600); err != nil {
 		return "", fmt.Errorf("compose 文件写入失败: %w", err)
 	}
 	env, cleanup, err := s.endpointEnv(ep, dir)
@@ -112,13 +116,17 @@ func (s *ComposeService) runCompose(ep *model.DockerEndpoint, project, args stri
 	return out, nil
 }
 
-// projectContent 取项目 compose 内容（不存在报错）
-func (s *ComposeService) projectContent(project string) string {
+// projectContent 取项目 compose 内容（不存在/为空报错——原查库失败静默返回空串，
+// 空文件交给 docker compose 执行得到误导性报错而非"项目不存在"）
+func (s *ComposeService) projectContent(project string) (string, error) {
 	var p model.DockerComposeProject
 	if err := global.GVA_DB.Where("name = ?", project).First(&p).Error; err != nil {
-		return ""
+		return "", newCtErr(ErrCodeComposeFileEmpty, "compose 项目不存在: "+project)
 	}
-	return p.Content
+	if strings.TrimSpace(p.Content) == "" {
+		return "", newCtErr(ErrCodeComposeFileEmpty, "compose 项目内容为空: "+project)
+	}
+	return p.Content, nil
 }
 
 // endpointEnv 接入点 → docker CLI 环境变量；TCP+TLS 时落临时证书目录（cleanup 用后即删）

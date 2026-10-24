@@ -25,6 +25,17 @@ func RenderK8sAgentDeployment(serverAddr, image, token string) (string, error) {
 	}
 	return fmt.Sprintf(`# 白泽集群内 Agent 一键接入（K4）：kubectl apply -f baize-agent.yaml
 # agent 以 ServiceAccount（只读）身份把 K8s API 请求经 WS 通道代理回 server
+# 令牌经 Secret 以环境变量注入（原写在 Deployment args，进程列表/describe 可见，
+# 集群内任何能 list pod 的 SA 都可读取并冒充该资产 agent）
+apiVersion: v1
+kind: Secret
+metadata:
+  name: baize-agent-token
+  namespace: default
+type: Opaque
+stringData:
+  token: %s
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -72,10 +83,18 @@ spec:
       containers:
         - name: agent
           image: %s
+          env:
+            - name: BAIZE_SERVER
+              value: %s
+            - name: BAIZE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: baize-agent-token
+                  key: token
           args:
             - -server
-            - %s
+            - $(BAIZE_SERVER)
             - -token
-            - %s
-`, image, sa, token), nil
+            - $(BAIZE_TOKEN)
+`, token, image, sa), nil
 }

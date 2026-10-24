@@ -91,6 +91,8 @@ system:
     use-strict-auth: false
     #  禁用自动迁移数据库表结构，生产环境建议设为true，手动迁移
     disable-auto-migrate: false
+    # 是否暴露 Swagger 文档（/swagger/index.html）：对外网环境建议关闭，内网调试可开启
+    enable-swagger: false
 
 # captcha configuration
 captcha:

@@ -57,9 +57,12 @@ func Routers() *gin.Engine {
 	// Router.Use(middleware.Cors()) // 直接放行全部跨域请求
 	// Router.Use(middleware.CorsByRules()) // 按照配置的规则放行跨域请求
 	// global.GVA_LOG.Info("use middleware cors")
-	docs.SwaggerInfo.BasePath = global.GVA_CONFIG.System.RouterPrefix
-	Router.GET(global.GVA_CONFIG.System.RouterPrefix+"/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	global.GVA_LOG.Info("register swagger handler")
+	// Swagger 暴露完整 API 面（路径/参数/模型），未认证可达即替攻击者省去侦察——默认关闭，配置开启
+	if global.GVA_CONFIG.System.EnableSwagger {
+		docs.SwaggerInfo.BasePath = global.GVA_CONFIG.System.RouterPrefix
+		Router.GET(global.GVA_CONFIG.System.RouterPrefix+"/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		global.GVA_LOG.Info("register swagger handler")
+	}
 	// 方便统一添加路由组前缀 多服务器上线使用
 
 	PublicGroup := Router.Group(global.GVA_CONFIG.System.RouterPrefix)

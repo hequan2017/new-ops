@@ -90,6 +90,11 @@ func (a *AiopsApi) Chat(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
+	// prompt 长度上限：任意长度原样透传 LLM 供应商，888 下也可被刷出大额 API 账单
+	if len(req.Prompt) > 64<<10 {
+		response.FailWithMessage("prompt 超过 64KB 上限", c)
+		return
+	}
 	content, provider, modelName, err := service.AiopsService.Chat(
 		c.Request.Context(), req.ProviderID, req.System, req.Prompt)
 	if err != nil {

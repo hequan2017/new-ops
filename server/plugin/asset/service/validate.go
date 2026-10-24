@@ -14,8 +14,8 @@ const (
 	ErrCodeIPInvalid        = 1002
 	ErrCodeIPDuplicate      = 1003
 	ErrCodeStatusInvalid    = 1004
-	ErrCodeJumpHostInvalid  = 1005
-	ErrCodeHostFPMismatch   = 1010 // SSH 主机公钥指纹不匹配（安全拒绝）
+	ErrCodeJumpHostInvalid  = 1012 // 原与 RoomNameRequired 重号 1005，错开
+	ErrCodeHostFPMismatch   = 1013 // SSH 主机公钥指纹不匹配（安全拒绝；原与 RoomHasRacks 重号 1010）
 )
 
 // ServiceError 带业务错误码的错误（前端可按码分支处理）

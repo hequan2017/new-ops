@@ -2,6 +2,7 @@
 package api
 
 import (
+	"strconv"
 	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/model/common/request"
 	"github.com/hequan2017/new-ops/server/model/common/response"
@@ -50,12 +51,13 @@ func (t *termSession) GetTermSessionStreams(c *gin.Context) {
 		response.FailWithMessage("id 无效", c)
 		return
 	}
-	list, err := service.Service.TermAuditService.GetSessionStreams(id)
+	afterSeq, _ := strconv.ParseInt(c.DefaultQuery("afterSeq", "0"), 10, 64)
+	list, hasMore, err := service.Service.TermAuditService.GetSessionStreams(id, afterSeq)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	response.OkWithData(list, c)
+	response.OkWithData(gin.H{"list": list, "hasMore": hasMore}, c)
 }
 
 // GetTermSessionCommands 会话命令列表

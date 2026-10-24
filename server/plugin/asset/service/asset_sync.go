@@ -44,8 +44,36 @@ func (s *AssetHostService) SyncFromAliyunECS(credentialID uint, region, operator
 	}
 
 	res := &ECSSyncResult{Total: len(instances)}
+	// 预取 SN→存量主机与 IP 占用（含软删行，唯一索引对二者都生效）：
+	// 原逐实例 First+Updates 的 N+1，且更新 ip 不查占用——命中唯一索引冲突时整台进 Failed
+	snSet := make([]string, 0, len(instances))
 	for _, it := range instances {
-		created, err := s.upsertFromECS(it, operator)
+		if it.InstanceID != "" {
+			snSet = append(snSet, it.InstanceID)
+		}
+	}
+	existingBySN := map[string]model.AssetHost{}
+	ipOwner := map[string]uint{} // ip → 持有主机 ID（含软删行）
+	if len(snSet) > 0 {
+		var rows []model.AssetHost
+		if err := global.GVA_DB.Unscoped().Where("sn IN ?", snSet).Find(&rows).Error; err == nil {
+			for i := range rows {
+				if rows[i].DeletedAt.Time.IsZero() {
+					existingBySN[rows[i].SN] = rows[i]
+				}
+				if rows[i].IP != "" {
+					ipOwner[rows[i].IP] = rows[i].ID
+				}
+			}
+		}
+	}
+	var allHosts []model.AssetHost
+	global.GVA_DB.Unscoped().Select("id, ip").Where("ip <> ''").Find(&allHosts)
+	for i := range allHosts {
+		ipOwner[allHosts[i].IP] = allHosts[i].ID
+	}
+	for _, it := range instances {
+		created, err := s.upsertFromECS(it, operator, existingBySN, ipOwner)
 		if err != nil {
 			res.Failed = append(res.Failed, fmt.Sprintf("%s: %v", it.InstanceID, err))
 			continue
@@ -60,15 +88,16 @@ func (s *AssetHostService) SyncFromAliyunECS(credentialID uint, region, operator
 }
 
 // upsertFromECS 按 SN（InstanceID）upsert 单个实例，返回是否为新建
-func (s *AssetHostService) upsertFromECS(it ecsInstance, operator string) (bool, error) {
+// existingBySN/ipOwner 为预取的存量映射（含软删行占用）；新建后回写映射防同批 SN/IP 撞车
+func (s *AssetHostService) upsertFromECS(it ecsInstance, operator string,
+	existingBySN map[string]model.AssetHost, ipOwner map[string]uint) (bool, error) {
 	hostname := it.Hostname
 	if hostname == "" {
 		hostname = it.InstanceID
 	}
-	var exist model.AssetHost
-	err := global.GVA_DB.Where("sn = ?", it.InstanceID).First(&exist).Error
+	exist, found := existingBySN[it.InstanceID]
 	switch {
-	case err == nil:
+	case found:
 		updates := map[string]any{
 			"hostname": hostname,
 			"os":       osNameToID(it.OSName),
@@ -78,8 +107,14 @@ func (s *AssetHostService) upsertFromECS(it ecsInstance, operator string) (bool,
 			"public_ip": it.PublicIP,
 			"status":    string(mapECSStatus(it.Status)),
 		}
-		if it.InnerIP != "" {
+		if it.InnerIP != "" && it.InnerIP != exist.IP {
+			if owner, taken := ipOwner[it.InnerIP]; taken && owner != exist.ID {
+				// IP 被其他主机占用（含软删残留行）：跳过 ip 字段更新并显式报失败原因，
+				// 否则唯一索引冲突的报错整台进 Failed 且原因晦涩
+				return false, fmt.Errorf("内网IP %s 已被主机 id=%d 占用，跳过 ip 更新", it.InnerIP, owner)
+			}
 			updates["ip"] = it.InnerIP
+			ipOwner[it.InnerIP] = exist.ID
 		}
 		if err := global.GVA_DB.Model(&model.AssetHost{}).Where("id = ?", exist.ID).Updates(updates).Error; err != nil {
 			return false, err
@@ -87,7 +122,7 @@ func (s *AssetHostService) upsertFromECS(it ecsInstance, operator string) (bool,
 		recordHostHistory(global.GVA_DB, exist.ID, model.HostHistoryUpdate,
 			map[string]any{"action": "阿里云ECS同步", "instanceId": it.InstanceID}, operator)
 		return false, nil
-	case isRecordNotFound(err):
+	default: // 按 SN 未找到 → 新建
 		ip := it.InnerIP
 		if ip == "" {
 			ip = it.PublicIP
@@ -107,14 +142,16 @@ func (s *AssetHostService) upsertFromECS(it ecsInstance, operator string) (bool,
 		if err := validateHost(h); err != nil {
 			return false, err
 		}
+		if owner, taken := ipOwner[h.IP]; taken {
+			return false, fmt.Errorf("内网IP %s 已被主机 id=%d 占用，无法导入", h.IP, owner)
+		}
 		if err := global.GVA_DB.Create(h).Error; err != nil {
 			return false, err
 		}
+		ipOwner[h.IP] = h.ID
 		recordHostHistory(global.GVA_DB, h.ID, model.HostHistoryCreate,
 			map[string]any{"action": "阿里云ECS同步", "instanceId": it.InstanceID}, operator)
 		return true, nil
-	default:
-		return false, err
 	}
 }
 

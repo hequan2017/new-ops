@@ -60,10 +60,25 @@ func (s *TermAuditService) GetSessionList(info request.PageInfo, username, statu
 	return list, total, err
 }
 
-// GetSessionStreams 会话流镜像（回放：seq 升序，limit 上限 20000）
-func (s *TermAuditService) GetSessionStreams(sessionID uint) (list []*model.TermSessionStream, err error) {
-	err = global.GVA_DB.Where("session_id = ?", sessionID).Order("seq ASC").Limit(20000).Find(&list).Error
-	return list, err
+// GetSessionStreams 会话流镜像（回放：seq 升序游标分页）。
+// 原一次性 Limit(20000) 静默截断：刷屏几分钟即超限，超出部分丢失且一次性
+// Find+序列化内存峰值可达百 MB 级；afterSeq 游标翻页（默认取首批 2000，hasMore 提示续拉）
+const sessionStreamPageSize = 2000
+
+func (s *TermAuditService) GetSessionStreams(sessionID uint, afterSeq int64) (list []*model.TermSessionStream, hasMore bool, err error) {
+	db := global.GVA_DB.Where("session_id = ?", sessionID)
+	if afterSeq > 0 {
+		db = db.Where("seq > ?", afterSeq)
+	}
+	err = db.Order("seq ASC").Limit(sessionStreamPageSize + 1).Find(&list).Error
+	if err != nil {
+		return nil, false, err
+	}
+	if len(list) > sessionStreamPageSize {
+		list = list[:sessionStreamPageSize]
+		hasMore = true
+	}
+	return list, hasMore, nil
 }
 
 // GetSessionCommands 会话命令列表
@@ -138,9 +153,9 @@ func (t *termService) GetSessionList(info request.PageInfo, username, status str
 	return TermAudit.GetSessionList(info, username, status)
 }
 
-// GetSessionStreams 会话流镜像（审计回放数据）
-func (t *termService) GetSessionStreams(sessionID uint) ([]*model.TermSessionStream, error) {
-	return TermAudit.GetSessionStreams(sessionID)
+// GetSessionStreams 会话流镜像（审计回放数据；afterSeq 游标分页）
+func (t *termService) GetSessionStreams(sessionID uint, afterSeq int64) ([]*model.TermSessionStream, bool, error) {
+	return TermAudit.GetSessionStreams(sessionID, afterSeq)
 }
 
 // GetSessionCommands 会话命令列表

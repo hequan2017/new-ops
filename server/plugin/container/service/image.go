@@ -30,9 +30,22 @@ type pullStatus struct {
 
 var imagePulls = &pullStatus{tasks: map[string]string{}}
 
+const pullStatusMaxEntries = 1024
+
 func (p *pullStatus) set(key, status string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	// 终态条目（成功/失败）只增不减会长驻膨胀：超限时先清理非"拉取中"旧条目再兜底整体收缩
+	if len(p.tasks) >= pullStatusMaxEntries {
+		for k, v := range p.tasks {
+			if v != "拉取中" {
+				delete(p.tasks, k)
+			}
+		}
+		if len(p.tasks) >= pullStatusMaxEntries {
+			p.tasks = map[string]string{}
+		}
+	}
 	p.tasks[key] = status
 }
 

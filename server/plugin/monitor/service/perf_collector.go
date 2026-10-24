@@ -239,9 +239,19 @@ func (s *MonitorService) CollectAll() {
 		return
 	}
 	defer collectMu.Unlock()
+	// 跳过已装在线 agent 的资产：SSH 采样（1s 窗口口径）与 agent 30s 上报双通道并行，
+	// 同一指标序列混入两种口径的点（图表毛刺）且白白消耗 SSH 并发与凭据解密。
+	// 直查表名避免 monitor→agent import 环（agent 已依赖 monitor 指标模型）；90s 为 agent 在线 TTL
+	var agentAssetIDs []uint
+	global.GVA_DB.Table("agent_instances").
+		Where("last_heartbeat > ?", time.Now().Add(-90*time.Second)).
+		Pluck("asset_id", &agentAssetIDs)
+	db := global.GVA_DB.Where("credential_id IS NOT NULL AND status != ?", assetModel.AssetStatusRetired)
+	if len(agentAssetIDs) > 0 {
+		db = db.Where("id NOT IN ?", agentAssetIDs)
+	}
 	var hosts []*assetModel.AssetHost
-	global.GVA_DB.Where("credential_id IS NOT NULL AND status != ?", assetModel.AssetStatusRetired).
-		Find(&hosts)
+	db.Find(&hosts)
 	sem := make(chan struct{}, 5)
 	var wg sync.WaitGroup
 	for _, h := range hosts {

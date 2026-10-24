@@ -18,7 +18,7 @@ import (
 )
 
 // discover 插件内错误码（沿用 asset 1000-1099 段）
-const ErrCodeCIDRInvalid = 1006
+const ErrCodeCIDRInvalid = 1020 // 原与 RoomDuplicate 重号 1006，错开
 
 // maxDiscoverHosts 单次发现展开的地址数上限（防 /0 类超大段拖垮服务）
 const maxDiscoverHosts = 4096

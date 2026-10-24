@@ -11,17 +11,23 @@ func TestRenderK8sAgentDeployment(t *testing.T) {
 		t.Fatalf("正常渲染应成功: %v", err)
 	}
 	for _, want := range []string{
-		"kind: ServiceAccount", "kind: ClusterRole", "kind: ClusterRoleBinding", "kind: Deployment",
+		"kind: Secret", "kind: ServiceAccount", "kind: ClusterRole", "kind: ClusterRoleBinding", "kind: Deployment",
 		"serviceAccountName: baize-agent", "hequan2017/baize-agent:0.2.0",
 		"http://192.168.112.138:8888", "tok-abc123",
 		`verbs: ["get", "list", "watch"]`,
+		"secretKeyRef:", "- $(BAIZE_TOKEN)",
 	} {
 		if !strings.Contains(y, want) {
 			t.Fatalf("YAML 缺少 %q", want)
 		}
 	}
-	if strings.Count(y, "---") != 3 {
-		t.Fatalf("应为 4 段文档: %d", strings.Count(y, "---"))
+	if strings.Count(y, "---") != 4 {
+		t.Fatalf("应为 5 段文档（含令牌 Secret）: %d", strings.Count(y, "---"))
+	}
+	// 令牌明文只应出现在 Secret（stringData），不得出现在 Deployment args/env 明文值里
+	deploymentPart := y[strings.Index(y, "kind: Deployment"):]
+	if strings.Contains(deploymentPart, "tok-abc123") {
+		t.Fatal("令牌明文不应出现在 Deployment 段（应经 Secret env 注入）")
 	}
 }
 

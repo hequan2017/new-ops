@@ -114,10 +114,11 @@ func (s *MonitorService) fireAlert(rule *model.MonitorAlertRule, summary string,
 		silence = 30 * time.Minute
 	}
 	var recent model.MonitorAlertEvent
-	q := global.GVA_DB.Where("rule_id = ? AND fired_at > ?", rule.ID, time.Now().Add(-silence)).
+	// 仅对未恢复事件去重：已恢复事件也计入会把"恢复后窗口内再次故障"静默吞掉，最长整个窗口丢告警
+	q := global.GVA_DB.Where("rule_id = ? AND fired_at > ? AND resolved_at IS NULL", rule.ID, time.Now().Add(-silence)).
 		Order("id DESC").First(&recent)
 	if q.Error == nil {
-		return // 静默窗口内已触发过
+		return // 静默窗口内已有未恢复的告警
 	}
 	ev := &model.MonitorAlertEvent{
 		RuleID: rule.ID, AssetID: rule.AssetID,
