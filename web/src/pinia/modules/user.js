@@ -133,6 +133,13 @@ export const useUserStore = defineStore('user', () => {
     // 清理所有相关的localStorage项
     localStorage.removeItem('originSetting')
     localStorage.removeItem('token')
+    // 401 路径清理不刷新页面：同步重置内存中的用户资料，防残留到下一登录
+    userInfo.value = {
+      uuid: '',
+      nickName: '',
+      headerImg: '',
+      authority: {}
+    }
   }
 
   return {
