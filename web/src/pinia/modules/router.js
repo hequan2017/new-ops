@@ -156,6 +156,12 @@ export const useRouterStore = defineStore('router', () => {
   const routeMap = {}
   // 从后台获取动态路由
   const SetAsyncRouter = async () => {
+    // 重置累积器：401 不刷新页面重登录等场景会二次调用，
+    // 不重置则 notLayout/keepAlive 数组叠加重复路由、routeMap/nameMap 持续膨胀
+    notLayoutRouterArr.length = 0
+    keepAliveRoutersArr.length = 0
+    for (const k in nameMap) delete nameMap[k]
+    for (const k in routeMap) delete routeMap[k]
     asyncRouterFlag.value++
     const baseRouter = [
       {
