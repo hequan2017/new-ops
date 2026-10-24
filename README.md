@@ -2,6 +2,8 @@
 
 > **v0.2.0+**（2026-10-08 更新）—— M0-M4 全部完成（**两套真实集群联调 + 两级数据隔离验证收官**）；**M8 主体完成：K3 Helm 全生命周期（values 表单/YAML 双模式 + chart 仓库）+ 三级 RBAC 命名空间层 + C2 Compose 编排/端口转发/统计历史图表化**，全部经测试机双 k3s 集群与 Docker 真机端到端验证；M5 GPU 算力骨架 + 防超卖引擎（无显卡部分待环境）；并完成一轮**平台级安全加固**（9 插件鉴权漏洞修复、WS/SSE 端点角色收敛、MD5→SHA-256）。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
 >
+> **v0.3.0 筹备中**（2026-10-24 更新）—— **M9 Agent 通道全链交付**：A1 独立二进制（注册/心跳/指标上报，100 Agent 并发压测通过）、A2 批量执行 SSH/Agent 双后端 + 文件分发、A3 流水线远程执行器（构建工作空间按构建隔离）、A4 Docker/K8s Agent 模式纳管（HTTP-over-WS 代理 + 集群内 ServiceAccount + 一键接入 YAML）；**M6 dbops goInception 审核/执行/备份回滚真机闭环**、**M7 aiops LLM 网关 + Pod AI 诊断**、M8 C3 应用模板化一键部署；并完成一轮**全模块优化巡检**（20 场：工单并发乐观锁、WS 单写者互斥、N+1 批量化、AES-GCM 篡改测试、资源上限加固），整仓 `go test -race` 转绿。
+>
 > **命名由来**：白泽是中国上古神话中的瑞兽，通晓天下万物之情——愿这套平台也能"通晓"你的全部基础设施。仓库/工程名沿用 `new-ops`。
 >
 > 开发总计划（功能盘点 / 架构设计 / 里程碑任务清单 / 逐场排期 / 开发日志）：[docs/DEV_PLAN.md](docs/DEV_PLAN.md) ｜ 插件开发规范：[docs/plugin-dev-guide.md](docs/plugin-dev-guide.md)
@@ -348,12 +350,12 @@ server/plugin/<name>/
 | M3 | 流水线：三层模型/执行器（快照+状态机+审批+并发）/SSE/三通道触发/发版闭环 | ✅ |
 | M4 | 容器 C1 全部 + C2 镜像/网络/卷/stats；**k8s K1/K2 全部**（k3s 真集群验证）；**两套真实集群联调 + 两级隔离验证收官** | ✅ |
 | M5 | GPU 算力：节点/规格/实例/**防超卖引擎**已交付；Docker 直通/HAMi/监控待显卡环境 | 🔨 |
-| M6 | monitor 三项 ✅；dbops 实例纳管 + SQL 工单骨架 ✅（goInception 审核/执行待环境） | 🔨 |
-| M7 | workflow 工单引擎 ✅；aiops MCP 运维工具 ✅（AI 诊断网关待 LLM 密钥）；org 钉钉登录 | 🔨 |
-| M8 | **K3 全部完成：Helm 全生命周期（values 表单+YAML 双模式）+ chart 仓库 + 三级 RBAC 命名空间层**（双 k3s 集群验证）；**C2 全部完成：Compose 编排/端口转发/统计历史图表化**；AI 诊断/GPU 视图待环境 | 🔨 |
-| M9 | 轻量 Go Agent：反向长连接/采集上报/第二执行通道 | 📋 |
+| M6 | monitor 三项 ✅；dbops 实例纳管 + SQL 工单 + **goInception 审核/执行/备份回滚 ✅**（soar 优化建议/多环境待环境） | 🔨 |
+| M7 | workflow 工单引擎 ✅；aiops **MCP 运维工具 + LLM 网关 + Pod AI 诊断 ✅**（mock OpenAI E2E）；org 钉钉登录待企业配置 | 🔨 |
+| M8 | **K3 全部完成：Helm 全生命周期（values 表单+YAML 双模式）+ chart 仓库 + 三级 RBAC 命名空间层**（双 k3s 集群验证）；**C2 全部完成 + C3 应用模板化一键部署 ✅**；AI 诊断 ✅（经 aiops 网关）；GPU 资源视图待环境 | 🔨 |
+| M9 | **A1-A4 全链交付**：独立二进制（注册/心跳/指标/任务执行/文件分发/Docker-K8s HTTP 代理）+ 服务端网关 + job 双执行后端 + 流水线远程执行器（工作空间按构建隔离）+ 集群内 ServiceAccount 纳管（一键接入 YAML）；**100 Agent 并发压测通过**；本地全链 E2E 7/7；集群内 daemon 级 E2E 待测试机 | 🔨 |
 
-- 发布：`v0.1.0`（M0-M2）、`v0.2.0`（+M3/M4 主体/M6 monitor/M7 workflow）；M4 收官（K1/K2 + k3s 真集群验证）后的下一个小版本筹备中
+- 发布：`v0.1.0`（M0-M2）、`v0.2.0`（+M3/M4 主体/M6 monitor/M7 workflow）；**v0.3.0 筹备中**（M9 全链 + goInception + AI 运维 + C3 模板化 + 优化巡检已入主线）
 - 逐场进展与排期见 [DEV_PLAN 开发日志](docs/DEV_PLAN.md)；旧仓库功能并入后将逐一归档标注"功能已并入 new-ops"
 
 ---
