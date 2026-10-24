@@ -15,6 +15,7 @@ let timer = null
 let forceCloseTimer = null
 let loadingInstance = null
 let isLoadingVisible = false
+let last401At = 0
 
 const clearLoadingTimers = () => {
   if (timer) {
@@ -148,7 +149,8 @@ service.interceptors.request.use(
       message: error.message || '请求发送失败'
     })
 
-    return error
+    // 请求阶段失败必须 reject：返回普通值会被下游当响应对象使用（res.code 为 undefined 静默失败）
+    return Promise.reject(error)
   }
 )
 
@@ -202,15 +204,20 @@ service.interceptors.response.use(
     }
 
     if (error.response.status === 401) {
-      emitter.emit('show-error', {
-        code: '401',
-        message: getErrorMessage(error),
-        fn: () => {
-          const userStore = useUserStore()
-          userStore.ClearStorage()
-          router.push({ name: 'Login', replace: true })
-        }
-      })
+      // 401 防抖：token 过期时多个并发请求会同时到达，只弹第一个错误框（1.5s 窗口）
+      const now = Date.now()
+      if (now - last401At > 1500) {
+        last401At = now
+        emitter.emit('show-error', {
+          code: '401',
+          message: getErrorMessage(error),
+          fn: () => {
+            const userStore = useUserStore()
+            userStore.ClearStorage()
+            router.push({ name: 'Login', replace: true })
+          }
+        })
+      }
       return Promise.reject(error)
     }
 
