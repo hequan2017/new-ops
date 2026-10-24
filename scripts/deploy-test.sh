@@ -69,6 +69,12 @@ if [ "$MODE" = "fresh" ]; then
   sed -i "s|path: \"\"|path: $DEPLOY_DIR/data|" config.yaml
   sed -i "s/addr: 8888/addr: $API_PORT/" config.yaml
   sed -i 's/open-captcha: 0/open-captcha: 999999/' config.yaml
+  # 替换生效校验：config 模板格式变化时 sed 会静默 no-op，DB 初始化阶段才报错难排查
+  grep -q 'db-type: sqlite' config.yaml || { echo "!! fresh 配置替换失败：db-type"; exit 1; }
+  grep -q "path: $DEPLOY_DIR/data" config.yaml || { echo "!! fresh 配置替换失败：sqlite path"; exit 1; }
+  grep -q "addr: $API_PORT" config.yaml || { echo "!! fresh 配置替换失败：addr"; exit 1; }
+  grep -q 'open-captcha: 999999' config.yaml || { echo "!! fresh 配置替换失败：open-captcha"; exit 1; }
+  echo "    fresh 配置替换校验通过（sqlite/port/captcha）"
 else
   rm -f config.yaml.new
 fi
