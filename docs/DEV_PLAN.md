@@ -206,6 +206,9 @@
 | SQL 审核 | goInception + soar 外部二进制 | 进程调用 + 结果解析 | seal |
 | 流水线日志 | SSE（net/http flusher） | `/sse/pipeline/*` | new-jenkins |
 | 定时任务 | GVA 内置 timer/cron | 注册制，不另引 cron 库 | GVA |
+| UUID | `github.com/google/uuid` v1.6.0 | webhook 令牌/agent 任务号/会话标识（标准库无此能力） | 场29 登记 |
+| SQLite 驱动 | `github.com/glebarez/sqlite` v1.11.0（纯 Go 免 CGO） | 测试环境/轻量部署（deploy-test 全新安装口径） | 场45 起 |
+| MySQL 驱动 | `github.com/go-sql-driver/mysql` | GVA mysql 模式 + dbops goInception 协议连接 | GVA 底座 / 场81 |
 | API 文档 | swaggo 注释 | 随代码同步 | GVA |
 
 **原则**：标准库能解决的不引第三方；同类场景全平台只用一个库。
