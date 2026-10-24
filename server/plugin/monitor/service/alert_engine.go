@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hequan2017/new-ops/server/global"
@@ -38,18 +39,29 @@ func evaluateMetric(values []float64, operator string, threshold float64) bool {
 	return true
 }
 
-// EvalAllRules 全量规则评估（CollectAll 末尾调用）
+// EvalAllRules 全量规则评估（CollectAll 末尾调用）：
+// 指标规则为 DB 查询型串行执行；端口探活规则含 2s 拨号超时，并发评估（上限 10）
+// 避免 N 条不可达端口把采集轮拖长 N×2s。
 func (s *MonitorService) EvalAllRules() {
 	var rules []model.MonitorAlertRule
 	global.GVA_DB.Where("enabled = ?", true).Find(&rules)
+	sem := make(chan struct{}, 10)
+	var wg sync.WaitGroup
 	for i := range rules {
 		switch rules[i].Type {
 		case model.RuleTypeMetric:
 			s.evalMetricRule(&rules[i])
 		case model.RuleTypePort:
-			s.evalPortRule(&rules[i])
+			wg.Add(1)
+			go func(rule *model.MonitorAlertRule) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+				s.evalPortRule(rule)
+			}(&rules[i])
 		}
 	}
+	wg.Wait()
 }
 
 // evalMetricRule 指标规则评估
