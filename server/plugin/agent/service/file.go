@@ -43,6 +43,9 @@ func validateFileMode(mode string) (os.FileMode, error) {
 	return os.FileMode(v), nil
 }
 
+// fileMaxBytes 文件分发上限（与 agent 端 fileSize 校验一致）
+const fileMaxBytes = 8 << 30
+
 // PushFile 向资产上的在线 agent 分发本地文件（同步等待落盘校验结果；写操作仅 888）
 func (s *AgentService) PushFile(operator string, assetID uint, localPath, remotePath, mode string) (*TaskResult, error) {
 	if assetID == 0 || strings.TrimSpace(localPath) == "" || strings.TrimSpace(remotePath) == "" {
@@ -63,6 +66,10 @@ func (s *AgentService) PushFile(operator string, assetID uint, localPath, remote
 	fi, err := src.Stat()
 	if err != nil || fi.IsDir() {
 		return nil, newAgentErr(ErrCodeAgentParamInvalid, "本地路径须为普通文件")
+	}
+	// 服务端预检与 agent 同口径：>8GB 逐块发完才被拒（带宽全废+逐块错误回帧风暴）
+	if fi.Size() > fileMaxBytes {
+		return nil, newAgentErr(ErrCodeAgentParamInvalid, fmt.Sprintf("文件超过分发上限 8GB（实际 %d 字节）", fi.Size()))
 	}
 
 	// 先流式计算 SHA256，再回头分块读
@@ -89,8 +96,24 @@ func (s *AgentService) PushFile(operator string, assetID uint, localPath, remote
 		FileSHA256: sum, FileMode: fmt.Sprintf("%04o", fm)}); err != nil {
 		return nil, err
 	}
+	// 早停：agent 拒收（并发占满/写盘失败等）后失败帧即入 ch，继续盲发整个文件
+	// 只会浪费带宽并触发 agent 侧逐块"未知任务"回帧——每块发送前非阻塞探测
+	tryDrainResult := func() (*TaskResult, bool) {
+		select {
+		case f := <-ch:
+			r := &TaskResult{TaskNo: taskNo, ExitCode: f.ExitCode, Output: f.Output, ErrMsg: f.Msg,
+				ElapsedMs: time.Since(start).Milliseconds()}
+			s.persistTask(operator, assetID, "file", summary, taskStatusOf(r.ExitCode, r.ErrMsg), r)
+			return r, true
+		default:
+			return nil, false
+		}
+	}
 	buf := make([]byte, fileChunkSize)
 	for {
+		if r, done := tryDrainResult(); done {
+			return r, nil
+		}
 		n, rerr := io.ReadFull(src, buf)
 		if n > 0 {
 			if err := send(agentFrame{Type: "file_chunk", TS: time.Now().Unix(), TaskNo: taskNo,
@@ -104,6 +127,9 @@ func (s *AgentService) PushFile(operator string, assetID uint, localPath, remote
 		if rerr != nil {
 			return nil, fmt.Errorf("读取文件失败: %w", rerr)
 		}
+	}
+	if r, done := tryDrainResult(); done {
+		return r, nil
 	}
 	if err := send(agentFrame{Type: "file_end", TS: time.Now().Unix(), TaskNo: taskNo}); err != nil {
 		return nil, fmt.Errorf("收尾帧下发失败: %w", err)

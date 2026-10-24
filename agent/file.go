@@ -31,11 +31,14 @@ type fileReceiver struct {
 	seen *taskSeen
 	mu   sync.Mutex
 	open map[string]*incomingFile
-	sem  chan struct{}
+	// unknownReplied 未知任务分块已回执过的任务号（每任务只回一次，防大文件逐块回帧风暴）
+	unknownReplied map[string]struct{}
+	sem            chan struct{}
 }
 
 func newFileReceiver(maxConcurrent, maxSeen int) *fileReceiver {
-	return &fileReceiver{seen: newTaskSeen(maxSeen), open: map[string]*incomingFile{}, sem: make(chan struct{}, maxConcurrent)}
+	return &fileReceiver{seen: newTaskSeen(maxSeen), open: map[string]*incomingFile{},
+		unknownReplied: map[string]struct{}{}, sem: make(chan struct{}, maxConcurrent)}
 }
 
 func (r *fileReceiver) handle(f frame, send func(frame) error) {
@@ -115,13 +118,23 @@ func (r *fileReceiver) start(f frame, send func(frame) error) {
 func (r *fileReceiver) chunk(f frame, send func(frame) error) {
 	r.mu.Lock()
 	it := r.open[f.TaskNo]
-	r.mu.Unlock()
 	if it == nil {
 		if f.TaskNo != "" {
-			r.reply(f.TaskNo, -1, "未知文件任务分块", send)
+			// 每任务号只回执一次：server 侧有早停但迟到分块仍可能多帧，逐块回执会放大成错误风暴
+			if _, done := r.unknownReplied[f.TaskNo]; !done {
+				if len(r.unknownReplied) > 1024 { // 防长驻膨胀
+					r.unknownReplied = map[string]struct{}{}
+				}
+				r.unknownReplied[f.TaskNo] = struct{}{}
+				r.mu.Unlock()
+				r.reply(f.TaskNo, -1, "未知文件任务分块", send)
+				return
+			}
 		}
+		r.mu.Unlock()
 		return
 	}
+	r.mu.Unlock()
 	data, err := base64.StdEncoding.DecodeString(f.FileData)
 	if err != nil {
 		r.fail(f.TaskNo, it, "分块解码失败: "+err.Error(), send)

@@ -1,9 +1,28 @@
 package timer
 
 import (
-	"github.com/robfig/cron/v3"
 	"sync"
+
+	"github.com/robfig/cron/v3"
+	"go.uber.org/zap"
 )
+
+// panicRecoverOption 全局 job panic 恢复：robfig/cron v3 默认不恢复 panic，任一定时任务
+// 崩溃会带崩整个 server 进程——所有构造点统一挂 recover 链（zap 记录后仅跳过本次执行）
+func panicRecoverOption() cron.Option {
+	return cron.WithChain(cron.Recover(zapCronLogger{}))
+}
+
+// zapCronLogger cron.Recover 所需日志接口的 zap 适配
+type zapCronLogger struct{}
+
+func (zapCronLogger) Info(msg string, kv ...interface{}) {
+	zap.L().Info("cron: "+msg, zap.Any("kv", kv))
+}
+
+func (zapCronLogger) Error(err error, msg string, kv ...interface{}) {
+	zap.L().Error("cron: "+msg, append([]zap.Field{zap.Error(err)}, zap.Any("kv", kv))...)
+}
 
 type Timer interface {
 	// 寻找所有Cron
@@ -58,7 +77,7 @@ func (t *timer) AddTaskByFunc(cronName string, spec string, fun func(), taskName
 	if _, ok := t.cronList[cronName]; !ok {
 		tasks := make(map[cron.EntryID]*task)
 		t.cronList[cronName] = &taskManager{
-			corn:  cron.New(option...),
+			corn:  cron.New(append([]cron.Option{panicRecoverOption()}, option...)...),
 			tasks: tasks,
 		}
 	}
@@ -80,7 +99,7 @@ func (t *timer) AddTaskByFuncWithSecond(cronName string, spec string, fun func()
 	if _, ok := t.cronList[cronName]; !ok {
 		tasks := make(map[cron.EntryID]*task)
 		t.cronList[cronName] = &taskManager{
-			corn:  cron.New(option...),
+			corn:  cron.New(append([]cron.Option{panicRecoverOption()}, option...)...),
 			tasks: tasks,
 		}
 	}
@@ -101,7 +120,7 @@ func (t *timer) AddTaskByJob(cronName string, spec string, job interface{ Run() 
 	if _, ok := t.cronList[cronName]; !ok {
 		tasks := make(map[cron.EntryID]*task)
 		t.cronList[cronName] = &taskManager{
-			corn:  cron.New(option...),
+			corn:  cron.New(append([]cron.Option{panicRecoverOption()}, option...)...),
 			tasks: tasks,
 		}
 	}
@@ -123,7 +142,7 @@ func (t *timer) AddTaskByJobWithSeconds(cronName string, spec string, job interf
 	if _, ok := t.cronList[cronName]; !ok {
 		tasks := make(map[cron.EntryID]*task)
 		t.cronList[cronName] = &taskManager{
-			corn:  cron.New(option...),
+			corn:  cron.New(append([]cron.Option{panicRecoverOption()}, option...)...),
 			tasks: tasks,
 		}
 	}

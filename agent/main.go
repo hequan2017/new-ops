@@ -72,6 +72,14 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+	// 心跳周期钳制 (5s,55s]：server 读超时固定 2×30s=60s、离线 TTL 90s，interval ≥60s 会
+	// 在 deadline 边界反复竞态掉线、≥90s 则每轮被踢且状态永离线——配置得当时也应留出余量
+	if *flagInterval < 5*time.Second {
+		*flagInterval = 5 * time.Second
+	}
+	if *flagInterval > 55*time.Second {
+		*flagInterval = 55 * time.Second
+	}
 	hostname := *flagHostname
 	if hostname == "" {
 		if h, err := os.Hostname(); err == nil {
