@@ -106,7 +106,7 @@
   import {
     sftpList, sftpMkdir, sftpDelete, sftpRename, sftpUpload, sftpDownload
   } from '@/plugin/term/api/sftp'
-  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
+  import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { computed, onMounted, ref } from 'vue'
@@ -115,7 +115,6 @@
 
   const hostId = ref(undefined)
   const credentialId = ref(undefined)
-  const hostList = ref([])
   const credList = ref([])
   const entries = ref([])
   const loading = ref(false)
@@ -139,10 +138,7 @@
   }
   const fmtTime = (t) => (t ? t.replace('T', ' ').slice(0, 19) : '-')
 
-  const loadHosts = async () => {
-    const res = await getAssetHostList({ page: 1, pageSize: 1000 })
-    if (res.code === 0) hostList.value = res.data.list || []
-  }
+  const { hostOptions: hostList, fetchHostOptions: loadHosts } = useHostOptions()
   const loadCreds = async () => {
     const res = await getCredentialList()
     if (res.code === 0) {

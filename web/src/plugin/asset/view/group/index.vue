@@ -66,7 +66,7 @@
     updateAssetGroup,
     getAssetGroupList
   } from '@/plugin/asset/api/assetGroup'
-  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
+  import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
   import { getUserList } from '@/api/user'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { onMounted, reactive, ref } from 'vue'
@@ -74,7 +74,6 @@
   defineOptions({ name: 'AssetGroup' })
 
   const list = ref([])
-  const hostList = ref([])
   const userList = ref([])
   const dialogVisible = ref(false)
   const formRef = ref(null)
@@ -86,10 +85,7 @@
     if (res.code === 0) list.value = res.data || []
   }
 
-  const getHosts = async () => {
-    const res = await getAssetHostList({ page: 1, pageSize: 1000 })
-    if (res.code === 0) hostList.value = res.data.list || []
-  }
+  const { hostOptions: hostList, fetchHostOptions: getHosts } = useHostOptions()
 
   const getUsers = async () => {
     const res = await getUserList({ page: 1, pageSize: 1000 })

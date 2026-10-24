@@ -7,6 +7,6 @@ export const updateEndpoint = (data) => service({ url: '/container/endpoint', me
 // 删除接入点
 export const deleteEndpoint = (params) => service({ url: '/container/endpoint', method: 'delete', params })
 // 接入点列表
-export const getEndpointList = (params) => service({ url: '/container/endpoint/list', method: 'get', params })
+export const getEndpointList = (params, config) => service({ url: '/container/endpoint/list', method: 'get', params, ...config })
 // 手动巡检
 export const checkEndpoint = (params) => service({ url: '/container/endpoint/check', method: 'post', params })

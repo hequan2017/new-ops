@@ -92,13 +92,17 @@
     }
   }
 
+  // 命名 handler 便于卸载移除（原匿名监听器泄漏且 dispose 后未置 null，触发时对已销毁实例调 resize）
+  const onResize = () => chart && chart.resize()
   onMounted(async () => {
     await nextTick()
     chart = echarts.init(chartEl.value)
-    window.addEventListener('resize', () => chart && chart.resize())
+    window.addEventListener('resize', onResize)
     load()
   })
   onBeforeUnmount(() => {
-    if (chart) chart.dispose()
+    window.removeEventListener('resize', onResize)
+    chart?.dispose()
+    chart = null
   })
 </script>

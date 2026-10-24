@@ -152,7 +152,7 @@
   } from '@/plugin/k8s/api/k8sCluster'
   import { getNsVisibility, getNsGrantList, createNsGrant, deleteNsGrant } from '@/plugin/k8s/api/k8sResource'
   import { getK8sAgentYaml } from '@/plugin/agent/api/agentInstance'
-  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
+  import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
   import { getUserList } from '@/api/user'
   import ResourceBrowser from '@/plugin/k8s/components/ResourceBrowser.vue'
   import OverviewDrawer from '@/plugin/k8s/components/OverviewDrawer.vue'
@@ -179,13 +179,9 @@
   }
 
   // K4 agent 模式：资产行选 + 一键接入 YAML 生成（签发令牌随 YAML 注入）
-  const hostOptions = ref([])
   const yamlLoading = ref(false)
   const agentYaml = ref('')
-  const loadHostOptions = async () => {
-    const res = await getAssetHostList({ page: 1, pageSize: 500 })
-    if (res.code === 0) hostOptions.value = res.data.list || []
-  }
+  const { hostOptions, fetchHostOptions: loadHostOptions } = useHostOptions()
   const onGenYaml = async () => {
     if (!form.assetId) {
       ElMessage.warning('请先选择关联资产')

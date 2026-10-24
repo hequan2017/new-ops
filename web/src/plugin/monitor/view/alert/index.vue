@@ -136,14 +136,14 @@
   import {
     createAlertRule, updateAlertRule, deleteAlertRule, getAlertRules, getAlertEvents
   } from '@/plugin/monitor/api/alert'
-  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
+  import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
 
   defineOptions({ name: 'monitorAlert' })
 
   const tab = ref('rules')
   const rules = ref([])
   const rulesLoading = ref(false)
-  const hostOptions = ref([])
+  const { hostOptions, fetchHostOptions } = useHostOptions()
 
   const assetLabel = (id) => {
     const h = hostOptions.value.find((x) => x.ID === id)
@@ -231,8 +231,7 @@
   }
 
   onMounted(async () => {
-    const h = await getAssetHostList({ page: 1, pageSize: 500 })
-    if (h.code === 0) hostOptions.value = h.data.list || []
+    fetchHostOptions()
     loadRules()
     loadEvents()
   })

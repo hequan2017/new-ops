@@ -246,7 +246,7 @@
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { createBatchExec, cancelBatchExec, getBatchList, getBatchDetail } from '@/plugin/job/api/batchExec'
   import { getScriptList, getVarGroupList } from '@/plugin/job/api/jobScript'
-  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
+  import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import { getAgentInstanceList, pushAgentFile } from '@/plugin/agent/api/agentInstance'
 
@@ -263,20 +263,19 @@
     credentialId: null,
     execBackend: 'ssh'
   })
-  const hostOptions = ref([])
+  const { hostOptions, fetchHostOptions } = useHostOptions()
   const credOptions = ref([])
   const scriptOptions = ref([])
   const varGroupOptions = ref([])
   const submitting = ref(false)
 
   const loadOptions = async () => {
-    const [h, c, s, v] = await Promise.all([
-      getAssetHostList({ page: 1, pageSize: 500 }),
+    const [, c, s, v] = await Promise.all([
+      fetchHostOptions(),
       getCredentialList({ page: 1, pageSize: 200 }),
       getScriptList({}),
       getVarGroupList({})
     ])
-    if (h.code === 0) hostOptions.value = h.data.list || []
     if (c.code === 0) {
       credOptions.value = (c.data.list || c.data || []).filter(
         (x) => x.type === 'ssh_password' || x.type === 'ssh_key'

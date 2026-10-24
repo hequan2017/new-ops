@@ -402,7 +402,6 @@
   import ContainerShell from '@/plugin/container/components/ContainerShell.vue'
   import ContainerLogs from '@/plugin/container/components/ContainerLogs.vue'
   import { getCredentialList } from '@/plugin/asset/api/credential'
-  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
 
   defineOptions({ name: 'containerEndpoint' })
 
@@ -421,13 +420,17 @@
     }
   }
 
-  const getList = async () => {
-    loading.value = true
+  // silent：轮询静默刷新（不翻转表格 loading/不触发全局遮罩），用户操作才走带遮罩路径
+  const getList = async (silent = false) => {
+    if (!silent) loading.value = true
     try {
-      const res = await getEndpointList({ keyword: keyword.value || undefined, status: status.value || undefined })
+      const res = await getEndpointList(
+        { keyword: keyword.value || undefined, status: status.value || undefined },
+        { donNotShowLoading: silent }
+      )
       if (res.code === 0) tableData.value = res.data || []
     } finally {
-      loading.value = false
+      if (!silent) loading.value = false
     }
   }
 
@@ -448,11 +451,7 @@
   const formRef = ref(null)
   const emptyForm = () => ({ ID: 0, name: '', addr: '', tlsCredentialId: null, viaAgent: false, assetId: null, notes: '' })
   const form = reactive(emptyForm())
-  const hostOptions = ref([])
-  const loadHostOptions = async () => {
-    const res = await getAssetHostList({ page: 1, pageSize: 500 })
-    if (res.code === 0) hostOptions.value = res.data.list || []
-  }
+  const { hostOptions, fetchHostOptions: loadHostOptions } = useHostOptions()
   const rules = {
     name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
     addr: [{ required: true, message: '请输入地址', trigger: 'blur' }]
@@ -936,11 +935,15 @@
     }
   }
 
+  // 轮询静默（原每 35s 翻 loading 致遮罩周期性闪烁，且走全局 loading）+ 页面隐藏暂停
+  const silentRefresh = () => {
+    if (document.visibilityState === 'visible') getList(true)
+  }
   onMounted(() => {
     loadCreds()
     loadHostOptions()
     getList()
-    pollTimer = setInterval(getList, 35000) // 跟随 30s 巡检周期轻刷新
+    pollTimer = setInterval(silentRefresh, 35000) // 跟随 30s 巡检周期轻刷新
   })
   onUnmounted(() => {
     if (pollTimer) clearInterval(pollTimer)

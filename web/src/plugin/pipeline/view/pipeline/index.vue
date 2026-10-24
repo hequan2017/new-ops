@@ -226,7 +226,6 @@
     createPipeline, updatePipeline, deletePipeline, getPipelineList,
     startBuild, cancelBuild, approveBuild, getBuildList, getBuildLogs, restartBuild
   } from '@/plugin/pipeline/api/pipeline'
-  import { getAssetHostList } from '@/plugin/asset/api/assetHost'
 
   defineOptions({ name: 'pipelineList' })
 
@@ -248,11 +247,7 @@
   const emptyStage = () => ({ name: '', approval: false, continueOnError: false, parallel: false, steps: [emptyStep()] })
 
   // 步骤执行主机选项（M9 A3：shell 步骤可经 SSH 或 Agent 通道在资产上执行）
-  const hostOptions = ref([])
-  const loadHostOptions = async () => {
-    const res = await getAssetHostList({ page: 1, pageSize: 500 })
-    if (res.code === 0) hostOptions.value = res.data.list || []
-  }
+  const { hostOptions, fetchHostOptions: loadHostOptions } = useHostOptions()
 
   const dialogVisible = ref(false)
   const saving = ref(false)
@@ -369,12 +364,17 @@
     }
   }
 
-  const doApprove = async (row) => {
-    const res = await approveBuild({ id: row.ID })
-    if (res.code === 0) {
-      ElMessage.success('已放行')
-      loadBuilds()
-    }
+  // 审批 gate 是流水线唯一人工拦截点：放行即继续后续（可能是生产）阶段，与取消同口径加二次确认
+  const doApprove = (row) => {
+    ElMessageBox.confirm(`确定放行构建 #${row.buildNo} 吗？放行后将继续执行后续阶段。`, '审批确认', {
+      confirmButtonText: '放行', cancelButtonText: '返回', type: 'warning'
+    }).then(async () => {
+      const res = await approveBuild({ id: row.ID })
+      if (res.code === 0) {
+        ElMessage.success('已放行')
+        loadBuilds()
+      }
+    })
   }
 
   const doCancel = (row) => {
