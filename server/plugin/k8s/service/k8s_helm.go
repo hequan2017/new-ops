@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -252,8 +253,30 @@ func (s *K8sClusterService) GetHelmRepoList() ([]*model.K8sHelmRepo, error) {
 	return list, err
 }
 
+// helmChartRefRe chart 引用白名单：Helm 的 LocateChart 对本地已存在路径优先于仓库解析
+// （仅打 warning），未校验的 chartRef 可加载服务器本地任意 chart 文件并探测文件系统存在性
+var helmChartRefRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
+
+// validateHelmChartRef 校验 chart 引用与版本（纯逻辑）：拒绝绝对/相对路径、协议前缀与 ..
+func validateHelmChartRef(chartRef, version string) error {
+	ref := strings.TrimSpace(chartRef)
+	if ref == "" {
+		return newK8sErr(ErrCodeNamespaceReq, "chart 名不能为空")
+	}
+	if !helmChartRefRe.MatchString(ref) || strings.Contains(ref, "..") || strings.HasPrefix(ref, "/") || strings.HasPrefix(ref, "./") || strings.Contains(ref, "://") {
+		return newK8sErr(ErrCodeNamespaceReq, fmt.Sprintf("chart 名不合法: %q（仅允许仓库内 chart 引用，不接受本地路径）", ref))
+	}
+	if v := strings.TrimSpace(version); v != "" && !regexp.MustCompile(`^[A-Za-z0-9._+-]{1,64}$`).MatchString(v) {
+		return newK8sErr(ErrCodeNamespaceReq, fmt.Sprintf("版本号不合法: %q", v))
+	}
+	return nil
+}
+
 // locateRepoChart 经 downloader 拉取仓库 chart 到本地缓存后加载（RepoURL 直连，无需预登记 repositories.yaml）
 func locateRepoChart(repo *model.K8sHelmRepo, chartRef, version string) (*chart.Chart, error) {
+	if err := validateHelmChartRef(chartRef, version); err != nil {
+		return nil, err
+	}
 	cpo := &action.ChartPathOptions{RepoURL: repo.URL, Version: strings.TrimSpace(version)}
 	settings := cli.New()
 	if settings.RepositoryCache == "" {

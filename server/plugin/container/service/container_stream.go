@@ -148,6 +148,10 @@ func (s *EndpointService) LogsWS(ws *websocket.Conn, endpointID uint, containerI
 			_ = w.write(websocket.TextMessage, []byte(`{"type":"pong"}`))
 		}
 	}
+	// 读循环退出（close 帧或客户端异常断开）必须先 cancel 再等输出协程：
+	// 原实现异常断开只 break 即阻塞 <-done，而输出协程卡在 streamR.Read（follow 流对静默容器
+	// 永不返回）——cancel 在 defer 里排在等待之后形成死锁，每断开一次泄漏一个协程+一条 daemon 连接
+	cancel()
 	<-done
 }
 
@@ -240,5 +244,9 @@ func (s *EndpointService) ExecWS(ws *websocket.Conn, endpointID uint, containerI
 			}
 		}
 	}
+	// 同 LogsWS：先 cancel+显式关 attach（hijack 连接不受 ctx 约束），解除输出协程对
+	// attach.Reader.Read 的阻塞后再等待，防异常断开泄漏
+	cancel()
+	attach.Close()
 	<-done
 }

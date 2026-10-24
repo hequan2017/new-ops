@@ -108,7 +108,11 @@ func (s *K8sClusterService) createAgentCluster(c *model.K8sCluster) error {
 
 // DeleteCluster 删除集群
 func (s *K8sClusterService) DeleteCluster(id uint) error {
-	return global.GVA_DB.Delete(&model.K8sCluster{}, id).Error
+	if err := global.GVA_DB.Delete(&model.K8sCluster{}, id).Error; err != nil {
+		return err
+	}
+	invalidateClientsetCache(id)
+	return nil
 }
 
 // GetClusterList 集群列表（密文与 kubeconfig 均不返回，模型字段已 json:"-"）

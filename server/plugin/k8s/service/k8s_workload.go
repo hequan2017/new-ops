@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hequan2017/new-ops/server/global"
@@ -15,15 +16,30 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// clientsetForCluster 解密 kubeconfig 并构造 clientset（每次构造，无长连接池）
+// clientsetCache 按 clusterID 缓存 clientset：原每次调用都全量重建
+// （AES 解密 kubeconfig → clientcmd 解析 → 新建 Transport/TLS 握手），scopedList
+// 对普通用户逐授权 ns 扇出时按 ns 数成倍放大；集群删除时失效（集群无更新路径）
+var clientsetCache sync.Map // map[uint]*kubernetes.Clientset
+
+// invalidateClientsetCache 集群删除时摘除缓存项
+func invalidateClientsetCache(clusterID uint) { clientsetCache.Delete(clusterID) }
+
+// clientsetForCluster 解密 kubeconfig 并构造 clientset（带按集群缓存）
 func clientsetForCluster(clusterID uint) (*kubernetes.Clientset, model.K8sCluster, error) {
 	var c model.K8sCluster
 	if err := global.GVA_DB.First(&c, clusterID).Error; err != nil {
 		return nil, c, fmt.Errorf("集群不存在: %w", err)
 	}
+	if v, ok := clientsetCache.Load(clusterID); ok {
+		return v.(*kubernetes.Clientset), c, nil
+	}
 	if c.ViaAgent {
 		cs, err := kubernetes.NewForConfig(agentRESTConfig(&c))
-		return cs, c, err
+		if err != nil {
+			return nil, c, err
+		}
+		clientsetCache.Store(clusterID, cs)
+		return cs, c, nil
 	}
 	kubeconfig, err := crypto.Decrypt(c.KubeconfigCipher)
 	if err != nil {
@@ -33,6 +49,7 @@ func clientsetForCluster(clusterID uint) (*kubernetes.Clientset, model.K8sCluste
 	if err != nil {
 		return nil, c, err
 	}
+	clientsetCache.Store(clusterID, cs)
 	return cs, c, nil
 }
 
