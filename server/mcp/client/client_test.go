@@ -3,32 +3,33 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/mark3labs/mcp-go/mcp"
 	"testing"
+
+	mcpClient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
 )
+
+// newTestClient MCP 集成测试统一入口：本地 8888 server 不可达即跳过。
+// 必须先判 err 再注册 Close——NewClient 失败返回 nil client，原测试 defer c.Close()
+// 写在判空之前，连接失败时 Fatalf 触发 Goexit 执行 defer 空指针 panic。
+func newTestClient(t *testing.T) *mcpClient.Client {
+	t.Helper()
+	c, err := NewClient("http://localhost:8888/sse", "test-client", "1.0.0", "白泽 MCP服务")
+	if err != nil {
+		t.Skipf("本地 MCP 服务(localhost:8888)不可用，跳过集成测试: %v", err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	return c
+}
 
 // 测试 MCP 客户端连接
 func TestMcpClientConnection(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过需要 MCP 服务的集成测试")
-	}
-	c, err := NewClient("http://localhost:8888/sse", "test-client", "1.0.0", "白泽 MCP服务")
-	defer c.Close()
-	if err != nil {
-		t.Fatalf("%s", err.Error())
-	}
+	newTestClient(t)
 }
 
 func TestTools(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过需要 MCP 服务的集成测试")
-	}
 	t.Run("currentTime", func(t *testing.T) {
-		c, err := NewClient("http://localhost:8888/sse", "test-client", "1.0.0", "new-ops MCP服务")
-		defer c.Close()
-		if err != nil {
-			t.Fatalf("Failed to create client: %v", err)
-		}
+		c := newTestClient(t)
 		ctx := context.Background()
 
 		request := mcp.CallToolRequest{}
@@ -53,15 +54,7 @@ func TestTools(t *testing.T) {
 	})
 
 	t.Run("getNickname", func(t *testing.T) {
-
-		if testing.Short() {
-			t.Skip("跳过需要 MCP 服务的集成测试")
-		}
-		c, err := NewClient("http://localhost:8888/sse", "test-client", "1.0.0", "白泽 MCP服务")
-		defer c.Close()
-		if err != nil {
-			t.Fatalf("Failed to create client: %v", err)
-		}
+		c := newTestClient(t)
 		ctx := context.Background()
 
 		// Initialize
@@ -72,7 +65,7 @@ func TestTools(t *testing.T) {
 			Version: "1.0.0",
 		}
 
-		_, err = c.Initialize(ctx, initRequest)
+		_, err := c.Initialize(ctx, initRequest)
 		if err != nil {
 			t.Fatalf("初始化失败: %v", err)
 		}
@@ -100,14 +93,7 @@ func TestTools(t *testing.T) {
 }
 
 func TestGetTools(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过需要 MCP 服务的集成测试")
-	}
-	c, err := NewClient("http://localhost:8888/sse", "test-client", "1.0.0", "白泽 MCP服务")
-	defer c.Close()
-	if err != nil {
-		t.Fatalf("Failed to create client: %v", err)
-	}
+	c := newTestClient(t)
 	ctx := context.Background()
 
 	toolsRequest := mcp.ListToolsRequest{}

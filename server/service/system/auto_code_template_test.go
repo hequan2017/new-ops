@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"encoding/json"
+	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/model/system/request"
 	"reflect"
 	"testing"
@@ -36,6 +37,10 @@ func Test_autoCodeTemplate_Create(t *testing.T) {
 func Test_autoCodeTemplate_Preview(t *testing.T) {
 	if testing.Short() {
 		t.Skip("跳过依赖全局配置的集成测试")
+	}
+	if global.GVA_DB == nil {
+		// Preview 首行即查询 GVA_DB——裸测试进程无 DB，不跳过会空指针 panic
+		t.Skip("全局 DB 未初始化，跳过 auto-code 预览集成测试")
 	}
 	type args struct {
 		ctx  context.Context
