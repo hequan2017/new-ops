@@ -61,6 +61,25 @@ var registry = struct {
 	conns map[uint]*agentConn
 }{conns: map[uint]*agentConn{}}
 
+// registerConn 登记连接；同资产重连时返回被顶替的旧连接（调用方主动关闭促其读循环收尾）
+func registerConn(assetID uint, ac *agentConn) (displaced *agentConn) {
+	registry.Lock()
+	defer registry.Unlock()
+	old := registry.conns[assetID]
+	registry.conns[assetID] = ac
+	return old
+}
+
+// unregisterConn 摘除连接——仅当注册表仍指向本连接：网络闪断重连后旧连接的退出清理
+// 不得误删顶替它的新连接注册项（否则 agent 实际在线而注册表显示离线，任务下发全失效）
+func unregisterConn(assetID uint, ac *agentConn) {
+	registry.Lock()
+	defer registry.Unlock()
+	if registry.conns[assetID] == ac {
+		delete(registry.conns, assetID)
+	}
+}
+
 // ---- 消息信封（agent ⇄ server JSON 帧） ----
 
 type agentFrame struct {
@@ -244,12 +263,12 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if first.Type != "register" || first.Token == "" {
-		_ = conn.WriteJSON(agentFrame{Type: "register_fail", TS: time.Now().Unix(), Msg: "首帧必须为携带令牌的 register"})
+		writeRegisterAck(conn, agentFrame{Type: "register_fail", TS: time.Now().Unix(), Msg: "首帧必须为携带令牌的 register"})
 		return
 	}
 	var inst model.AgentInstance
 	if err := global.GVA_DB.Where("token_hash = ?", HashAgentToken(first.Token)).First(&inst).Error; err != nil {
-		_ = conn.WriteJSON(agentFrame{Type: "register_fail", TS: time.Now().Unix(), Msg: "令牌无效或已吊销"})
+		writeRegisterAck(conn, agentFrame{Type: "register_fail", TS: time.Now().Unix(), Msg: "令牌无效或已吊销"})
 		return
 	}
 	now := time.Now()
@@ -257,19 +276,15 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 		"version": first.Agent.Version, "os_arch": first.Agent.Os + "/" + first.Agent.Arch,
 		"hostname": first.Agent.Hostname, "last_heartbeat": &now,
 	})
-	if err := conn.WriteJSON(agentFrame{Type: "register_ok", TS: now.Unix()}); err != nil {
+	if err := writeRegisterAck(conn, agentFrame{Type: "register_ok", TS: now.Unix()}); err != nil {
 		return
 	}
 
 	ac := &agentConn{AssetID: inst.AssetID, Conn: conn}
-	registry.Lock()
-	registry.conns[inst.AssetID] = ac
-	registry.Unlock()
-	defer func() {
-		registry.Lock()
-		delete(registry.conns, inst.AssetID)
-		registry.Unlock()
-	}()
+	if old := registerConn(inst.AssetID, ac); old != nil {
+		_ = old.Conn.Close() // 顶替旧连接：主动关闭促其读循环立即退出
+	}
+	defer unregisterConn(inst.AssetID, ac)
 
 	// 服务端周期 ping 保活（客户端自动 pong）；读超时=2 个心跳周期
 	pingDone := make(chan struct{})
@@ -297,6 +312,12 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 		}
 		_ = conn.SetReadDeadline(time.Now().Add(2 * AgentHeartbeatInterval))
 	}
+}
+
+// writeRegisterAck 注册阶段应答（写入前 10s 超时，防僵死对端把网关协程挂死——与业务帧同口径）
+func writeRegisterAck(conn *websocket.Conn, f agentFrame) error {
+	_ = conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	return conn.WriteJSON(f)
 }
 
 // pingLoop 周期 ping 保活（经 WriteMu 与业务帧互斥）

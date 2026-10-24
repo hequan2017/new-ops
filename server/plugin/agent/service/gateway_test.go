@@ -49,3 +49,35 @@ func TestHashAgentToken(t *testing.T) {
 		t.Fatal("同输入应同哈希")
 	}
 }
+
+// TestRegistryDisplaceAndUnregister 同资产重连顶替与退出清理：
+// 旧连接退出不得误删顶替它的新连接注册项（网络闪断重连场景）
+func TestRegistryDisplaceAndUnregister(t *testing.T) {
+	const asset = uint(42)
+	old, fresh := &agentConn{AssetID: asset}, &agentConn{AssetID: asset}
+	defer unregisterConn(asset, nil) // 兜底清场（nil 不等于任何登记项，无副作用）
+
+	if displaced := registerConn(asset, old); displaced != nil {
+		t.Fatalf("首次登记不应有顶替对象")
+	}
+	// 重连：新连接顶替旧连接
+	if displaced := registerConn(asset, fresh); displaced != old {
+		t.Fatalf("重连应返回被顶替的旧连接")
+	}
+	// 旧连接读循环退出、执行清理——新连接的注册项必须仍在
+	unregisterConn(asset, old)
+	registry.Lock()
+	_, ok := registry.conns[asset]
+	registry.Unlock()
+	if !ok {
+		t.Fatalf("旧连接退出误删了新连接的注册项")
+	}
+	// 新连接退出才真正摘除
+	unregisterConn(asset, fresh)
+	registry.Lock()
+	_, ok = registry.conns[asset]
+	registry.Unlock()
+	if ok {
+		t.Fatalf("新连接退出后注册表应清空")
+	}
+}
