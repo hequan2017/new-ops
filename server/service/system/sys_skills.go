@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/model/system"
@@ -385,7 +386,13 @@ func (s *SkillsService) SaveGlobalConstraint(_ context.Context, req request.Skil
 	return nil
 }
 
-func (s *SkillsService) DownloadOnlineSkill(_ context.Context, req request.DownloadOnlineSkillReq) error {
+// maxSkillZipBytes 在线技能包大小上限（防解压炸弹/磁盘填充）
+const maxSkillZipBytes = 100 << 20
+
+// skillHTTPClient 在线技能下载客户端（原 http.Get/DefaultClient 无超时，外部 URL 可挂死协程）
+var skillHTTPClient = &http.Client{Timeout: 60 * time.Second}
+
+func (s *SkillsService) DownloadOnlineSkill(ctx context.Context, req request.DownloadOnlineSkillReq) error {
 	skillsDir, err := s.toolSkillsDir(req.Tool)
 	if err != nil {
 		return err
@@ -399,13 +406,13 @@ func (s *SkillsService) DownloadOnlineSkill(_ context.Context, req request.Downl
 		return fmt.Errorf("构建下载请求失败: %w", err)
 	}
 
-	downloadReq, err := http.NewRequest(http.MethodPost, "https://plugin.new-ops.com/api/shopPlugin/downloadSkill", bytes.NewReader(body))
+	downloadReq, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://plugin.new-ops.com/api/shopPlugin/downloadSkill", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("构建下载请求失败: %w", err)
 	}
 	downloadReq.Header.Set("Content-Type", "application/json")
 
-	downloadResp, err := http.DefaultClient.Do(downloadReq)
+	downloadResp, err := skillHTTPClient.Do(downloadReq)
 	if err != nil {
 		return fmt.Errorf("下载技能失败: %w", err)
 	}
@@ -415,7 +422,7 @@ func (s *SkillsService) DownloadOnlineSkill(_ context.Context, req request.Downl
 		return fmt.Errorf("下载技能失败, HTTP状态码: %d", downloadResp.StatusCode)
 	}
 
-	metaBody, err := io.ReadAll(downloadResp.Body)
+	metaBody, err := io.ReadAll(io.LimitReader(downloadResp.Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("读取下载结果失败: %w", err)
 	}
@@ -434,7 +441,12 @@ func (s *SkillsService) DownloadOnlineSkill(_ context.Context, req request.Downl
 		return errors.New("下载结果缺少 url")
 	}
 
-	zipResp, err := http.Get(realDownloadURL)
+	// 外部 URL 下载：带 ctx 与超时（原 http.Get 无超时可挂死协程）
+	zipReq, err := http.NewRequestWithContext(ctx, http.MethodGet, realDownloadURL, nil)
+	if err != nil {
+		return fmt.Errorf("构建压缩包下载请求失败: %w", err)
+	}
+	zipResp, err := skillHTTPClient.Do(zipReq)
 	if err != nil {
 		return fmt.Errorf("下载压缩包失败: %w", err)
 	}
@@ -451,11 +463,15 @@ func (s *SkillsService) DownloadOnlineSkill(_ context.Context, req request.Downl
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
-	if _, err = io.Copy(tmpFile, zipResp.Body); err != nil {
-		tmpFile.Close()
+	// 大小上限截断（防解压炸弹/磁盘填充）
+	written, err := io.Copy(tmpFile, io.LimitReader(zipResp.Body, maxSkillZipBytes+1))
+	tmpFile.Close()
+	if err != nil {
 		return fmt.Errorf("保存技能包失败: %w", err)
 	}
-	tmpFile.Close()
+	if written > maxSkillZipBytes {
+		return fmt.Errorf("技能包超过大小上限 %d MB", maxSkillZipBytes>>20)
+	}
 
 	if err = extractZipToDir(tmpPath, skillsDir); err != nil {
 		return fmt.Errorf("解压技能包失败: %w", err)

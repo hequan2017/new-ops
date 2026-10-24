@@ -22,6 +22,11 @@ import (
 var respPool sync.Pool
 var bufferSize = 1024
 
+// maxRespCapture 操作日志响应体留档缓存上限——超出部分仅透传不再缓存。
+// 原实现把整个响应体缓冲进内存并全量入库：excel 导出/文件下载等大响应逐请求驻留
+// 数十上百 MB 内存，且超长 Resp 落库必超 max_allowed_packet 报错
+const maxRespCapture = 16 * 1024
+
 func init() {
 	respPool.New = func() interface{} {
 		return make([]byte, bufferSize)
@@ -124,6 +129,8 @@ type responseBodyWriter struct {
 }
 
 func (r responseBodyWriter) Write(b []byte) (int, error) {
-	r.body.Write(b)
+	if r.body.Len() < maxRespCapture {
+		r.body.Write(b) // 留档只需头部片段；超出上限仅透传
+	}
 	return r.ResponseWriter.Write(b)
 }
