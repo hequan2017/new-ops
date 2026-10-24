@@ -124,6 +124,19 @@ func (a *assetHost) FindAssetHost(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
+	scope := &service.HostUserScope{
+		IsSuperAdmin: utils.GetUserAuthorityId(c) == 888,
+		UserID:       utils.GetUserID(c),
+	}
+	ok, err := assetHostService.CheckHostInScope(uint(req.ID), scope)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if !ok {
+		response.FailWithMessage("主机不存在或无权访问", c)
+		return
+	}
 	h, err := assetHostService.GetAssetHost(uint(req.ID))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
@@ -183,6 +196,19 @@ func (a *assetHost) GetAssetHostHistory(c *gin.Context) {
 	var info request.PageInfo
 	if err := c.ShouldBindQuery(&info); err != nil {
 		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	scope := &service.HostUserScope{
+		IsSuperAdmin: utils.GetUserAuthorityId(c) == 888,
+		UserID:       utils.GetUserID(c),
+	}
+	ok, err := assetHostService.CheckHostInScope(uint(req.ID), scope)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if !ok {
+		response.FailWithMessage("主机不存在或无权访问", c)
 		return
 	}
 	list, total, err := assetHostService.GetAssetHostHistoryList(uint(req.ID), info)

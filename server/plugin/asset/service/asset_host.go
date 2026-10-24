@@ -147,6 +147,24 @@ func (s *AssetHostService) GetAssetHost(id uint) (h *model.AssetHost, err error)
 	return h, err
 }
 
+// CheckHostInScope 单机数据权限校验：888 放行；其他用户仅可访问其资产组内主机
+// （find/history 等按 ID 直查的接口在取数前调用，避免绕过列表层的 scope 过滤）
+func (s *AssetHostService) CheckHostInScope(hostID uint, scope *HostUserScope) (bool, error) {
+	if scope == nil || scope.IsSuperAdmin {
+		return true, nil
+	}
+	ids, err := new(AssetGroupService).GetUserAuthorizedHostIDs(scope.UserID)
+	if err != nil {
+		return false, err
+	}
+	for _, id := range ids {
+		if id == hostID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // HostUserScope 主机数据权限范围：888 全量；其他用户仅见其资产组内主机
 type HostUserScope struct {
 	IsSuperAdmin bool
