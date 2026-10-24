@@ -637,4 +637,5 @@ web/src/plugin/asset/
 | 2026-10-24 | 108 | **第五轮抽查（场108，动态组件导入 utils/asyncRouter.js）**：安全性核验——菜单驱动的组件加载**构造上安全**：Vite import.meta.glob 构建期静态枚举 view//plugin/ 下真实存在的模块，dynamicImport 键相等精确匹配（无路径拼接/无运行时任意 import），恶意或错误菜单值最多得到 undefined 组件（路由错误处理器兜底）；管理员权限限定菜单编辑面 ✓；无改动 | 场109：窗口收尾总结或第五轮抽查续；测试机可达则优先补 E2E |
 | 2026-10-24 | 109 | **全量回归门禁（场109，两会话变更落地后整树验证）**：server `go build ./...`+`go vet ./...`+`go test ./...` **22 包全 ok**（无 -short 全量）、agent build/vet/test ok、web vite build ok——树当前全绿；打本地标签 **v0.3.0-rc1**（M9 全链+巡检两轮+安全加固，push 待凭据恢复随批次推送） | 场110：测试机可达补 E2E；或窗口继续抽查 |
 | 2026-10-24 | 110 | **第五轮抽查（场110，JWT 签发/续签/黑名单链）**：utils/jwt.go + middleware/jwt.go 核验全部正确——CreateTokenByOldToken 用 singleflight 按旧 token 归并（并发续签不重复签发）、缓冲窗口内换发经 new-token 头与前端拦截器接力（场101 已核）、黑名单前置校验+LoginOut 入黑名单闭环（场106 已核）、NotBefore -1s 时钟偏移防护 ✓；至此前端+后端认证关键面（签发/续签/黑名单/守卫/store/拦截器）全部核验完毕 | 场111：窗口继续抽查或按遗留清单随环境恢复补验 |
+| 2026-10-24 | 111 | **第五轮抽查（场111，ClearDB 日清理）**：真实缺口——term 会话审计流镜像/命令抽取表无任何留存策略（每条 WS 消息一行 longtext，长期运行无界增长；对比 monitor/docker_stats/事件日志各有清理）→ ClearDB 补 90 天留存两表（对齐 sys_operation_records 口径；表名/字段硬编码常量无注入面；term_sessions 元数据行小暂留）；build+vet 过 | 场112：窗口继续抽查或收尾；测试机可达则优先补 E2E |
 
