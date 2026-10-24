@@ -62,3 +62,17 @@
 
 - 2026-10-26 09:00 定时任务自动停止（maxRuns 与场数上限对齐）。
 - 最后一场除常规收尾外：核对 DEV_PLAN 全部勾选状态与本文档两阶段标记，输出冲刺总结（完成项/遗留项/优化轮次）到开发日志。
+
+## 五、中期盘点（2026-10-24 场97，窗口过半检查点）
+
+**已交付（场61-96，本会话与并行会话拼合）**：
+- 开发：M9 Agent 通道全链（A1 二进制/A2 双后端+文件分发/A3 流水线远程执行器/A4 Docker+K8s Agent 模式纳管+一键 YAML，本地全链 E2E 7/7 + 100 Agent 压测）、dbops goInception、aiops LLM 网关+Pod AI 诊断、C3 模板化、M7 aiops 收官。
+- 优化巡检两轮+抽查（73-96）：asset/term/job/pipeline/container/k8s/monitor/workflow/dbops/agent/aiops/gpu/ast 工具链/MCP/中间件/前端/deploy 脚本/crypto 全覆盖；修复了一批高价值缺陷——workflow 与 dbops 工单并发双写（dbops=生产库重复执行 SQL，乐观锁）、WebSSH/容器日志流并发写 WS 与写超时后置、gpu 防超卖行锁失效（gorm v1 语法）、SSH 密码型凭据必败、cron 无 panic 恢复、monitor 采样无超时防重入、JWT 生产模板默认键换随机值+public 启动硬守卫、注册表重连竞态、ast 测试污染根因；整仓 `go test -race` 转绿；新增 scripts/audit_routes.sh 路由对账工具（12 插件无漂移）。
+
+**遗留（均环境阻塞，恢复后按此清单补）**：
+1. 测试机 192.168.112.138 不可达（自 10-23 起）→ 部署冒烟、C3 模板化 E2E、k3s 集群内 agent daemon 级 E2E、100 Agent 压测复跑、workflow/dbops 并发冲突真机回归、批量删除/自动注入 DB 侧行为回归。
+2. push 阻塞：GitHub 凭据不可用（钥匙串无 github.com 条目/SSH key 未注册/gh 未装）→ **人工 `git push origin main`**（本地 33+ 提交）。
+3. GPU 显卡环境（直通/HAMi/监控/资源视图）、钉钉企业配置（登录/加签机器人）、soar 二进制（dbops 优化建议）。
+4. term 审计流镜像异步批量优化（记入待办，行为变化需真机回归）；monitor_metric 组合索引可选优化。
+
+**杂项**：git stash 两条历史残留（gorm_biz/router_biz 污染 WIP，并行会话判定可弃）留待人工 `git stash drop` 确认。

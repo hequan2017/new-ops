@@ -31,7 +31,7 @@ web/src/plugin/<name>/
 └── router/              # 静态兜底路由（正常走数据库动态菜单）
 ```
 
-参考已生成的骨架：`server/plugin/asset/plugin.go`（M0 已注册 10 个插件骨架）。
+参考已生成的骨架：`server/plugin/asset/plugin.go`（M0 注册 10 个业务插件骨架，后续新增 agent/aiops 通道类插件共 12 个）。
 
 ## 3. 初始化数据（菜单/API/Casbin）规范
 
