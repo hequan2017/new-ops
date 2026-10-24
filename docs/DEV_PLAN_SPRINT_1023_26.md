@@ -46,7 +46,8 @@
 10. 进度记录：**k8s 已巡检（场78）**——模块质量整体良好：PodShell 写互斥（k8sWsIO）场55 已做对；GuardNamespace 覆盖核验完整（Pod 日志/YAML/Pod 详情/Helm 历史四端点+agent 集群守卫）；namespaceVisible 出错 fail-closed；scopedList 普通用户多授权 ns 串行扇出为已知低价值点（授权量人工控制，不改）；实施一处加固：k8sWsIO.writeJSON（pong）补写超时（与数据帧同口径，防对端卡死阻塞 stdin 泵）；-race 全过。下一模块：monitor。
 11. 进度记录：**monitor 已巡检（场79）**——实施一处优化：EvalAllRules 端口探活规则从串行改有界并发评估（上限 10）——原 N 条不可达端口把采集轮拖长 N×2s；解析纯函数/采集轮并发 5/静默去重/恢复关闭/留存清理/agent 心跳指标复用链路审查无问题；记录功能缺口：钉钉机器人加签方式未支持（仅自定义关键词 webhook），待环境后按需补；-race 全过。下一模块：workflow。
 12. 进度记录：**workflow 已巡检（场80）**——修一处并发数据完整性缺陷：SubmitAction 先读状态后更新且无并发保护，两人同时审批同一工单会双写流转（approve+reject 竞态决定终态、release 发版钩子可能重复触发）→ 乐观锁修复（UPDATE 携带读取时 state+status，RowsAffected=0 报"工单状态已变化，请刷新后重试"），cancel 路径同口径；行为变化：并发冲突从静默双写改为显式报错，真机回归随测试机恢复；状态机引擎/审批约束/钩子失败不阻断收档审查无问题；-race 全过。下一模块：dbops。
-13. 进度记录：**dbops 已巡检（场81）**——修同类并发缺陷且更严重：ExecuteOrder 先读 approved 再无条件置 executing，双击/并发执行会让 goInception **对生产库重复执行 SQL** → 三处流转点乐观锁（ExecuteOrder 转执行中带 status=approved 条件+冲突报"状态已变化"；失败回滚 approved 带 executing 条件；AuditOrder 仅 pending 可更新；CancelOrder 仅 pending 可取消），行为变化同前（并发冲突显式报错），真机回归随测试机；实例密码加密/脱敏回显/删除前未结束工单检查/goInception magic 协议与备份回滚审查无问题（dbops 无既有单测，并发修复依赖真机回归）。下一模块：agent。下一模块：pipeline。
+13. 进度记录：**dbops 已巡检（场81）**——修同类并发缺陷且更严重：ExecuteOrder 先读 approved 再无条件置 executing，双击/并发执行会让 goInception **对生产库重复执行 SQL** → 三处流转点乐观锁（ExecuteOrder 转执行中带 status=approved 条件+冲突报"状态已变化"；失败回滚 approved 带 executing 条件；AuditOrder 仅 pending 可更新；CancelOrder 仅 pending 可取消），行为变化同前（并发冲突显式报错），真机回归随测试机；实例密码加密/脱敏回显/删除前未结束工单检查/goInception magic 协议与备份回滚审查无问题（dbops 无既有单测，并发修复依赖真机回归）。
+14. 进度记录（注：场82-87 由并行会话完成并已回写 DEV_PLAN——agent 注册表竞态/aiops panic/gpu 防超卖行锁失效（gorm v1 语法）/ast 工具链/集成测试守卫，整仓 go test 转绿）：**web 前端已巡检（场88）**——XSS 面（v-html 零使用）、EventSource 关闭（pipeline closeStream 卸载有调）、定时器生命周期核验：修容器接入点页镜像拉取轮询两处泄漏——①拉取进行中离开页面 pullTimer 永不清理（卸载后 2s 轮询持续打 API）→ onUnmounted 补清；②拉取**失败**状态永不停止轮询（仅"成功"停止）→ 终态（成功/失败）都停止并分别提示；build 过。下一模块：docs/scripts。下一模块：pipeline。
 
 ## 三、每场 DoD（硬性）
 

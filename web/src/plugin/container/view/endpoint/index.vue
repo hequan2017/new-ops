@@ -642,11 +642,18 @@
       if (pullTimer) clearInterval(pullTimer)
       pullTimer = setInterval(async () => {
         const st = await pullStatus({ endpointId: ctEndpoint.value.ID, ref })
-        if (st.code === 0 && String(st.data || '').startsWith('成功')) {
+        if (st.code !== 0) return
+        const s = String(st.data || '')
+        // 终态（成功/失败）都停止轮询——失败不停会导致 2s 轮询永不终止
+        if (s.startsWith('成功') || s.startsWith('失败')) {
           clearInterval(pullTimer)
           pullTimer = null
-          ElMessage.success(`拉取完成：${ref}`)
-          loadImages()
+          if (s.startsWith('成功')) {
+            ElMessage.success(`拉取完成：${ref}`)
+            loadImages()
+          } else {
+            ElMessage.error(`拉取失败：${s.replace(/^失败[:：]\s*/, '')}`)
+          }
         }
       }, 2000)
     }
@@ -937,5 +944,10 @@
   })
   onUnmounted(() => {
     if (pollTimer) clearInterval(pollTimer)
+    if (pullTimer) {
+      // 拉取进行中离开页面：轮询定时器随组件销毁清理
+      clearInterval(pullTimer)
+      pullTimer = null
+    }
   })
 </script>
