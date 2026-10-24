@@ -640,4 +640,5 @@ web/src/plugin/asset/
 | 2026-10-24 | 111 | **第五轮抽查（场111，ClearDB 日清理）**：真实缺口——term 会话审计流镜像/命令抽取表无任何留存策略（每条 WS 消息一行 longtext，长期运行无界增长；对比 monitor/docker_stats/事件日志各有清理）→ ClearDB 补 90 天留存两表（对齐 sys_operation_records 口径；表名/字段硬编码常量无注入面；term_sessions 元数据行小暂留）；build+vet 过 | 场112：窗口继续抽查或收尾；测试机可达则优先补 E2E |
 | 2026-10-24 | 112 | **第五轮抽查（场112，deploy 脚本 fresh 替换加固）**：fresh 安装的 sed 替换（db-type/sqlite path/addr/open-captcha）在 config 模板格式变化时会**静默 no-op**，走错配置要到 initdb 阶段才报错难排查 → 四项替换逐项 grep 断言，失败即中止并指明哪一项；bash -n 过，真机验证随下次部署自然覆盖 | 场113：窗口继续抽查或收尾；测试机可达则优先补 E2E |
 | 2026-10-24 | 113 | **文档一致性（场113，plugin-dev-guide 全文重读）**：三处更新——①测试指引改全量 `go test ./...` 必须绿（场85-87 后不依赖 -short 隔离，CI 已同步）；②骨架状态表从 M0 时代更新到当前实况（各插件交付阶段标注）；③核验 config.prod.yaml.example 引用有效（并行会话场89-90 创建，JWT/凭据/验证码安全红线齐全） | 场114：窗口收尾总结或抽查续；测试机可达则优先补 E2E |
+| 2026-10-24 | 114 | **Makefile 同步（场114，对齐 CI 场103）**：test 目标放开 -short（全量 go test，注释更新）；新增 test-agent（agent 模块 build/vet/test）与 build-agent（交叉编译 linux/amd64 二进制）目标——agent 独立模块此前无本地 make 入口；make test-agent 实测过 | 场115：窗口收尾总结或抽查续；测试机可达则优先补 E2E |
 
