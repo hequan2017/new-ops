@@ -20,7 +20,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.26'
           cache-dependency-path: server/go.sum
 
       - name: Build
@@ -31,10 +31,34 @@ jobs:
         working-directory: server
         run: go vet ./...
 
-      # -short：跳过依赖已初始化全局配置/会修改源码文件的集成测试
+      # 场85-87 已根治测试污染与环境依赖（ast 对称性/守卫跳过），可全量运行
       - name: Test
         working-directory: server
-        run: go test -short ./...
+        run: go test ./...
+
+  agent:
+    name: agent (go build / vet / test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache-dependency-path: agent/go.sum
+
+      - name: Build
+        working-directory: agent
+        run: go build ./...
+
+      - name: Vet
+        working-directory: agent
+        run: go vet ./...
+
+      - name: Test
+        working-directory: agent
+        run: go test ./...
 
   web:
     name: web (vite build)
