@@ -2,7 +2,7 @@
 
 # jwt configuration
 jwt:
-    signing-key: qmPlus
+    signing-key: 6f26a9d2a1caa84fbd05bb12e9d9c7870f1c5cffa3347848e667a0dc7c7290ff # !! 部署前务必更换为独立随机值
     expires-time: 7d
     buffer-time: 1d
     issuer: qmPlus
