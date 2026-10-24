@@ -222,15 +222,17 @@ func readAllResultsets(rows *sql.Rows) ([]auditRow, error) {
 	return out, nil
 }
 
-// runInceptionBlock 连引擎提交一个 magic 块（execute=true 时执行并生成备份）
-func (s *DbopsService) runInceptionBlock(order *model.DbopsOrder, execute bool) ([]auditRow, error) {
+// runInceptionBlock 连引擎提交一个 magic 块（execute=true 时执行并生成备份）。
+// 第二返回值 submitted：块是否已提交引擎——true 时即便返回 err，SQL 也可能已在目标库生效，
+// 调用方绝不能把工单回退到可执行态（重试会对生产库重复执行非幂等 DML）
+func (s *DbopsService) runInceptionBlock(order *model.DbopsOrder, execute bool) ([]auditRow, bool, error) {
 	var cfg model.DbopsInceptionConfig
 	if err := global.GVA_DB.Where("name = ?", "default").First(&cfg).Error; err != nil {
-		return nil, newDbErr(ErrCodeAuditNotConfigured, "SQL 审核引擎（goInception）未配置")
+		return nil, false, newDbErr(ErrCodeAuditNotConfigured, "SQL 审核引擎（goInception）未配置")
 	}
 	host, port, user, pass, err := s.GetInstanceCredential(order.InstanceID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	var inst model.DbopsInstance
 	global.GVA_DB.First(&inst, order.InstanceID)
@@ -238,23 +240,24 @@ func (s *DbopsService) runInceptionBlock(order *model.DbopsOrder, execute bool) 
 		InstanceHost: host, InstancePort: port, Username: user, Password: pass, Database: inst.Database,
 	}, order.AuditPayload, execute)
 	if berr != nil {
-		return nil, berr
+		return nil, false, berr
 	}
 	db, err := sql.Open("mysql", engineDSN(&cfg))
 	if err != nil {
-		return nil, newDbErr(ErrCodeInceptionConnFailed, "审核引擎 DSN 无效: "+err.Error())
+		return nil, false, newDbErr(ErrCodeInceptionConnFailed, "审核引擎 DSN 无效: "+err.Error())
 	}
 	defer db.Close()
 	if err := db.Ping(); err != nil {
-		return nil, newDbErr(ErrCodeInceptionConnFailed, "审核引擎连接失败: "+err.Error())
+		return nil, false, newDbErr(ErrCodeInceptionConnFailed, "审核引擎连接失败: "+err.Error())
 	}
 	rows, qerr := queryEngineBlock(db, block)
 	if qerr != nil {
-		// 引擎对整体失败以 MySQL 错误回传（如连接目标库失败/语法 fatal）
-		return []auditRow{{ErrLevel: 2, ErrMsg: qerr.Error(), Stage: "CHECKED"}}, nil
+		// 引擎对整体失败以 MySQL 错误回传（如连接目标库失败/语法 fatal）——未执行任何语句
+		return []auditRow{{ErrLevel: 2, ErrMsg: qerr.Error(), Stage: "CHECKED"}}, false, nil
 	}
 	defer rows.Close()
-	return readAllResultsets(rows)
+	out, rerr := readAllResultsets(rows)
+	return out, true, rerr // 已提交引擎：读取阶段的错误意味着结果未知
 }
 
 // AuditOrder 审核（errlevel=2 → 审核不通过保持待审核；全部通过 → 审核通过）
@@ -266,7 +269,7 @@ func (s *DbopsService) AuditOrder(orderID uint, operator string) (*model.DbopsOr
 	if order.Status != model.OrderPending {
 		return nil, newDbErr(ErrCodeOrderInvalid, "工单不在待审核状态")
 	}
-	rows, err := s.runInceptionBlock(&order, false)
+	rows, _, err := s.runInceptionBlock(&order, false) // 审核（execute=false）无执行副作用，忽略 submitted
 	if err != nil {
 		return nil, err
 	}
@@ -315,8 +318,23 @@ func (s *DbopsService) ExecuteOrder(orderID uint, operator string) (*model.Dbops
 	if res.RowsAffected == 0 {
 		return nil, newDbErr(ErrCodeOrderInvalid, "工单状态已变化，请刷新后重试")
 	}
-	rows, err := s.runInceptionBlock(&order, true)
+	rows, submitted, err := s.runInceptionBlock(&order, true)
 	if err != nil {
+		if submitted {
+			// 提交后（结果读取阶段）失败：SQL 可能已在目标库生效——置"失败+结果未知"由人工核对，
+			// 绝不能回退"审核通过"让重试对生产库重复执行（原实现一律回退，是重复执行 SQL 的窗口）
+			now := time.Now()
+			note := marshalRows(map[string]any{
+				"rows": []auditRow{{ErrLevel: 2, Stage: "CHECKED",
+					ErrMsg: "执行结果未知（引擎连接中断，SQL 可能已生效，请人工核对目标库，不可直接重试）: " + err.Error()}},
+				"operator": operator, "finishedAt": now.Format(time.RFC3339),
+			})
+			global.GVA_DB.Model(&model.DbopsOrder{}).
+				Where("id = ? AND status = ?", orderID, model.OrderExecuting).
+				Updates(map[string]any{"status": model.OrderFailed, "exec_result": note, "finished_at": &now})
+			return nil, newDbErr(ErrCodeOrderInvalid, "执行结果未知，工单已置为失败，请人工核对目标库后处理: "+err.Error())
+		}
+		// 提交前失败（配置/凭据/引擎连不通）：安全回退审核通过，可修复后重试
 		global.GVA_DB.Model(&model.DbopsOrder{}).
 			Where("id = ? AND status = ?", orderID, model.OrderExecuting).
 			Update("status", model.OrderApproved)
@@ -339,11 +357,35 @@ func (s *DbopsService) ExecuteOrder(orderID uint, operator string) (*model.Dbops
 		"rows": rows, "operator": operator, "finishedAt": now.Format(time.RFC3339),
 		"rollbacks": rollbacks,
 	}
-	global.GVA_DB.Model(&model.DbopsOrder{}).Where("id = ?", orderID).Updates(map[string]any{
+	// 终态写库失败必须显式暴露（原忽略错误：写失败或进程崩溃会让工单永久卡在"执行中"，
+	// 后续审核/取消/删除全被状态守卫拦死）
+	if uerr := global.GVA_DB.Model(&model.DbopsOrder{}).Where("id = ?", orderID).Updates(map[string]any{
 		"status": status, "exec_result": marshalRows(execPayload), "finished_at": &now,
-	})
+	}).Error; uerr != nil {
+		global.GVA_LOG.Error(fmt.Sprintf("dbops 工单 %d 终态写库失败（状态 %s 未落库，可能滞留执行中）: %v", orderID, status, uerr))
+		return nil, fmt.Errorf("执行已完成但终态写库失败，请刷新确认工单状态: %w", uerr)
+	}
 	global.GVA_DB.First(&order, orderID)
 	return &order, nil
+}
+
+// SweepStuckExecuting 清扫滞留"执行中"的工单：执行中状态无任何流转出口（审核/取消都要求其他
+// 状态），进程在执行中途崩溃/重启或终态写库失败即永久卡死（连带实例删除被未结束工单拦死）。
+// 启动时把 1 小时未动的执行中工单置失败并标注"结果未知"，由人工核对目标库。
+func (s *DbopsService) SweepStuckExecuting() {
+	cutoff := time.Now().Add(-time.Hour)
+	note := marshalRows(map[string]any{
+		"rows": []auditRow{{ErrLevel: 2, Stage: "CHECKED",
+			ErrMsg: "执行中断（服务重启或终态写库失败），结果未知，请人工核对目标库后处理"}},
+	})
+	res := global.GVA_DB.Model(&model.DbopsOrder{}).
+		Where("status = ? AND updated_at < ?", model.OrderExecuting, cutoff).
+		Updates(map[string]any{"status": model.OrderFailed, "exec_result": note, "finished_at": time.Now()})
+	if res.Error != nil {
+		global.GVA_LOG.Error("dbops 滞留执行中工单清扫失败: " + res.Error.Error())
+	} else if res.RowsAffected > 0 {
+		global.GVA_LOG.Info(fmt.Sprintf("dbops 清扫滞留执行中工单 %d 单（置失败/结果未知）", res.RowsAffected))
+	}
 }
 
 // fetchRollbacks 从备份库按 opid_time 取回滚语句（GORM builder；备份未配置/查询失败不阻断执行结果）。

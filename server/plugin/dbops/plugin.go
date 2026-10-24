@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hequan2017/new-ops/server/plugin/dbops/initialize"
+	"github.com/hequan2017/new-ops/server/plugin/dbops/service"
 	interfaces "github.com/hequan2017/new-ops/server/utils/plugin/v2"
 )
 
@@ -28,5 +29,6 @@ func (p *plugin) Register(group *gin.Engine) {
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
 	initialize.Casbin(ctx)
+	service.DbopsServiceI.SweepStuckExecuting() // 清扫上次运行滞留的"执行中"工单（无出口状态）
 	initialize.Router(group)
 }

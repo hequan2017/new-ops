@@ -196,7 +196,7 @@ func (a *workflowApi) GetInstanceLogs(c *gin.Context) {
 		response.FailWithMessage("id 无效", c)
 		return
 	}
-	logs, err := wfSvc.GetInstanceLogs(uint(id))
+	logs, err := wfSvc.GetInstanceLogs(uint(id), utils.GetUserID(c), utils.GetUserAuthorityId(c) == 888)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

@@ -36,11 +36,18 @@ func (a *dbopsApi) GetInceptionConfig(c *gin.Context) {
 // @Success 200 {object} response.Response{msg=string} "保存成功"
 // @Router /dbops/inception [post]
 func (a *dbopsApi) SaveInceptionConfig(c *gin.Context) {
-	var cfg dbModel.DbopsInceptionConfig
-	if err := c.ShouldBindJSON(&cfg); err != nil {
+	// 模型 BackupPassEnc 为 json:"-"（双向忽略），直接绑定 ORM 模型时前端 backupPass 永远进不来，
+	// 备份库密码恒空 → 回滚语句查询整体静默失效；DTO 单独接收后转入模型字段
+	var req struct {
+		dbModel.DbopsInceptionConfig
+		BackupPass string `json:"backupPass"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		response.FailWithMessage("参数无效: "+err.Error(), c)
 		return
 	}
+	cfg := req.DbopsInceptionConfig
+	cfg.BackupPassEnc = req.BackupPass
 	if err := dbSvc.SaveInceptionConfig(&cfg); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

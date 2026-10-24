@@ -322,7 +322,16 @@ func (s *WorkflowService) GetInstanceList(page, pageSize int, creator, status st
 }
 
 // GetInstanceLogs 流转记录
-func (s *WorkflowService) GetInstanceLogs(instanceID uint) (list []*model.WfActionLog, err error) {
+// GetInstanceLogs 工单流转记录（属主校验：888 放行；其他用户仅可读自己的工单——
+// 原 无归属校验且 GET 路由对 9528 开放，遍历 id 即可读他人工单的审批/评论/hook 日志）
+func (s *WorkflowService) GetInstanceLogs(instanceID uint, userID uint, isSuperAdmin bool) (list []*model.WfActionLog, err error) {
+	if !isSuperAdmin {
+		var count int64
+		global.GVA_DB.Model(&model.WfInstance{}).Where("id = ? AND user_id = ?", instanceID, userID).Count(&count)
+		if count == 0 {
+			return nil, newWfErr(ErrCodeWfNotFound, "工单不存在或无权访问")
+		}
+	}
 	err = global.GVA_DB.Where("instance_id = ?", instanceID).Order("id ASC").Limit(100).Find(&list).Error
 	return list, err
 }
