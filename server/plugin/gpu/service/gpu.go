@@ -10,6 +10,7 @@ import (
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/gpu/model"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // 错误码
@@ -39,14 +40,17 @@ func canAllocate(total, used, want int) bool {
 	return want > 0 && total-used >= want
 }
 
+// nodeUsageAgg 节点占用聚合行（单节点与批量共用列口径）
+type nodeUsageAgg struct {
+	NodeID uint
+	Gpu    int
+	Cpu    int
+	Mem    int
+}
+
 // nodeUsage 节点当前占用量（运行中实例汇总）
 func nodeUsage(tx *gorm.DB, nodeID uint) (gpu, cpu, mem int, err error) {
-	type agg struct {
-		Gpu int
-		Cpu int
-		Mem int
-	}
-	var a agg
+	var a nodeUsageAgg
 	err = tx.Model(&model.GpuInstance{}).
 		Select("COALESCE(SUM(gpu_allocated),0) as gpu, COALESCE(SUM(cpu_allocated),0) as cpu, COALESCE(SUM(mem_alloc_gb),0) as mem").
 		Where("node_id = ? AND status = ?", nodeID, model.InstRunning).
@@ -114,10 +118,28 @@ func (s *GpuService) GetNodeList() ([]NodeWithUsage, error) {
 	if err := global.GVA_DB.Order("id DESC").Find(&nodes).Error; err != nil {
 		return nil, err
 	}
+	// 一次 GROUP BY 批量取占用（原逐节点查询的 N+1）
+	usage := map[uint]nodeUsageAgg{}
+	if len(nodes) > 0 {
+		ids := make([]uint, 0, len(nodes))
+		for _, n := range nodes {
+			ids = append(ids, n.ID)
+		}
+		var rows []nodeUsageAgg
+		if err := global.GVA_DB.Model(&model.GpuInstance{}).
+			Select("node_id, COALESCE(SUM(gpu_allocated),0) as gpu, COALESCE(SUM(cpu_allocated),0) as cpu, COALESCE(SUM(mem_alloc_gb),0) as mem").
+			Where("node_id IN ? AND status = ?", ids, model.InstRunning).
+			Group("node_id").Scan(&rows).Error; err != nil {
+			return nil, err
+		}
+		for _, r := range rows {
+			usage[r.NodeID] = r
+		}
+	}
 	out := make([]NodeWithUsage, 0, len(nodes))
 	for _, n := range nodes {
-		gpu, cpu, mem, _ := nodeUsage(global.GVA_DB, n.ID)
-		out = append(out, NodeWithUsage{GpuNode: n, GpuUsed: gpu, CpuUsed: cpu, MemUsed: mem})
+		u := usage[n.ID]
+		out = append(out, NodeWithUsage{GpuNode: n, GpuUsed: u.Gpu, CpuUsed: u.Cpu, MemUsed: u.Mem})
 	}
 	return out, nil
 }
@@ -159,9 +181,10 @@ func (s *GpuService) StartInstance(nodeID, specID uint, name, creator string, us
 	}
 	var inst *model.GpuInstance
 	err := global.GVA_DB.Transaction(func(tx *gorm.DB) error {
-		// 行锁节点（防并发超卖的关键）
+		// 行锁节点（防并发超卖的关键）——gorm:query_option 是 jinzhu/gorm v1 语法，
+		// gorm.io/gorm 下被静默忽略（锁根本没加），必须走 clause.Locking
 		var node model.GpuNode
-		if err := tx.Set("gorm:query_option", "FOR UPDATE").
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			First(&node, nodeID).Error; err != nil {
 			return newGpuErr(ErrCodeGpuNotFound, "节点不存在")
 		}
