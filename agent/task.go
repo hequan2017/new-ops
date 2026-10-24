@@ -14,6 +14,9 @@ import (
 // maxTaskOutputBytes 输出回传上限（与 server 留存口径一致）
 const maxTaskOutputBytes = 60 * 1024
 
+// maxTaskTimeoutSec 单任务超时上限（与 server 下发侧封顶一致；执行端不信任对端数值）
+const maxTaskTimeoutSec = 600
+
 // taskErrTimeout 自身执行超时时回传的错误文案（server 据此映射"超时"状态）
 const taskErrTimeout = "执行超时"
 
@@ -78,6 +81,7 @@ func (t *taskExecutor) dispatch(f frame, send func(frame) error) {
 }
 
 // runTask 限时执行单条命令（/bin/sh -c；windows 不支持）
+// 输出走 cappedBuffer：内存占用恒定 ≤ 上限，防止 cat 大文件/yes 类命令在超时窗口内打爆 agent（原 CombinedOutput 全量缓冲）
 func runTask(timeout time.Duration, command string) (exitCode int, output string, errMsg string) {
 	if runtime.GOOS == "windows" {
 		return -1, "", "windows 暂不支持任务执行"
@@ -85,11 +89,17 @@ func runTask(timeout time.Duration, command string) (exitCode int, output string
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
+	if timeout > maxTaskTimeoutSec*time.Second {
+		timeout = maxTaskTimeoutSec * time.Second
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", command)
-	out, err := cmd.CombinedOutput()
-	capped := truncateBytes(string(out), maxTaskOutputBytes)
+	out := &cappedBuffer{limit: maxTaskOutputBytes}
+	cmd.Stdout = out
+	cmd.Stderr = out
+	err := cmd.Run()
+	capped := out.String()
 	if ctx.Err() == context.DeadlineExceeded {
 		return -1, capped, taskErrTimeout
 	}
@@ -100,6 +110,54 @@ func runTask(timeout time.Duration, command string) (exitCode int, output string
 		return -1, capped, err.Error()
 	}
 	return 0, capped, ""
+}
+
+// cappedBuffer 有界输出缓冲：只保留头部 limit 字节（rune 边界内），超出丢弃并追加截断标记
+type cappedBuffer struct {
+	buf     []byte
+	limit   int
+	dropped bool
+}
+
+func (b *cappedBuffer) Write(p []byte) (int, error) {
+	room := b.limit - len(b.buf)
+	if room <= 0 {
+		b.dropped = true
+		return len(p), nil
+	}
+	if len(p) > room {
+		b.buf = append(b.buf, p[:room]...)
+		b.dropped = true
+	} else {
+		b.buf = append(b.buf, p...)
+	}
+	return len(p), nil
+}
+
+// String 返回缓冲内容；发生丢弃时追加标记，让 server 侧能看出输出被 agent 截断
+func (b *cappedBuffer) String() string {
+	s := trimToLimit(string(b.buf), b.limit)
+	if b.dropped {
+		s += "\n...[agent 侧输出超过上限已截断]"
+	}
+	return s
+}
+
+// trimToLimit 头部 max 字节内截断：超限走 truncateBytes；恰好等长时尾部可能带
+// 被截半的多字节字符（cappedBuffer 按字节截），逐个丢弃非法尾字节
+func trimToLimit(s string, max int) string {
+	if len(s) > max {
+		s = truncateBytes(s, max)
+	}
+	for len(s) > 0 {
+		r, size := utf8.DecodeLastRuneInString(s)
+		if r == utf8.RuneError && size == 1 {
+			s = s[:len(s)-1]
+			continue
+		}
+		break
+	}
+	return s
 }
 
 // truncateBytes 按 UTF-8 字符边界截断到 max 字节内（纯逻辑）

@@ -106,3 +106,43 @@ func TestTruncateBytes(t *testing.T) {
 		t.Fatal("截断应保持 UTF-8 合法（字符边界）")
 	}
 }
+
+func TestCappedBufferBounded(t *testing.T) {
+	b := &cappedBuffer{limit: 1024}
+	chunk := strings.Repeat("a", 4096)
+	for i := 0; i < 1000; i++ { // 名义写入 4MB，缓冲应恒定 ≤ limit
+		if _, err := b.Write([]byte(chunk)); err != nil {
+			t.Fatalf("写入失败: %v", err)
+		}
+		if len(b.buf) > 1024 {
+			t.Fatalf("缓冲超过上限: %d", len(b.buf))
+		}
+	}
+	got := b.String()
+	if !strings.Contains(got, "已截断") {
+		t.Fatalf("发生丢弃应追加截断标记: %q", got[len(got)-40:])
+	}
+	if !strings.HasPrefix(got, strings.Repeat("a", 1024)) {
+		t.Fatal("应保留头部内容")
+	}
+}
+
+func TestCappedBufferRuneBoundary(t *testing.T) {
+	b := &cappedBuffer{limit: 10} // 会落在多字节字符中间
+	if _, err := b.Write([]byte(strings.Repeat("好", 100))); err != nil {
+		t.Fatalf("写入失败: %v", err)
+	}
+	if !utf8.ValidString(b.String()) {
+		t.Fatal("截断应保持 UTF-8 合法（字符边界）")
+	}
+}
+
+func TestRunTaskOutputCapped(t *testing.T) {
+	_, out, _ := runTask(5*time.Second, "yes hello | head -c 3000000") // 3MB 输出
+	if len(out) > maxTaskOutputBytes+64 {                              // 头部上限 + 截断标记
+		t.Fatalf("输出应被钳制在上限附近: %d", len(out))
+	}
+	if !strings.Contains(out, "已截断") {
+		t.Fatalf("超限输出应带截断标记，尾: %q", out[len(out)-40:])
+	}
+}
