@@ -764,6 +764,9 @@
         const sshCreds = (res.data || []).filter(
           (c) => c.type === 'ssh_password' || c.type === 'ssh_key'
         )
+        // 同步填充下拉数据源（credList 仅在 openCollect/openSync 填充，直接点"日志"时
+        // 下拉无选项、显示裸 ID，且隐式选用第一个凭据不可见不可换）
+        credList.value = sshCreds
         if (sshCreds.length) logCredId.value = sshCreds[0].ID
       }
     }

@@ -64,7 +64,16 @@ export default ({ mode }) => {
         output: {
           entryFileNames: 'assets/baize-[name].[hash].js',
           chunkFileNames: 'assets/baize-[name].[hash].js',
-          assetFileNames: 'assets/baize-[name].[hash].[ext]'
+          assetFileNames: 'assets/baize-[name].[hash].[ext]',
+          // 大库拆独立 chunk：element-plus/图标全量注册保留（form-create/vform3 依赖全局注册，
+          // 按需引入无法真机回归），拆出后入口 js 显著减小、并行加载且升级时长期缓存命中
+          advancedChunks: {
+            groups: [
+              { name: 'element-plus', test: /node_modules[\\/]+element-plus/ },
+              { name: 'el-icons', test: /node_modules[\\/]+@element-plus[\\/]+icons-vue/ },
+              { name: 'echarts-lib', test: /node_modules[\\/]+(echarts|zrender)/ }
+            ]
+          }
         }
       }
     },

@@ -75,7 +75,7 @@
   import { getTermSessionList, getTermSessionStreams, getTermSessionCommands } from '@/plugin/term/api/termSession'
   import { Terminal } from '@xterm/xterm'
   import '@xterm/xterm/css/xterm.css'
-  import { nextTick, onMounted, ref } from 'vue'
+  import { nextTick, onMounted, ref , onBeforeUnmount } from 'vue'
 
   defineOptions({ name: 'TermAudit' })
 
@@ -106,6 +106,14 @@
   const replayTab = ref('stream')
   const replayEl = ref(null)
   const commands = ref([])
+  let replayTerm = null // 连续回放多个会话时旧实例不销毁会叠加渲染且泄漏
+
+  const disposeReplay = () => {
+    replayTerm?.dispose()
+    replayTerm = null
+    if (replayEl.value) replayEl.value.innerHTML = ''
+  }
+  onBeforeUnmount(disposeReplay)
 
   const openReplay = async (row) => {
     replayId.value = row.ID
@@ -117,12 +125,14 @@
     ])
     commands.value = cmdsRes.data || []
     await nextTick()
+    disposeReplay()
     const term = new Terminal({
       fontSize: 12,
       disableStdin: true,
       theme: { background: '#0b1021', foreground: '#e2e8f0' },
       scrollback: 10000
     })
+    replayTerm = term
     term.open(replayEl.value)
     for (const s of streamsRes.data || []) {
       if (s.direction === 0) {

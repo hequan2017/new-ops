@@ -477,7 +477,7 @@
     getHelmChartMeta, inspectHelmChart, getNsVisibility
   } from '@/plugin/k8s/api/k8sResource'
   import { ElMessage, ElMessageBox } from 'element-plus'
-  import { ref, watch } from 'vue'
+  import { ref, watch , onBeforeUnmount } from 'vue'
   import PodShell from '@/plugin/k8s/components/PodShell.vue'
 
   const visible = defineModel('visible', { type: Boolean })
@@ -618,10 +618,15 @@
     if (file) loadHelmMetaUpload(file)
   }
 
+  // chart/version 为自由文本输入：逐键触发 meta 请求且中间态连弹报错——防抖 500ms
+  let helmMetaTimer = null
+  onBeforeUnmount(() => clearTimeout(helmMetaTimer))
   watch(
     () => [helmInstallForm.value.repoId, helmInstallForm.value.chart, helmInstallForm.value.version],
     () => {
-      if (helmInstallForm.value.mode === 'repo') loadHelmMetaRepo()
+      if (helmInstallForm.value.mode !== 'repo') return
+      clearTimeout(helmMetaTimer)
+      helmMetaTimer = setTimeout(loadHelmMetaRepo, 500)
     }
   )
 

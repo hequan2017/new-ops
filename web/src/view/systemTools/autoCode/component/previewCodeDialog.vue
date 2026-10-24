@@ -18,7 +18,29 @@
 <script setup>
   import { Marked } from 'marked'
   import { markedHighlight } from 'marked-highlight'
-  import hljs from 'highlight.js'
+  // 按需注册：全量 import 打包约 190 种语言（懒块 960KB），预览场景只需以下几种
+  import hljs from 'highlight.js/lib/core'
+  import hljsGo from 'highlight.js/lib/languages/go'
+  import hljsJavascript from 'highlight.js/lib/languages/javascript'
+  import hljsXml from 'highlight.js/lib/languages/xml'
+  import hljsSql from 'highlight.js/lib/languages/sql'
+  import hljsJson from 'highlight.js/lib/languages/json'
+  import hljsYaml from 'highlight.js/lib/languages/yaml'
+  import hljsBash from 'highlight.js/lib/languages/bash'
+  import hljsShell from 'highlight.js/lib/languages/shell'
+  import hljsIni from 'highlight.js/lib/languages/ini'
+  import hljsPlaintext from 'highlight.js/lib/languages/plaintext'
+
+  hljs.registerLanguage('go', hljsGo)
+  hljs.registerLanguage('javascript', hljsJavascript)
+  hljs.registerLanguage('xml', hljsXml)
+  hljs.registerLanguage('sql', hljsSql)
+  hljs.registerLanguage('json', hljsJson)
+  hljs.registerLanguage('yaml', hljsYaml)
+  hljs.registerLanguage('bash', hljsBash)
+  hljs.registerLanguage('shell', hljsShell)
+  hljs.registerLanguage('ini', hljsIni)
+  hljs.registerLanguage('plaintext', hljsPlaintext)
   import { ElMessage } from 'element-plus'
   import { onMounted, ref, watchEffect } from 'vue'
   import { useAppStore } from '@/pinia'
