@@ -217,14 +217,17 @@ func (s *DbopsService) CancelOrder(orderID uint, operator string) error {
 	return nil
 }
 
-// GetOrderList 工单分页（普通用户仅本人）
-func (s *DbopsService) GetOrderList(page, pageSize int, creator string, userID uint, isSuperAdmin bool) (list []*model.DbopsOrder, total int64, err error) {
+// GetOrderList 工单分页（普通用户仅本人；creator 模糊、status 精确过滤）
+func (s *DbopsService) GetOrderList(page, pageSize int, creator, status string, userID uint, isSuperAdmin bool) (list []*model.DbopsOrder, total int64, err error) {
 	db := global.GVA_DB.Model(&model.DbopsOrder{})
 	if !isSuperAdmin {
 		db = db.Where("user_id = ?", userID)
 	}
 	if creator != "" {
 		db = db.Where("creator LIKE ?", "%"+creator+"%")
+	}
+	if status != "" {
+		db = db.Where("status = ?", status)
 	}
 	if err = db.Count(&total).Error; err != nil {
 		return nil, 0, err

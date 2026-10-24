@@ -226,15 +226,19 @@ func (a *dbopsApi) CancelOrder(c *gin.Context) {
 // @Success 200 {object} response.Response{data=response.PageResult} "获取成功"
 // @Router /dbops/order/list [post]
 func (a *dbopsApi) ListOrders(c *gin.Context) {
-	var info request.PageInfo
-	_ = c.ShouldBindJSON(&info)
-	list, total, err := dbSvc.GetOrderList(info.Page, info.PageSize, c.Query("creator"),
+	var req struct {
+		request.PageInfo
+		Creator string `json:"creator"`
+		Status  string `json:"status"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	list, total, err := dbSvc.GetOrderList(req.Page, req.PageSize, req.Creator, req.Status,
 		utils.GetUserID(c), utils.GetUserAuthorityId(c) == 888)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
 	response.OkWithDetailed(response.PageResult{
-		List: list, Total: total, Page: info.Page, PageSize: info.PageSize,
+		List: list, Total: total, Page: req.Page, PageSize: req.PageSize,
 	}, "获取成功", c)
 }

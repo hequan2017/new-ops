@@ -47,7 +47,7 @@
           :page-size="pageSize"
           :total="total"
           layout="total, prev, pager, next"
-          @current-change="loadList"
+          @current-change="getList"
         />
       </div>
     </div>
@@ -177,7 +177,8 @@
     try {
       const res = await getOrderList({
         page: page.value, pageSize,
-        creator: creator.value || undefined
+        creator: creator.value || undefined,
+        status: status.value || undefined
       })
       if (res.code === 0) {
         tableData.value = res.data.list || []

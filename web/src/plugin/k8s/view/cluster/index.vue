@@ -225,6 +225,7 @@
   const openBrowser = (row) => {
     browserClusterId.value = row.ID
     browserName.value = row.name
+    browserVisible.value = true
   }
   const onScale = (row) => {
     scaleDialogRef.value?.open(row, browserClusterId.value)
