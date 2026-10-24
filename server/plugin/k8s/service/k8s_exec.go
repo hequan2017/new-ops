@@ -41,7 +41,7 @@ func (w *k8sWsIO) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// writeJSON 控制应答（pong 等）
+// writeJSON 控制应答（pong 等；超时与数据帧同口径，避免对端卡死阻塞 stdin 泵）
 func (w *k8sWsIO) writeJSON(v any) error {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -49,6 +49,7 @@ func (w *k8sWsIO) writeJSON(v any) error {
 	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	_ = w.ws.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	return w.ws.WriteMessage(websocket.TextMessage, b)
 }
 

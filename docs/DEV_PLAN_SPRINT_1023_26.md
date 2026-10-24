@@ -42,7 +42,8 @@
 6. 进度记录：**term 已巡检（场74）**——修两处 WS 桥接真实缺陷：①写超时 deadline 设在 WriteMessage 之后（本次写入无超时，客户端卡死永久阻塞输出协程）→ 提前到写入前；②输出协程与读循环 pong 应答并发写 WS（gorilla 禁止，容器 exec/PodShell 同类问题已修、term 漏）→ 加 wsWrite 单写者互斥（数据帧/pong/关闭帧统一走锁+超时）；logtail 同步修 deadline 顺序（其本身单写者安全）；-race 下 term 单测全过；待办优化：审计流镜像逐条同步落库在输出热路径（阻塞终端写 DB），后续场次改有界异步批量刷写（行为变化需真机回归）。
 7. 进度记录：**job 已巡检（场75）**——CreateBatchExec 主机快照逐台 GetAssetHost（含 Room/Rack/ProductLines 无谓 Preload）→ 一次批量查询+缺失精确报错（语义等价）；自动变量注入逐主机 Pluck 组映射的 N+1 → 批量预载 groupsByHost + 纯函数 renderCommandForHost（单测 1 组：多组首个命中/未命中/无组）；-race 全过。结果逐条 INSERT 保持原样（受主机数上限约束，收益有限）。
 8. 进度记录：**pipeline 已巡检（场76）**——修两处日志链路缺陷：①appendLog 字节硬切 16KB 会切出非法 UTF-8 存库（SSH 输出超限时日志乱码）→ truncateLogRunes 字符边界截断（单测：CJK 边界/ASCII/标记）；②runHTTPStep 用单次 Read 读响应体快照（允许短读，日志常为空/不完整）→ readBodySnippet 完整读取上限字节（io.ReadAll+LimitReader）；执行器并发/审批 gate/取消收档逻辑审查无问题（-race 过）。
-9. 进度记录：**container 已巡检（场77）**——LogsWS/ExecWS 与 term 同病的两处修复：①日志流输出写入无任何超时（客户端卡死永久阻塞输出协程）→ wsSingleWriter 统一写入前设 10s 超时；②读循环 pong 与输出协程二进制帧**并发写 WS**（gorilla 禁止）→ 单写者互斥（场74 term 同口径）；统计采样/事件水位/生命周期/端口转发审查无问题（agent 模式接入点自动兼容管理面采样）；-race 全过。下一模块：k8s。下一模块：pipeline。
+9. 进度记录：**container 已巡检（场77）**——LogsWS/ExecWS 与 term 同病的两处修复：①日志流输出写入无任何超时（客户端卡死永久阻塞输出协程）→ wsSingleWriter 统一写入前设 10s 超时；②读循环 pong 与输出协程二进制帧**并发写 WS**（gorilla 禁止）→ 单写者互斥（场74 term 同口径）；统计采样/事件水位/生命周期/端口转发审查无问题（agent 模式接入点自动兼容管理面采样）；-race 全过。下一模块：k8s。
+10. 进度记录：**k8s 已巡检（场78）**——模块质量整体良好：PodShell 写互斥（k8sWsIO）场55 已做对；GuardNamespace 覆盖核验完整（Pod 日志/YAML/Pod 详情/Helm 历史四端点+agent 集群守卫）；namespaceVisible 出错 fail-closed；scopedList 普通用户多授权 ns 串行扇出为已知低价值点（授权量人工控制，不改）；实施一处加固：k8sWsIO.writeJSON（pong）补写超时（与数据帧同口径，防对端卡死阻塞 stdin 泵）；-race 全过。下一模块：monitor。下一模块：pipeline。
 
 ## 三、每场 DoD（硬性）
 
