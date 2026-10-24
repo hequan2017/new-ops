@@ -15,6 +15,7 @@ import (
 )
 
 // sftpClientFor 为主机建立 SFTP 客户端（凭据取用→DialSSH→sftp.NewClient）
+// 指纹校验与终端链路同口径：带 ExpectedFingerprint 强校验，首连为空时 TOFU 回填
 func sftpClientFor(host *model.AssetHost, credentialID uint) (*sftp.Client, func(), error) {
 	secret, credType, username, err := assetSvc.Service.CredCredentialService.GetPlaintext(credentialID)
 	if err != nil {
@@ -23,9 +24,15 @@ func sftpClientFor(host *model.AssetHost, credentialID uint) (*sftp.Client, func
 	if credType != model.CredTypeSSHPassword && credType != model.CredTypeSSHKey {
 		return nil, nil, fmt.Errorf("SFTP 仅支持 SSH 密码/私钥凭据")
 	}
-	client, _, err := assetSvc.DialSSH(host.IP, assetSvc.SSHAuth{Username: username, Password: secret, PrivateKey: secret})
+	client, fingerprint, err := assetSvc.DialSSH(host.IP, assetSvc.SSHAuth{
+		Username: username, Password: secret, PrivateKey: secret,
+		ExpectedFingerprint: host.SSHFP,
+	})
 	if err != nil {
 		return nil, nil, err
+	}
+	if host.SSHFP == "" && fingerprint != "" {
+		_ = assetSvc.Service.AssetHostService.RecordHostFingerprint(host.ID, fingerprint, "sftp-tou")
 	}
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {

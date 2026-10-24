@@ -80,6 +80,8 @@ func (t *terminal) WebSSH(c *gin.Context) {
 		Cols:         cols,
 		Rows:         rows,
 		Operator:     claims.Username,
+		UserID:       claims.BaseClaims.ID, // 审计归属（原两列恒空）
+		ClientIP:     c.ClientIP(),
 	}
 	// 阻塞桥接：结束后 WS 已被关闭
 	_ = service.TermService.StartWebSSH(ws, params)

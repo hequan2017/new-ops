@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -134,40 +135,49 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 	} else {
 		sessionID = sess.ID
 	}
+	streamSeq := new(atomic.Int64) // 输出协程与读循环并发发号，须原子（原 int64++ 是数据竞态）
+	cmdAcc := newInputAccumulator()
 	defer func() {
 		if sessionID > 0 {
+			// 审计收尾：残留未回车的最后一条命令也入档（flush 专为此而设，原从未调用）
+			if rest := cmdAcc.flush(); rest != "" {
+				_ = auditSvc.AppendCommand(sessionID, streamSeq.Load(), rest)
+			}
 			auditSvc.EndSession(sessionID)
 		}
 	}()
-	streamSeq := int64(0)
-	cmdAcc := newInputAccumulator()
 	recordStream := func(direction uint8, payload string) {
 		if sessionID == 0 {
 			return
 		}
-		streamSeq++
-		_ = auditSvc.AppendStream(sessionID, streamSeq, direction, payload)
+		seq := streamSeq.Add(1)
+		_ = auditSvc.AppendStream(sessionID, seq, direction, payload)
 	}
 
 	// SSH 输出 → WS（二进制帧）
 	go func() {
+		// SSH 侧结束（含敲 exit 的正常 io.EOF）即收尾：发 close 帧并 closeAll 解除主循环
+		// ReadMessage 阻塞——原实现 EOF 静默 break，客户端冻结且会话滞留"进行中"至手动关连
+		defer closeAll()
 		buf := make([]byte, 8192)
 		for {
 			n, readErr := stdout.Read(buf)
 			if n > 0 {
 				// 写超时须在写入前生效（原顺序写在之后，本次写入无超时、客户端卡死会永久阻塞输出协程）
 				if werr := wsWrite(websocket.BinaryMessage, buf[:n]); werr != nil {
-					break
+					return
 				}
 				if sessionID > 0 {
 					recordStream(model.StreamDirDown, string(buf[:n]))
 				}
 			}
 			if readErr != nil {
-				if readErr != io.EOF {
+				if readErr == io.EOF {
+					_ = wsWriteControl(1000, "会话已结束")
+				} else {
 					_ = wsWriteControl(4000, "SSH 连接已断开")
 				}
-				break
+				return
 			}
 		}
 	}()
@@ -201,7 +211,7 @@ func (t *termService) StartWebSSH(ws *websocket.Conn, p TermStartParams) error {
 			if sessionID > 0 {
 				recordStream(model.StreamDirUp, input)
 				for _, cmd := range cmdAcc.feed(input) {
-					_ = auditSvc.AppendCommand(sessionID, streamSeq, cmd)
+					_ = auditSvc.AppendCommand(sessionID, streamSeq.Load(), cmd)
 				}
 			}
 			_, _ = stdin.Write([]byte(input)) // 非控制 JSON 的文本按终端输入处理

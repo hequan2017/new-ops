@@ -158,10 +158,17 @@ func (s *sftpApi) SftpDownload(c *gin.Context) {
 		return
 	}
 	defer cleanup()
+	if size > sftpDownloadLimit {
+		response.FailWithMessage(fmt.Sprintf("文件超过下载上限 %d MB（实际 %d MB），请先在远端压缩或分割", sftpDownloadLimit>>20, size>>20), c)
+		return
+	}
 	c.Header("Content-Disposition", "attachment; filename=\""+path.Base(name)+"\"")
-	c.Header("Content-Length", fmt.Sprint(size))
-	c.Data(http.StatusOK, "application/octet-stream", streamToBytes(src))
+	// 流式写响应：原 streamToBytes 全量驻内存，GB 级文件单请求即可 OOM
+	c.DataFromReader(http.StatusOK, size, "application/octet-stream", src, nil)
 }
+
+// sftpDownloadLimit SFTP 下载大小上限（内存不再全量缓冲，仍限流防误点大文件拖垮带宽）
+const sftpDownloadLimit = 512 << 20
 
 // SftpUpload 上传文件（覆盖远端同名）
 // @Tags Sftp
@@ -195,24 +202,11 @@ func (s *sftpApi) SftpUpload(c *gin.Context) {
 		return
 	}
 	defer src.Close()
-	target := dir + "/" + fileHeader.Filename
+	// multipart 文件名不可信：Base 清洗防 ../ 穿越与路径混乱
+	target := dir + "/" + path.Base(fileHeader.Filename)
 	if err := termSvc.Service.SftpService.SftpUpload(host, credID, target, src, fileHeader.Size); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
 	response.OkWithMessage("上传成功", c)
-}
-
-// streamToBytes 读取全部内容（SFTP 文件有限大小场景）
-func streamToBytes(r interface{ Read([]byte) (int, error) }) []byte {
-	buf := make([]byte, 0, 4096)
-	tmp := make([]byte, 4096)
-	for {
-		n, err := r.Read(tmp)
-		buf = append(buf, tmp[:n]...)
-		if err != nil {
-			break
-		}
-	}
-	return buf
 }

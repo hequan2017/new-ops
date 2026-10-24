@@ -6,12 +6,32 @@ package service
 import (
 	"fmt"
 	"io"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 
 	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
 )
+
+// logTailPathRe 路径白名单：%q 只转义引号/反斜杠/控制字符，不转义 $ 与反引号，
+// `/log/$(reboot)` 这类路径会在远端登录 shell 的双引号内做命令替换，必须字符级白名单拒绝
+var logTailPathRe = regexp.MustCompile(`^[A-Za-z0-9_./+~@=-]+$`)
+
+// validateLogTailPath 校验日志路径（纯逻辑）
+func validateLogTailPath(p string) error {
+	if p == "" || p[0] != '/' {
+		return fmt.Errorf("日志路径必须为绝对路径（以 / 开头）")
+	}
+	if strings.Contains(p, "..") {
+		return fmt.Errorf("日志路径不允许包含 ..")
+	}
+	if !logTailPathRe.MatchString(p) {
+		return fmt.Errorf("日志路径含非法字符（仅允许字母/数字/._/+~@=-）")
+	}
+	return nil
+}
 
 // LogTailParams 日志 tail 启动参数
 type LogTailParams struct {
@@ -32,8 +52,8 @@ func (t *termService) StartLogTail(ws *websocket.Conn, p LogTailParams) error {
 	if host.IP == "" {
 		return fmt.Errorf("主机缺少内网IP")
 	}
-	if p.Path == "" || p.Path[0] != '/' {
-		return fmt.Errorf("日志路径必须为绝对路径（以 / 开头）")
+	if err := validateLogTailPath(p.Path); err != nil {
+		return err
 	}
 	lines := p.Lines
 	if lines <= 0 {
@@ -98,6 +118,9 @@ func (t *termService) StartLogTail(ws *websocket.Conn, p LogTailParams) error {
 			}
 		}
 	}()
+
+	// 客户端仅需上行 close 控制帧，限读上限防超大帧打爆内存（webssh 有 1MB 此处补齐更紧的 64KB）
+	ws.SetReadLimit(64 << 10)
 
 	for {
 		msgType, data, err := ws.ReadMessage()
