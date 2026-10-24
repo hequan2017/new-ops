@@ -639,4 +639,5 @@ web/src/plugin/asset/
 | 2026-10-24 | 110 | **第五轮抽查（场110，JWT 签发/续签/黑名单链）**：utils/jwt.go + middleware/jwt.go 核验全部正确——CreateTokenByOldToken 用 singleflight 按旧 token 归并（并发续签不重复签发）、缓冲窗口内换发经 new-token 头与前端拦截器接力（场101 已核）、黑名单前置校验+LoginOut 入黑名单闭环（场106 已核）、NotBefore -1s 时钟偏移防护 ✓；至此前端+后端认证关键面（签发/续签/黑名单/守卫/store/拦截器）全部核验完毕 | 场111：窗口继续抽查或按遗留清单随环境恢复补验 |
 | 2026-10-24 | 111 | **第五轮抽查（场111，ClearDB 日清理）**：真实缺口——term 会话审计流镜像/命令抽取表无任何留存策略（每条 WS 消息一行 longtext，长期运行无界增长；对比 monitor/docker_stats/事件日志各有清理）→ ClearDB 补 90 天留存两表（对齐 sys_operation_records 口径；表名/字段硬编码常量无注入面；term_sessions 元数据行小暂留）；build+vet 过 | 场112：窗口继续抽查或收尾；测试机可达则优先补 E2E |
 | 2026-10-24 | 112 | **第五轮抽查（场112，deploy 脚本 fresh 替换加固）**：fresh 安装的 sed 替换（db-type/sqlite path/addr/open-captcha）在 config 模板格式变化时会**静默 no-op**，走错配置要到 initdb 阶段才报错难排查 → 四项替换逐项 grep 断言，失败即中止并指明哪一项；bash -n 过，真机验证随下次部署自然覆盖 | 场113：窗口继续抽查或收尾；测试机可达则优先补 E2E |
+| 2026-10-24 | 113 | **文档一致性（场113，plugin-dev-guide 全文重读）**：三处更新——①测试指引改全量 `go test ./...` 必须绿（场85-87 后不依赖 -short 隔离，CI 已同步）；②骨架状态表从 M0 时代更新到当前实况（各插件交付阶段标注）；③核验 config.prod.yaml.example 引用有效（并行会话场89-90 创建，JWT/凭据/验证码安全红线齐全） | 场114：窗口收尾总结或抽查续；测试机可达则优先补 E2E |
 
