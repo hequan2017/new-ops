@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/hequan2017/new-ops/server/global"
@@ -88,6 +89,9 @@ func (s *AutoCodeService) LLMAutoStream(ctx context.Context, llm common.JSONMap)
 	return res, nil
 }
 
+// llmAutoModeRe 限制 mode 仅含安全字符，防止拼接进上游 URL 时被注入路径/查询片段
+var llmAutoModeRe = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
+
 func buildLLMAutoPath(llm common.JSONMap) (string, error) {
 	if global.GVA_CONFIG.AutoCode.AiPath == "" {
 		return "", errors.New("请先在 config.yaml 的 AutoCode.AiPath 中配置 AI 服务地址")
@@ -96,6 +100,9 @@ func buildLLMAutoPath(llm common.JSONMap) (string, error) {
 	mode := strings.TrimSpace(fmt.Sprintf("%v", llm["mode"]))
 	if mode == "" {
 		return "", errors.New("llmAuto 缺少 mode 参数")
+	}
+	if !llmAutoModeRe.MatchString(mode) {
+		return "", errors.New("mode 参数仅允许字母、数字、下划线和中划线")
 	}
 
 	return strings.ReplaceAll(global.GVA_CONFIG.AutoCode.AiPath, "{FUNC}", mode), nil

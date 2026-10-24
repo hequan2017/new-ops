@@ -4,9 +4,8 @@ import "github.com/gin-gonic/gin"
 
 type AutoCodeRouter struct{}
 
-func (s *AutoCodeRouter) InitAutoCodeRouter(Router *gin.RouterGroup, RouterPublic *gin.RouterGroup) {
+func (s *AutoCodeRouter) InitAutoCodeRouter(Router *gin.RouterGroup, _ *gin.RouterGroup) {
 	autoCodeRouter := Router.Group("autoCode")
-	publicAutoCodeRouter := RouterPublic.Group("autoCode")
 	{
 		autoCodeRouter.GET("getDB", autoCodeApi.GetDB)
 		autoCodeRouter.GET("getTables", autoCodeApi.GetTables)
@@ -46,10 +45,11 @@ func (s *AutoCodeRouter) InitAutoCodeRouter(Router *gin.RouterGroup, RouterPubli
 		autoCodeRouter.GET("getPluginList", autoCodePluginApi.GetPluginList)
 	}
 	{
-		publicAutoCodeRouter.POST("llmAuto", autoCodeApi.LLMAuto)
-		publicAutoCodeRouter.POST("llmAutoSSE", autoCodeApi.LLMAutoSSE)
-		publicAutoCodeRouter.POST("initMenu", autoCodePluginApi.InitMenu)
-		publicAutoCodeRouter.POST("initAPI", autoCodePluginApi.InitAPI)
-		publicAutoCodeRouter.POST("initDictionary", autoCodePluginApi.InitDictionary)
+		// LLM 代理与插件初始化原挂 public 组（无 JWT/casbin），存在配额盗刷与未授权写入面，收敛至 private
+		autoCodeRouter.POST("llmAuto", autoCodeApi.LLMAuto)
+		autoCodeRouter.POST("llmAutoSSE", autoCodeApi.LLMAutoSSE)
+		autoCodeRouter.POST("initMenu", autoCodePluginApi.InitMenu)
+		autoCodeRouter.POST("initAPI", autoCodePluginApi.InitAPI)
+		autoCodeRouter.POST("initDictionary", autoCodePluginApi.InitDictionary)
 	}
 }

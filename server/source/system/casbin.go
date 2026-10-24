@@ -180,6 +180,11 @@ func (i *initCasbin) InitializeData(ctx context.Context) (context.Context, error
 		{Ptype: "p", V0: "888", V1: "/autoCode/getAIWorkflowSessionDetail", V2: "POST"},
 		{Ptype: "p", V0: "888", V1: "/autoCode/deleteAIWorkflowSession", V2: "POST"},
 		{Ptype: "p", V0: "888", V1: "/autoCode/dumpAIWorkflowMarkdown", V2: "POST"},
+		{Ptype: "p", V0: "888", V1: "/autoCode/llmAuto", V2: "POST"},
+		{Ptype: "p", V0: "888", V1: "/autoCode/llmAutoSSE", V2: "POST"},
+		{Ptype: "p", V0: "888", V1: "/autoCode/initMenu", V2: "POST"},
+		{Ptype: "p", V0: "888", V1: "/autoCode/initAPI", V2: "POST"},
+		{Ptype: "p", V0: "888", V1: "/autoCode/initDictionary", V2: "POST"},
 
 		{Ptype: "p", V0: "888", V1: "/sysDictionaryDetail/findSysDictionaryDetail", V2: "GET"},
 		{Ptype: "p", V0: "888", V1: "/sysDictionaryDetail/updateSysDictionaryDetail", V2: "PUT"},

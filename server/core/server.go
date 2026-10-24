@@ -27,6 +27,7 @@ func RunServer() {
 
 	if global.GVA_DB != nil {
 		system.LoadAll()
+		initialize.EnsureSystemCasbinPolicies()
 	}
 
 	Router := initialize.Routers()

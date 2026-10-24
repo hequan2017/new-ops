@@ -48,8 +48,6 @@ func (i *initApiIgnore) InitializeData(ctx context.Context) (context.Context, er
 		{Method: "GET", Path: "/uploads/file/*filepath"},
 		{Method: "GET", Path: "/health"},
 		{Method: "HEAD", Path: "/uploads/file/*filepath"},
-		{Method: "POST", Path: "/autoCode/llmAuto"},
-		{Method: "POST", Path: "/autoCode/llmAutoSSE"},
 		{Method: "POST", Path: "/system/reloadSystem"},
 		{Method: "POST", Path: "/base/login"},
 		{Method: "POST", Path: "/base/captcha"},

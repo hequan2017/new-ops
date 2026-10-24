@@ -45,9 +45,15 @@ func (s *autoCodePlugin) Install(file *multipart.FileHeader) (web, server int, e
 	}
 	defer src.Close()
 
+	// multipart 文件名不可信：Base 清洗防路径穿越，仅接受 .zip 包
+	filename := filepath.Base(strings.ReplaceAll(file.Filename, "\\", "/"))
+	if filename == "." || filename == ".." || !strings.HasSuffix(strings.ToLower(filename), ".zip") {
+		return -1, -1, errors.New("插件包文件名不合法，仅支持 .zip")
+	}
+
 	// 在临时目录创建目标文件
 	// 使用完整路径拼接的好处：明确文件位置，避免路径混乱
-	out, err := os.Create(GVAPLUGPINATH + file.Filename)
+	out, err := os.Create(GVAPLUGPINATH + filename)
 	if err != nil {
 		return -1, -1, err
 	}
@@ -67,7 +73,7 @@ func (s *autoCodePlugin) Install(file *multipart.FileHeader) (web, server int, e
 		return -1, -1, err
 	}
 
-	paths, err := utils.Unzip(GVAPLUGPINATH+file.Filename, GVAPLUGPINATH)
+	paths, err := utils.Unzip(GVAPLUGPINATH+filename, GVAPLUGPINATH)
 	paths = filterFile(paths)
 	var webIndex = -1
 	var serverIndex = -1
