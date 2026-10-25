@@ -1,11 +1,11 @@
 package api
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/model/common/response"
 	email_response "github.com/hequan2017/new-ops/server/plugin/email/model/response"
 	"github.com/hequan2017/new-ops/server/plugin/email/service"
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 

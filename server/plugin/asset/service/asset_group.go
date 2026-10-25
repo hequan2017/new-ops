@@ -101,10 +101,10 @@ func (s *AssetGroupService) replaceGroupRelations(tx *gorm.DB, groupID uint, hos
 // AssetGroupWithRelations 资产组列表项（含关联 ID）
 type AssetGroupWithRelations struct {
 	model.AssetGroup
-	HostIDs  []uint `json:"hostIds"`
-	UserIDs  []uint `json:"userIds"`
-	HostNum  int64  `json:"hostNum"`
-	UserNum  int64  `json:"userNum"`
+	HostIDs []uint `json:"hostIds"`
+	UserIDs []uint `json:"userIds"`
+	HostNum int64  `json:"hostNum"`
+	UserNum int64  `json:"userNum"`
 }
 
 // groupMappingRows 关联行（扫描用）

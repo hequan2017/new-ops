@@ -3,9 +3,9 @@ package auto
 import (
 	"context"
 
+	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/plugin/auto/initialize"
 	interfaces "github.com/hequan2017/new-ops/server/utils/plugin/v2"
-	"github.com/gin-gonic/gin"
 )
 
 var Plugin = new(plugin)

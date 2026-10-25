@@ -98,13 +98,13 @@ func (s *AssetHostService) upsertFromECS(it ecsInstance, operator string,
 	switch {
 	case found:
 		updates := map[string]any{
-			"hostname": hostname,
-			"os":       osNameToID(it.OSName),
+			"hostname":   hostname,
+			"os":         osNameToID(it.OSName),
 			"os_version": it.OSName,
-			"cpu_cores": it.CPU,
-			"mem_gb":    it.MemoryMB / 1024,
-			"public_ip": it.PublicIP,
-			"status":    string(mapECSStatus(it.Status)),
+			"cpu_cores":  it.CPU,
+			"mem_gb":     it.MemoryMB / 1024,
+			"public_ip":  it.PublicIP,
+			"status":     string(mapECSStatus(it.Status)),
 		}
 		if it.InnerIP != "" && it.InnerIP != exist.IP {
 			if owner, taken := ipOwner[it.InnerIP]; taken && owner != exist.ID {
@@ -127,16 +127,16 @@ func (s *AssetHostService) upsertFromECS(it ecsInstance, operator string,
 			ip = it.PublicIP
 		}
 		h := &model.AssetHost{
-			Hostname: hostname,
-			IP:       ip,
-			OS:       osNameToID(it.OSName),
+			Hostname:  hostname,
+			IP:        ip,
+			OS:        osNameToID(it.OSName),
 			OSVersion: it.OSName,
-			CPUCores: it.CPU,
-			MemGB:    it.MemoryMB / 1024,
-			SN:       it.InstanceID,
-			Vendor:   "阿里云",
-			PublicIP: it.PublicIP,
-			Status:   mapECSStatus(it.Status),
+			CPUCores:  it.CPU,
+			MemGB:     it.MemoryMB / 1024,
+			SN:        it.InstanceID,
+			Vendor:    "阿里云",
+			PublicIP:  it.PublicIP,
+			Status:    mapECSStatus(it.Status),
 		}
 		if err := validateHost(h); err != nil {
 			return false, err

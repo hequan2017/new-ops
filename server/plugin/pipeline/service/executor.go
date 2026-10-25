@@ -642,7 +642,8 @@ func (s *PipelineBuildService) CheckBuildOwner(buildID uint, userID uint, isSupe
 }
 
 // GetBuildLogs 构建日志（升序分页）
-func (s *PipelineBuildService) GetBuildLogs(buildID uint, page, pageSize int) (list []*model.BuildLog, total int64, err error) {	db := global.GVA_DB.Model(&model.BuildLog{}).Where("build_id = ?", buildID)
+func (s *PipelineBuildService) GetBuildLogs(buildID uint, page, pageSize int) (list []*model.BuildLog, total int64, err error) {
+	db := global.GVA_DB.Model(&model.BuildLog{}).Where("build_id = ?", buildID)
 	if err = db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}

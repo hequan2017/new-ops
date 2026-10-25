@@ -14,8 +14,8 @@ func TestRenderCommandForHost(t *testing.T) {
 		9: {Name: "db", Variables: `[{"key":"port","value":"3306"}]`},
 	}
 	groups := map[uint][]uint{
-		101: {7, 9},  // 多组：首个命中生效
-		102: {8},     // 组无变量组：原样
+		101: {7, 9}, // 多组：首个命中生效
+		102: {8},    // 组无变量组：原样
 		// 103: 无组 → 原样
 	}
 	base := "echo {{port}}"

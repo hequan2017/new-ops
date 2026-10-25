@@ -114,8 +114,6 @@ func (s *ScriptService) GetScriptVersions(scriptID uint) (list []*model.JobScrip
 	return list, err
 }
 
-
-
 // VariableGroupService 变量组服务
 type VariableGroupService struct{}
 

@@ -2,9 +2,9 @@ package announcement
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/plugin/announcement/initialize"
 	interfaces "github.com/hequan2017/new-ops/server/utils/plugin/v2"
-	"github.com/gin-gonic/gin"
 )
 
 var _ interfaces.Plugin = (*plugin)(nil)

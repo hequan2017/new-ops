@@ -29,16 +29,16 @@ const (
 // DbopsInstance MySQL 实例
 type DbopsInstance struct {
 	global.GVA_MODEL
-	Name         string     `json:"name" gorm:"comment:实例名称;unique" binding:"required"`
-	Host         string     `json:"host" gorm:"comment:主机" binding:"required"`
-	Port         int        `json:"port" gorm:"comment:端口;default:3306"`
-	Username     string     `json:"username" gorm:"comment:账号"`
-	PasswordEnc  string     `json:"-" gorm:"size:255;comment:密码密文(AES-GCM)"`
-	Database     string     `json:"database" gorm:"comment:默认库"`
-	Status       string     `json:"status" gorm:"comment:状态;default:未知;index"`
-	Version      string     `json:"version" gorm:"comment:版本"`
-	LastCheckAt  *time.Time `json:"lastCheckAt" gorm:"comment:最近检测时间"`
-	Notes        string     `json:"notes" gorm:"type:text;comment:备注"`
+	Name        string     `json:"name" gorm:"comment:实例名称;unique" binding:"required"`
+	Host        string     `json:"host" gorm:"comment:主机" binding:"required"`
+	Port        int        `json:"port" gorm:"comment:端口;default:3306"`
+	Username    string     `json:"username" gorm:"comment:账号"`
+	PasswordEnc string     `json:"-" gorm:"size:255;comment:密码密文(AES-GCM)"`
+	Database    string     `json:"database" gorm:"comment:默认库"`
+	Status      string     `json:"status" gorm:"comment:状态;default:未知;index"`
+	Version     string     `json:"version" gorm:"comment:版本"`
+	LastCheckAt *time.Time `json:"lastCheckAt" gorm:"comment:最近检测时间"`
+	Notes       string     `json:"notes" gorm:"type:text;comment:备注"`
 }
 
 // DbopsOrder SQL 上线工单

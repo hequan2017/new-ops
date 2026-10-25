@@ -1,8 +1,8 @@
 package router
 
 import (
-	"github.com/hequan2017/new-ops/server/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/hequan2017/new-ops/server/middleware"
 )
 
 var Info = new(info)

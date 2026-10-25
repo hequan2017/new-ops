@@ -23,4 +23,3 @@ type SkillTool struct {
 	Key   string `json:"key"`
 	Label string `json:"label"`
 }
-

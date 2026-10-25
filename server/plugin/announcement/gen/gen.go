@@ -5,9 +5,9 @@ package main
 //go:generate go run gen.go
 
 import (
+	"github.com/hequan2017/new-ops/server/plugin/announcement/model"
 	"gorm.io/gen"
 	"path/filepath"
-	"github.com/hequan2017/new-ops/server/plugin/announcement/model"
 )
 
 func main() {

@@ -135,4 +135,3 @@ func GetPluginData(pluginName string) ([]system.SysApi, []system.SysBaseMenu, []
 	defer rw.Unlock()
 	return ApiMap[pluginName], MenuMap[pluginName], DictMap[pluginName]
 }
-

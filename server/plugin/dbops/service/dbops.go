@@ -17,13 +17,13 @@ import (
 
 // 错误码
 const (
-	ErrCodeInstNameRequired  = 1701
-	ErrCodeInstDuplicate     = 1702
-	ErrCodeInstAddrInvalid   = 1703
-	ErrCodeInstNotFound      = 1704
-	ErrCodeInstOffline       = 1705
-	ErrCodeOrderInvalid      = 1706
-	ErrCodeOrderNotFound     = 1707
+	ErrCodeInstNameRequired   = 1701
+	ErrCodeInstDuplicate      = 1702
+	ErrCodeInstAddrInvalid    = 1703
+	ErrCodeInstNotFound       = 1704
+	ErrCodeInstOffline        = 1705
+	ErrCodeOrderInvalid       = 1706
+	ErrCodeOrderNotFound      = 1707
 	ErrCodeAuditNotConfigured = 1708
 )
 

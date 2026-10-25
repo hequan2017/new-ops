@@ -108,15 +108,15 @@ func parseECSDescribeResponse(body []byte) (instances []ecsInstance, total int, 
 				PublicIP struct {
 					IpAddress []string `json:"IpAddress"`
 				} `json:"PublicIpAddress"`
-				OSName    string `json:"OSName"`
-				CPU       int    `json:"CPU"`
-				Memory    int    `json:"Memory"`
-				Status    string `json:"Status"`
+				OSName string `json:"OSName"`
+				CPU    int    `json:"CPU"`
+				Memory int    `json:"Memory"`
+				Status string `json:"Status"`
 			} `json:"Instance"`
 			TotalCount int `json:"TotalCount"`
 		} `json:"Instances"`
-		Code      string `json:"Code"`
-		Message   string `json:"Message"`
+		Code    string `json:"Code"`
+		Message string `json:"Message"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, 0, fmt.Errorf("响应解析失败: %w", err)

@@ -184,7 +184,7 @@
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Go 1.24+ · Gin · GORM · Casbin v3 · JWT · Zap · Viper · robfig/cron |
+| 后端 | Go 1.26（agent 兼容 1.24+） · Gin · GORM · Casbin v3 · JWT · Zap · Viper · robfig/cron |
 | 前端 | Vue 3.5 · Vite 8 · Element Plus · Pinia · ECharts 5 · xterm.js 6 |
 | 实时通道 | WebSocket（WebSSH / SFTP / 容器与 Pod 终端与日志）· SSE（流水线日志） |
 | 执行通道 | Go SSH（密码/私钥/keyboard-interactive）· Docker SDK · client-go · Helm SDK v3.22 |

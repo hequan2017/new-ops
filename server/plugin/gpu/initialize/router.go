@@ -8,12 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hequan2017/new-ops/server/global"
-	sysModel "github.com/hequan2017/new-ops/server/model/system"
 	"github.com/hequan2017/new-ops/server/middleware"
-	srvUtils "github.com/hequan2017/new-ops/server/utils"
-	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
+	sysModel "github.com/hequan2017/new-ops/server/model/system"
 	"github.com/hequan2017/new-ops/server/plugin/gpu/model"
 	"github.com/hequan2017/new-ops/server/plugin/gpu/router"
+	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
+	srvUtils "github.com/hequan2017/new-ops/server/utils"
 	"github.com/pkg/errors"
 )
 

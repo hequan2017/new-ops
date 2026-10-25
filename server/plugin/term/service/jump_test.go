@@ -145,14 +145,14 @@ func TestValidateLogTailPath(t *testing.T) {
 		{"/var/log/app_2026-10-24.log", true},
 		{"/var/log/my.app+1.log", true},
 		{"", false},
-		{"var/log/x", false},                  // 非绝对路径
-		{"/log/$(reboot)", false},             // 命令替换
-		{"/log/`id`", false},                  // 反引号替换
-		{"/log/a;rm -rf /", false},            // 分号与空格
-		{"/tmp/../etc/passwd", false},         // 越级
-		{`/log/a"b`, false},                   // 引号
-		{`/log/a\b`, false},                   // 反斜杠
-		{"/log/$(cat /etc/shadow)", false},    // 变量替换变体
+		{"var/log/x", false},               // 非绝对路径
+		{"/log/$(reboot)", false},          // 命令替换
+		{"/log/`id`", false},               // 反引号替换
+		{"/log/a;rm -rf /", false},         // 分号与空格
+		{"/tmp/../etc/passwd", false},      // 越级
+		{`/log/a"b`, false},                // 引号
+		{`/log/a\b`, false},                // 反斜杠
+		{"/log/$(cat /etc/shadow)", false}, // 变量替换变体
 	} {
 		err := validateLogTailPath(c.path)
 		if c.ok && err != nil {

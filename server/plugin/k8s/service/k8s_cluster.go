@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/hequan2017/new-ops/server/global"
-	"github.com/hequan2017/new-ops/server/plugin/asset/crypto"
 	agentSvc "github.com/hequan2017/new-ops/server/plugin/agent/service"
+	"github.com/hequan2017/new-ops/server/plugin/asset/crypto"
 	"github.com/hequan2017/new-ops/server/plugin/k8s/model"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -44,7 +44,7 @@ func parseKubeconfig(kubeconfig string) (*kubernetes.Clientset, string, error) {
 // agentRESTConfig agent 模式集群 RESTConfig：HTTP 请求经集群内 agent 的 ServiceAccount 代理（K4）
 func agentRESTConfig(c *model.K8sCluster) *rest.Config {
 	return &rest.Config{
-		Host: "https://kubernetes.default.svc",
+		Host:      "https://kubernetes.default.svc",
 		Transport: &agentSvc.AgentDockerTransport{AssetID: c.AssetID, FrameType: "k8s_req"},
 	}
 }

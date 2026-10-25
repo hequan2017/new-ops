@@ -11,9 +11,9 @@ import (
 
 // 批次状态
 const (
-	ExecStatusRunning   = "执行中"
-	ExecStatusFinished  = "已完成"
-	ExecStatusCanceled  = "已取消"
+	ExecStatusRunning  = "执行中"
+	ExecStatusFinished = "已完成"
+	ExecStatusCanceled = "已取消"
 )
 
 // 主机执行结果状态
@@ -34,20 +34,20 @@ const (
 // JobExecRecord 批量执行批次
 type JobExecRecord struct {
 	global.GVA_MODEL
-	Command     string     `json:"command" gorm:"type:text;comment:执行的命令"`
-	Concurrency int        `json:"concurrency" gorm:"comment:并发数"`
-	TimeoutSec  int        `json:"timeoutSec" gorm:"comment:单机超时秒"`
-	CredentialID *uint     `json:"credentialId" gorm:"comment:统一凭据ID(空则用主机绑定凭据)"`
-	VariableGroupID *uint  `json:"variableGroupId" gorm:"comment:显式变量组ID(空则按主机资产组自动注入)"`
-	ExecBackend  string    `json:"execBackend" gorm:"size:16;default:ssh;comment:执行后端(ssh/agent)"`
-	Total       int        `json:"total" gorm:"comment:主机总数"`
-	Success     int        `json:"success" gorm:"comment:成功数"`
-	Failed      int        `json:"failed" gorm:"comment:失败数"`
-	Status      string     `json:"status" gorm:"comment:状态;default:执行中;index"`
-	Operator    string     `json:"operator" gorm:"comment:操作人"`
-	UserID      uint       `json:"userId" gorm:"comment:操作用户ID;index"`
-	StartedAt   time.Time  `json:"startedAt" gorm:"comment:开始时间"`
-	FinishedAt  *time.Time `json:"finishedAt" gorm:"comment:结束时间"`
+	Command         string     `json:"command" gorm:"type:text;comment:执行的命令"`
+	Concurrency     int        `json:"concurrency" gorm:"comment:并发数"`
+	TimeoutSec      int        `json:"timeoutSec" gorm:"comment:单机超时秒"`
+	CredentialID    *uint      `json:"credentialId" gorm:"comment:统一凭据ID(空则用主机绑定凭据)"`
+	VariableGroupID *uint      `json:"variableGroupId" gorm:"comment:显式变量组ID(空则按主机资产组自动注入)"`
+	ExecBackend     string     `json:"execBackend" gorm:"size:16;default:ssh;comment:执行后端(ssh/agent)"`
+	Total           int        `json:"total" gorm:"comment:主机总数"`
+	Success         int        `json:"success" gorm:"comment:成功数"`
+	Failed          int        `json:"failed" gorm:"comment:失败数"`
+	Status          string     `json:"status" gorm:"comment:状态;default:执行中;index"`
+	Operator        string     `json:"operator" gorm:"comment:操作人"`
+	UserID          uint       `json:"userId" gorm:"comment:操作用户ID;index"`
+	StartedAt       time.Time  `json:"startedAt" gorm:"comment:开始时间"`
+	FinishedAt      *time.Time `json:"finishedAt" gorm:"comment:结束时间"`
 }
 
 // JobExecResult 单主机执行结果

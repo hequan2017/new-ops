@@ -39,8 +39,8 @@ func TestWrapMagicBlock(t *testing.T) {
 	// 凭据含注释选项非法字符（; */ 换行）必须拦截，防选项注释被截断逃逸
 	for name, bad := range map[string]inceptionTarget{
 		"密码含分号": {InstanceHost: "h", InstancePort: 3306, Username: "u", Password: "a;b", Database: "d"},
-		"密码含*/":  {InstanceHost: "h", InstancePort: 3306, Username: "u", Password: "a*/b", Database: "d"},
-		"账号含换行":  {InstanceHost: "h", InstancePort: 3306, Username: "u\nx", Password: "p", Database: "d"},
+		"密码含*/": {InstanceHost: "h", InstancePort: 3306, Username: "u", Password: "a*/b", Database: "d"},
+		"账号含换行": {InstanceHost: "h", InstancePort: 3306, Username: "u\nx", Password: "p", Database: "d"},
 	} {
 		if _, err := wrapMagicBlock(bad, "select 1;", false); err == nil {
 			t.Fatalf("%s 应被拦截", name)

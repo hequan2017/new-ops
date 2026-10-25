@@ -3,8 +3,8 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/hequan2017/new-ops/server/model/common/response"
 	"github.com/hequan2017/new-ops/server/model/common/request"
+	"github.com/hequan2017/new-ops/server/model/common/response"
 	"github.com/hequan2017/new-ops/server/plugin/asset/model"
 )
 

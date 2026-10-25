@@ -289,7 +289,7 @@ func (a *assetHost) ImportAssetHost(c *gin.Context) {
 // @Router /asset/host/collect [post]
 func (a *assetHost) CollectAssetHost(c *gin.Context) {
 	var req struct {
-		ID          uint `json:"ID" binding:"required"`
+		ID           uint `json:"ID" binding:"required"`
 		CredentialID uint `json:"credentialId" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {

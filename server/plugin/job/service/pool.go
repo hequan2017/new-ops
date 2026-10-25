@@ -23,12 +23,12 @@ type PoolTask struct {
 
 // PoolResult 单主机结果
 type PoolResult struct {
-	HostID    uint
-	Output    string
-	Err       error
-	Elapsed   time.Duration
-	Canceled  bool // 批次取消导致
-	TimedOut  bool // 单任务超时
+	HostID   uint
+	Output   string
+	Err      error
+	Elapsed  time.Duration
+	Canceled bool // 批次取消导致
+	TimedOut bool // 单任务超时
 }
 
 // runPool 并发执行全部任务：maxConcurrent 并发上限（<=0 取 1），

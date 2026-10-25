@@ -11,13 +11,13 @@ import (
 
 // asset 插件错误码补充（机房/机柜/产品线）
 const (
-	ErrCodeRoomNameRequired  = 1005
-	ErrCodeRoomDuplicate     = 1006
-	ErrCodeRackRoomNotFound  = 1007
-	ErrCodePLNameRequired    = 1008
-	ErrCodePLDuplicate       = 1009
-	ErrCodeRoomHasRacks      = 1010
-	ErrCodeRackNameRequired  = 1011
+	ErrCodeRoomNameRequired = 1005
+	ErrCodeRoomDuplicate    = 1006
+	ErrCodeRackRoomNotFound = 1007
+	ErrCodePLNameRequired   = 1008
+	ErrCodePLDuplicate      = 1009
+	ErrCodeRoomHasRacks     = 1010
+	ErrCodeRackNameRequired = 1011
 )
 
 // AssetRoomService 机房服务

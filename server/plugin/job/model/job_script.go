@@ -7,7 +7,7 @@ import (
 
 // 脚本语言
 const (
-	ScriptLangShell = "shell"
+	ScriptLangShell  = "shell"
 	ScriptLangPython = "python"
 	ScriptLangYaml   = "yaml"
 )

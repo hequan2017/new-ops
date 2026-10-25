@@ -10,9 +10,9 @@ import (
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/middleware"
+	sysModel "github.com/hequan2017/new-ops/server/model/system"
 	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 	srvUtils "github.com/hequan2017/new-ops/server/utils"
-	sysModel "github.com/hequan2017/new-ops/server/model/system"
 
 	"github.com/hequan2017/new-ops/server/plugin/aiops/model"
 	"github.com/hequan2017/new-ops/server/plugin/aiops/router"

@@ -26,10 +26,10 @@ type CollectedInfo struct {
 
 // SSHAuth SSH 认证参数（凭据保险库解密后传入，用后即弃）
 type SSHAuth struct {
-	Username           string
-	Password           string // CredTypeSSHPassword 时使用
-	PrivateKey         string // CredTypeSSHKey 时使用
-	Port               int
+	Username            string
+	Password            string // CredTypeSSHPassword 时使用
+	PrivateKey          string // CredTypeSSHKey 时使用
+	Port                int
 	ExpectedFingerprint string // 主机公钥指纹期望值（空=TOFU 首次信任）
 }
 

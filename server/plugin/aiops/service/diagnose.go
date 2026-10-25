@@ -11,8 +11,8 @@ import (
 	"sync"
 
 	"github.com/hequan2017/new-ops/server/global"
-	k8sSvc "github.com/hequan2017/new-ops/server/plugin/k8s/service"
 	"github.com/hequan2017/new-ops/server/plugin/aiops/model"
+	k8sSvc "github.com/hequan2017/new-ops/server/plugin/k8s/service"
 )
 
 // 诊断 prompt 模板：system 定位角色与输出口径，user 为采集快照

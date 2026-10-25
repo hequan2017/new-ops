@@ -7,13 +7,13 @@ const (
 	ErrCodeKubeconfigInvalid   = 1503
 	ErrCodeClusterNotFound     = 1504
 	// 1505-1507 见 k8s_write.go（ReplicasInvalid/NamespaceReq/WorkloadNotFound）
-	ErrCodeNodeNotFound         = 1508
-	ErrCodeKindUnsupported      = 1509
-	ErrCodeYAMLIdentityMismatch = 1510
-	ErrCodeYAMLEmpty            = 1511
-	ErrCodeRepoURLInvalid       = 1512
-	ErrCodeNsForbidden          = 1513
-	ErrCodeK8sAgentUnsupported  = 1514
+	ErrCodeNodeNotFound          = 1508
+	ErrCodeKindUnsupported       = 1509
+	ErrCodeYAMLIdentityMismatch  = 1510
+	ErrCodeYAMLEmpty             = 1511
+	ErrCodeRepoURLInvalid        = 1512
+	ErrCodeNsForbidden           = 1513
+	ErrCodeK8sAgentUnsupported   = 1514
 	ErrCodeK8sAgentAssetRequired = 1515
 )
 

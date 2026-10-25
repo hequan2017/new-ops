@@ -10,12 +10,12 @@ import (
 // DockerAppTemplate 应用模板（compose + {{参数}} 渲染）
 type DockerAppTemplate struct {
 	global.GVA_MODEL
-	Name        string `json:"name" gorm:"comment:模板名;unique" binding:"required"`
-	Category    string `json:"category" gorm:"comment:分类(如 web/db/监控);index"`
-	Description string `json:"description" gorm:"type:text;comment:描述"`
-	ComposeTpl  string `json:"composeTpl" gorm:"type:longtext;comment:compose 模板内容(支持 {{参数}} 占位)"`
+	Name         string `json:"name" gorm:"comment:模板名;unique" binding:"required"`
+	Category     string `json:"category" gorm:"comment:分类(如 web/db/监控);index"`
+	Description  string `json:"description" gorm:"type:text;comment:描述"`
+	ComposeTpl   string `json:"composeTpl" gorm:"type:longtext;comment:compose 模板内容(支持 {{参数}} 占位)"`
 	ParamsSchema string `json:"paramsSchema" gorm:"type:text;comment:参数定义(JSON 数组[{key,label,default,required}])"`
-	Notes       string `json:"notes" gorm:"type:text;comment:备注"`
+	Notes        string `json:"notes" gorm:"type:text;comment:备注"`
 }
 
 func (DockerAppTemplate) TableName() string { return "container_app_template" }

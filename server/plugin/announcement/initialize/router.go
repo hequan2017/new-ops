@@ -1,10 +1,10 @@
 package initialize
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/middleware"
 	"github.com/hequan2017/new-ops/server/plugin/announcement/router"
-	"github.com/gin-gonic/gin"
 )
 
 func Router(engine *gin.Engine) {

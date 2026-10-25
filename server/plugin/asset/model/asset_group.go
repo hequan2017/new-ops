@@ -24,8 +24,8 @@ func (AssetGroupHost) TableName() string { return "asset_group_hosts" }
 
 // AssetGroupUser 资产组-用户关联
 type AssetGroupUser struct {
-	GroupID uint   `json:"groupId" gorm:"comment:资产组ID;primaryKey"`
-	UserID  uint   `json:"userId" gorm:"comment:用户ID;primaryKey"`
+	GroupID  uint   `json:"groupId" gorm:"comment:资产组ID;primaryKey"`
+	UserID   uint   `json:"userId" gorm:"comment:用户ID;primaryKey"`
 	Username string `json:"username" gorm:"comment:用户名（冗余，便于展示）"`
 }
 

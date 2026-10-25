@@ -16,10 +16,10 @@ import (
 
 // 错误码
 const (
-	ErrCodeWfNameRequired   = 1901
-	ErrCodeWfStructInvalid  = 1902
-	ErrCodeWfNotFound       = 1903
-	ErrCodeWfActionInvalid  = 1904
+	ErrCodeWfNameRequired  = 1901
+	ErrCodeWfStructInvalid = 1902
+	ErrCodeWfNotFound      = 1903
+	ErrCodeWfActionInvalid = 1904
 )
 
 func newWfErr(code int, msg string) error { return &wfError{Code: code, Msg: msg} }

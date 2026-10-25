@@ -25,14 +25,14 @@ const (
 // GpuNode 算力节点
 type GpuNode struct {
 	global.GVA_MODEL
-	Name      string `json:"name" gorm:"comment:节点名称;unique" binding:"required"`
-	AssetID   *uint  `json:"assetId" gorm:"comment:关联资产ID"`
-	GpuModel  string `json:"gpuModel" gorm:"comment:显卡型号" binding:"required"`
-	GpuTotal  int    `json:"gpuTotal" gorm:"comment:GPU卡数" binding:"required"`
-	CpuTotal  int    `json:"cpuTotal" gorm:"comment:CPU核数"`
-	MemTotalGb int   `json:"memTotalGb" gorm:"comment:内存GB"`
-	Status    string `json:"status" gorm:"comment:状态;default:在线"`
-	Notes     string `json:"notes" gorm:"type:text;comment:备注"`
+	Name       string `json:"name" gorm:"comment:节点名称;unique" binding:"required"`
+	AssetID    *uint  `json:"assetId" gorm:"comment:关联资产ID"`
+	GpuModel   string `json:"gpuModel" gorm:"comment:显卡型号" binding:"required"`
+	GpuTotal   int    `json:"gpuTotal" gorm:"comment:GPU卡数" binding:"required"`
+	CpuTotal   int    `json:"cpuTotal" gorm:"comment:CPU核数"`
+	MemTotalGb int    `json:"memTotalGb" gorm:"comment:内存GB"`
+	Status     string `json:"status" gorm:"comment:状态;default:在线"`
+	Notes      string `json:"notes" gorm:"type:text;comment:备注"`
 }
 
 // GpuSpec 产品规格（定价）

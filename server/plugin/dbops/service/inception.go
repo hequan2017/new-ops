@@ -455,7 +455,7 @@ func (s *DbopsService) fetchRollbacks(order *model.DbopsOrder, rows []auditRow) 
 			Tablename string
 		}
 		var infos []infoRow
-		if err := backup.Table(schema + ".$_$Inception_backup_information$_$").
+		if err := backup.Table(schema+".$_$Inception_backup_information$_$").
 			Select("opid_time, tablename").Where("opid_time IN ?", seqs).Scan(&infos).Error; err != nil {
 			continue
 		}

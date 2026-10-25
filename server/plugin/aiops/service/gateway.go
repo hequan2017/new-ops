@@ -19,18 +19,18 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/hequan2017/new-ops/server/global"
-	"github.com/hequan2017/new-ops/server/plugin/asset/crypto"
 	"github.com/hequan2017/new-ops/server/plugin/aiops/model"
+	"github.com/hequan2017/new-ops/server/plugin/asset/crypto"
 )
 
 // 错误码（aiops 段 2010-2015，agent 已占 2001-2004）
 const (
-	ErrCodeProviderNotFound   = 2010
-	ErrCodeProviderInvalid    = 2011
-	ErrCodeLLMCallFailed      = 2012
-	ErrCodeDiagnosisFailed    = 2013
-	ErrCodeDiagnosisNotFound  = 2014
-	ErrCodeProviderNameDup    = 2015
+	ErrCodeProviderNotFound  = 2010
+	ErrCodeProviderInvalid   = 2011
+	ErrCodeLLMCallFailed     = 2012
+	ErrCodeDiagnosisFailed   = 2013
+	ErrCodeDiagnosisNotFound = 2014
+	ErrCodeProviderNameDup   = 2015
 )
 
 var AiopsService = new(AiopsServiceStruct)
