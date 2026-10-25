@@ -141,8 +141,8 @@ func runSession(wsURL, token string, meta agentMeta, interval time.Duration, exe
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-	defer files.cleanupAll() // 会话断开清理未完成接收的临时文件
+	defer files.cleanupAll() // 会话断开清理未完成接收的临时文件（先于 conn.Close 注册=后执行）
+	defer conn.Close()       // 先执行：读循环随连接关闭退出，避免清扫与收帧竞态
 
 	var wmu sync.Mutex
 	send := func(f frame) error {

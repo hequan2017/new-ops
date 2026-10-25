@@ -56,6 +56,19 @@ func (r *fileReceiver) reply(taskNo string, code int, errMsg string, send func(f
 	_ = send(frame{Type: "task_result", TS: time.Now().Unix(), TaskNo: taskNo, ExitCode: code, Msg: errMsg})
 }
 
+// release 原子摘除接收状态：仅当 open 表中确实摘除成功时才释放并发位——
+// 会话断开 cleanupAll 与读循环 fail/finish 并发摘除同一任务时，sem 释放与摘除
+// 一一对应；若两处都无条件 <-r.sem 会多释放，cleanupAll 收尾排水时永久阻塞（agent 挂死不重连）
+func (r *fileReceiver) release(taskNo string) {
+	r.mu.Lock()
+	_, ok := r.open[taskNo]
+	delete(r.open, taskNo)
+	r.mu.Unlock()
+	if ok {
+		<-r.sem
+	}
+}
+
 // fail 清理接收状态（关删临时文件、释放并发位）并回执失败
 func (r *fileReceiver) fail(taskNo string, it *incomingFile, errMsg string, send func(frame) error) {
 	if it != nil {
@@ -63,10 +76,7 @@ func (r *fileReceiver) fail(taskNo string, it *incomingFile, errMsg string, send
 			_ = it.tmp.Close()
 			_ = os.Remove(it.tmp.Name())
 		}
-		r.mu.Lock()
-		delete(r.open, taskNo)
-		r.mu.Unlock()
-		<-r.sem
+		r.release(taskNo)
 	}
 	r.reply(taskNo, -1, errMsg, send)
 }
@@ -163,10 +173,7 @@ func (r *fileReceiver) finish(f frame, send func(frame) error) {
 		return
 	}
 	ok := func() {
-		r.mu.Lock()
-		delete(r.open, f.TaskNo)
-		r.mu.Unlock()
-		<-r.sem
+		r.release(f.TaskNo)
 		r.reply(f.TaskNo, 0, "", send)
 	}
 	if it.written != it.size {

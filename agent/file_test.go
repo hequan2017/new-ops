@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 type fileCapture struct{ frames []frame }
@@ -97,5 +98,37 @@ func TestFileReceiveDedupDropsDuplicate(t *testing.T) {
 	r.handle(frame{Type: "file_end", TaskNo: "f5"}, cap.send)
 	if last := cap.last(); last.ExitCode != 0 {
 		t.Fatalf("首次推送应可正常收尾: %+v", last)
+	}
+}
+
+// 回归：会话断开 cleanupAll 与读循环 fail 对同一任务并发摘除时，
+// 并发位（sem）必须且只能释放一次——双重释放会让 cleanupAll 收尾排水永久阻塞。
+func TestFileReceiverConcurrentFailAndCleanupNoDoubleRelease(t *testing.T) {
+	r := newFileReceiver(1, 64)
+	cap := &fileCapture{}
+	abs := filepath.Join(t.TempDir(), "race.txt")
+	r.handle(frame{Type: "file_push", TaskNo: "f6", Payload: abs, FileSize: 10, FileSHA256: "aa"}, cap.send)
+
+	r.mu.Lock()
+	it := r.open["f6"] // 模拟读循环已取到接收状态、即将 fail 的瞬间
+	r.mu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		r.cleanupAll() // 会话断开：清扫含 f6 在内的未完成任务并排水 1 个并发位
+	}()
+	r.fail("f6", it, "分块解码失败", cap.send) // 读循环 fail 同一任务：摘除失败（已被 cleanupAll 摘走）→ 不得再排水
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("cleanupAll 被双重释放卡死——sem 排水超过实际占用")
+	}
+	// 并发位应可再次完整占用（容量 1）
+	select {
+	case r.sem <- struct{}{}:
+		<-r.sem
+	default:
+		t.Fatal("并发位未正确归还")
 	}
 }
