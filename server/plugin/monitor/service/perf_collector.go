@@ -5,6 +5,7 @@ package service
 
 import (
 	"fmt"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -258,6 +259,13 @@ func (s *MonitorService) CollectAll() {
 		wg.Add(1)
 		go func(h *assetModel.AssetHost) {
 			defer wg.Done()
+			// cron 级 Recover 不覆盖 job 内再起的 goroutine：远端输出解析 panic 会打死
+			// 整个 server——单机失败记日志跳过，不影响本轮其余主机
+			defer func() {
+				if r := recover(); r != nil {
+					global.GVA_LOG.Error(fmt.Sprintf("monitor 采集主机 %s(id=%d) panic: %v\n%s", h.Hostname, h.ID, r, debug.Stack()))
+				}
+			}()
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			sample, err := s.CollectPerf(h)

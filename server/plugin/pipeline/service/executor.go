@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -153,6 +154,15 @@ func (s *PipelineBuildService) CreateBuild(pipelineID uint, params map[string]st
 
 // run 执行主体（后台 goroutine）：状态机推进 + 审批 gate + 串行阶段
 func (s *PipelineBuildService) run(buildID uint) {
+	// 后台执行 goroutine 无 cron 级 panic 恢复兜底：不 recover 会打死整个 server 进程，
+	// 且构建永久停留"执行中"（审批/取消入口全部失效）——收档为失败并留痕
+	defer func() {
+		if r := recover(); r != nil {
+			global.GVA_LOG.Error(fmt.Sprintf("构建 %d 执行 panic: %v\n%s", buildID, r, debug.Stack()))
+			s.appendLog(buildID, "", "", model.LogSystem, fmt.Sprintf("构建执行异常崩溃: %v", r))
+			s.finish(buildID, model.BuildFailed)
+		}
+	}()
 	ctx, cancel := context.WithCancel(context.Background())
 	rt := &buildRuntime{cancel: cancel, approveCh: make(chan struct{}, 1)}
 	buildRegistry.Store(buildID, rt)
@@ -340,6 +350,30 @@ func pipelineShellCommand(workspace, content string) string {
 	return fmt.Sprintf("mkdir -p %q && cd %q && (\n%s\n)", workspace, workspace, content)
 }
 
+// maxShellOutputBytes SSH 步骤输出采集上限（与 job 批量执行/agent 通道 60KB 口径一致）
+const maxShellOutputBytes = 60 * 1024
+
+// boundedShellWriter 有界输出缓冲（head-only）：cat 大文件/高频输出命令在超时窗口内可产出
+// 远超留存量（日志截 16KB）的数据——原 io.ReadAll(stdout) 全量缓冲会在采集端先打爆内存
+type boundedShellWriter struct {
+	buf []byte
+	max int
+}
+
+func (w *boundedShellWriter) Write(p []byte) (int, error) {
+	room := w.max - len(w.buf)
+	if room <= 0 {
+		return len(p), nil
+	}
+	if len(p) > room {
+		p = p[:room]
+	}
+	w.buf = append(w.buf, p...)
+	return len(p), nil
+}
+
+func (w *boundedShellWriter) Bytes() []byte { return w.buf }
+
 // runShellStep 在绑定资产上执行 shell（M9 A3 双后端：SSH 直连经指纹校验/TOFU；Agent 通道经 WS 下发）。
 // 两后端统一以「构建工作空间」包装执行（mkdir+cd+子Shell），实现工作空间按构建隔离。
 func (s *PipelineBuildService) runShellStep(ctx context.Context, buildID uint, stageName string, sp snapshotStep) error {
@@ -384,28 +418,21 @@ func (s *PipelineBuildService) runShellStep(ctx context.Context, buildID uint, s
 		return fmt.Errorf("创建会话失败: %w", err)
 	}
 	defer session.Close()
-	stdout, err := session.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	session.Stderr = session.Stdout
-	if err := session.Start(command); err != nil {
-		return fmt.Errorf("启动命令失败: %w", err)
-	}
+	// 有界输出采集（stdout/stderr 合流），与 job 批量执行同口径
+	out := &boundedShellWriter{max: maxShellOutputBytes}
+	session.Stdout = out
+	session.Stderr = out
 	type result struct {
-		out string
 		err error
 	}
 	ch := make(chan result, 1)
 	go func() {
-		b, _ := io.ReadAll(stdout) // 读错误以 Wait 退出码为准（EOF 属正常收尾）
-		waitErr := session.Wait()
-		ch <- result{string(b), waitErr}
+		ch <- result{session.Run(command)}
 	}()
 	select {
 	case r := <-ch:
-		if out := strings.TrimSpace(r.out); out != "" {
-			s.appendLog(buildID, stageName, sp.Name, model.LogStdout, out)
+		if o := strings.TrimSpace(string(out.Bytes())); o != "" {
+			s.appendLog(buildID, stageName, sp.Name, model.LogStdout, o)
 		}
 		return r.err
 	case <-ctx.Done():

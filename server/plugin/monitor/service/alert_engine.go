@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -55,6 +56,13 @@ func (s *MonitorService) EvalAllRules() {
 			wg.Add(1)
 			go func(rule *model.MonitorAlertRule) {
 				defer wg.Done()
+				// cron 级 Recover 不覆盖 job 内再起的 goroutine：单规则评估 panic
+				// 会打死整个 server——记日志跳过该规则
+				defer func() {
+					if r := recover(); r != nil {
+						global.GVA_LOG.Error(fmt.Sprintf("monitor 端口规则(id=%d) 评估 panic: %v\n%s", rule.ID, r, debug.Stack()))
+					}
+				}()
 				sem <- struct{}{}
 				defer func() { <-sem }()
 				s.evalPortRule(rule)

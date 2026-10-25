@@ -7,6 +7,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -153,6 +154,17 @@ func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, i
 
 // runBatch 批次执行主体（后台 goroutine）
 func (s *jobService) runBatch(record *model.JobExecRecord, hosts []*assetModel.AssetHost) {
+	// 后台执行 goroutine 无 cron 级 panic 恢复兜底：不 recover 会打死整个 server 进程，
+	// 且批次永久停留"执行中"（取消入口失效）——收档为已完成并全量记失败
+	defer func() {
+		if r := recover(); r != nil {
+			global.GVA_LOG.Error(fmt.Sprintf("job 批次 %d 执行 panic: %v\n%s", record.ID, r, debug.Stack()))
+			now := time.Now()
+			global.GVA_DB.Model(&model.JobExecRecord{}).Where("id = ?", record.ID).Updates(map[string]any{
+				"status": model.ExecStatusFinished, "success": 0, "failed": record.Total, "finished_at": &now,
+			})
+		}
+	}()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancelRegistry.Store(record.ID, cancel)
 	defer func() {
