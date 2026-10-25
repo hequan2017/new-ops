@@ -18,24 +18,6 @@ func kubernetesNewForRESTConfig(cfg *rest.Config) (*kubernetes.Clientset, error)
 	return kubernetes.NewForConfig(cfg)
 }
 
-// k8sPodLogOptions corev1.PodLogOptions 轻量构造
-type k8sPodLogOptions struct {
-	Container string
-	TailLines int64
-}
-
-func (o *k8sPodLogOptions) podLogOptions() *corev1.PodLogOptions {
-	opts := &corev1.PodLogOptions{}
-	if o.Container != "" {
-		opts.Container = o.Container
-	}
-	if o.TailLines > 0 {
-		t := o.TailLines
-		opts.TailLines = &t
-	}
-	return opts
-}
-
 // statusReady 转 int32（零值兼容）
 func statusReady(v int32) int32 { return v }
 

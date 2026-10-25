@@ -1,11 +1,11 @@
 # 白泽（BaiZe）插件开发规范
 
 > 适用范围：所有业务插件（asset / term / job / pipeline / container / k8s / gpu / dbops / monitor / workflow / org / aiops 等）。
-> 开发计划与里程碑见 [DEV_PLAN.md](DEV_PLAN.md)。本规范与 DEV_PLAN 3.5（依赖清单）、3.6（接口与错误码）配合使用。
+> 功能总览与里程碑口径见仓库根 [README.md](../README.md)；接口与错误码分段规范见本文第 4 节。
 
 ## 1. 总原则
 
-1. **业务代码只存在于插件内**：`server/plugin/<name>/` 与 `web/src/plugin/<name>/`，禁止修改底座（server 根包与 web 基座组件）业务逻辑；需要底座增强时在 DEV_PLAN 立项后单独提交。
+1. **业务代码只存在于插件内**：`server/plugin/<name>/` 与 `web/src/plugin/<name>/`，禁止修改底座（server 根包与 web 基座组件）业务逻辑；确需底座增强时单独评估提交，保持上游可合并。
 2. **底座能力直接用**：认证(JWT)、鉴权(Casbin v3)、操作日志中间件、统一响应 `{code,data,msg}`、分页、Swagger 注释、定时任务注册、多云上传——不要重复造。
 3. **上游跟随**：底座保持与 flipped-aurora/gin-vue-admin main 可合并（merge --allow-unrelated-histories）。插件目录结构对齐官方插件（`plugin/announcement` 为参考实现）。
 
@@ -46,8 +46,8 @@ web/src/plugin/<name>/
 |---|---|
 | 凭据 | 一律 `asset` 凭据保险库（AES-256-GCM）；表只存密文+末4位；接口不回显明文 |
 | 审计 | 所有写操作过操作日志中间件；删除类接口软删除 |
-| 依赖 | 新增第三方库先登记 DEV_PLAN 3.5；标准库优先；同类场景唯一库 |
-| 错误码 | 按 DEV_PLAN 3.6 分段（asset=1000-1099 …），0 成功，通用错误用 GVA 7xxx |
+| 依赖 | 新增第三方库需评估必要性并保持同类场景唯一；标准库优先 |
+| 错误码 | 按插件独占分段（asset=1000-1099 …，全量分段见 README「接口与错误码规范」），0 成功，通用错误用 GVA 7xxx |
 | Swagger | 每个导出接口写 swag 注释，`make doc` 可再生成 |
 | 命名 | 表名 `<plugin>_<entity>`；避免 GVA_ 前缀（保留给底座） |
 
@@ -55,7 +55,7 @@ web/src/plugin/<name>/
 
 - 单元测试：service 层为主，**全量 `go test ./...` 必须绿**（场85-87 已根治 ast 注入对称性与环境依赖，不再依赖 `-short` 隔离；CI 已同步放开全量）。**禁止在测试中修改仓库源文件**。
 - 依赖全局初始化（GVA_DB/GVA_CONFIG）的测试加环境守卫跳过（不可达 `t.Skip`，参考 mcp/client 与 auto_code 的守卫模式）。
-- 每场完成定义（DoD）：代码+编译+单测+Swagger+初始化脚本+DEV_PLAN 勾选+开发日志+push+**测试环境部署冒烟通过**。
+- 每场完成定义（DoD）：代码+编译+单测+Swagger+初始化脚本+push+**测试环境部署冒烟通过**。
 
 ## 6. 部署
 
@@ -79,4 +79,4 @@ NEW_OPS_TEST_HOST=root@x.x.x.x make deploy-host   # 其他机器
 | agent | **M9 全链交付**（任务/文件分发/Docker-K8s 代理/100 压测） | 集群内 E2E 待测试机 |
 | announcement / email / auto / plugin-tool | GVA 官方插件，保留 | 底座 |
 
-实时进展以 [DEV_PLAN 开发日志](DEV_PLAN.md) 为准。
+里程碑与各插件功能总览以仓库根 [README.md](../README.md) 为准。

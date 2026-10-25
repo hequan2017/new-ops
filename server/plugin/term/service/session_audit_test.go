@@ -11,9 +11,9 @@ func Test_inputAccumulator_feed(t *testing.T) {
 	if len(cmds) != 1 || cmds[0] != "ls -la" {
 		t.Fatalf("单条命令抽取错误: %v", cmds)
 	}
-	// 带退格修正：systemct → \b\b 越界忽略 → 输入 l → "systemctl"？此处构造确定场景
-	cmds = acc.feed("systemctl sta")
-	cmds = acc.feed("tus\x7f\x7f\r") // \x7f\x7f 删除 "us" → "systemctl stat"
+	// 带退格修正：分两段喂入（首段无回车仅累积），退格删除 "us" 后回车抽出 "systemctl stat"
+	acc.feed("systemctl sta")
+	cmds = acc.feed("tus\x7f\x7f\r")
 	if len(cmds) != 1 || cmds[0] != "systemctl stat" {
 		t.Fatalf("退格修正错误: %v", cmds)
 	}

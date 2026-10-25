@@ -1,5 +1,5 @@
 // Package monitor 白泽业务插件：监控告警（采集/规则/通知）
-// 开发规范见 docs/DEV_PLAN.md 与 docs/plugin-dev-guide.md
+// 开发规范见 docs/plugin-dev-guide.md
 package monitor
 
 import (

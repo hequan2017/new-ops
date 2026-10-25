@@ -1,5 +1,5 @@
 // Package service 白泽流水线：定义 CRUD（三层嵌套，事务内整体替换）
-// pipeline 插件错误码段：1300-1399（DEV_PLAN 3.6）
+// pipeline 插件错误码段：1300-1399
 package service
 
 import (

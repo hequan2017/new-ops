@@ -1,5 +1,5 @@
 // Package service 白泽数据库工单：实例纳管与 SQL 工单（M6 dbops）
-// dbops 插件错误码段：1700-1799（DEV_PLAN 3.6）
+// dbops 插件错误码段：1700-1799
 package service
 
 import (

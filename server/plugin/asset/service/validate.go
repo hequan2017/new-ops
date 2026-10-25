@@ -8,7 +8,7 @@ import (
 	"github.com/hequan2017/new-ops/server/plugin/asset/model"
 )
 
-// asset 插件错误码段：1000-1099（DEV_PLAN 3.6）
+// asset 插件错误码段：1000-1099
 const (
 	ErrCodeHostnameRequired = 1001
 	ErrCodeIPInvalid        = 1002

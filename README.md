@@ -1,12 +1,10 @@
 # 白泽 BaiZe · 统一运维开发平台（new-ops）
 
-> **v0.2.0+**（2026-10-08 更新）—— M0-M4 全部完成（**两套真实集群联调 + 两级数据隔离验证收官**）；**M8 主体完成：K3 Helm 全生命周期（values 表单/YAML 双模式 + chart 仓库）+ 三级 RBAC 命名空间层 + C2 Compose 编排/端口转发/统计历史图表化**，全部经测试机双 k3s 集群与 Docker 真机端到端验证；M5 GPU 算力骨架 + 防超卖引擎（无显卡部分待环境）；并完成一轮**平台级安全加固**（9 插件鉴权漏洞修复、WS/SSE 端点角色收敛、MD5→SHA-256）。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
->
-> **v0.3.0 筹备中**（2026-10-24 更新）—— **M9 Agent 通道全链交付**：A1 独立二进制（注册/心跳/指标上报，100 Agent 并发压测通过）、A2 批量执行 SSH/Agent 双后端 + 文件分发、A3 流水线远程执行器（构建工作空间按构建隔离）、A4 Docker/K8s Agent 模式纳管（HTTP-over-WS 代理 + 集群内 ServiceAccount + 一键接入 YAML）；**M6 dbops goInception 审核/执行/备份回滚真机闭环**、**M7 aiops LLM 网关 + Pod AI 诊断**、M8 C3 应用模板化一键部署；并完成一轮**全模块优化巡检**（20 场：工单并发乐观锁、WS 单写者互斥、N+1 批量化、AES-GCM 篡改测试、资源上限加固），整仓 `go test -race` 转绿。
+> **v0.3.0-rc1**（2026-10-24）—— M0-M9 全部可交付部分完成：**M9 Agent 通道全链**（独立二进制注册/心跳/指标上报、批量执行 SSH/Agent 双后端 + 文件分发、流水线远程执行器、Docker/K8s Agent 模式纳管，100 Agent 并发压测通过）、**M6 dbops goInception 审核/执行/备份回滚真机闭环**、**M7 aiops LLM 网关 + Pod AI 诊断**、M8 C3 应用模板化一键部署；并完成六轮**全模块优化巡检**（130 场：工单并发乐观锁、WS 单写者互斥、N+1 批量化、AES-GCM 篡改测试、资源上限加固、公开路由收敛、定时器/路由状态重置缺陷修复等），整仓 `go test -race` 全绿。接口仍可能调整，生产部署前请完成安全复核（JWT 密钥、验证码、主密钥轮换）。
 >
 > **命名由来**：白泽是中国上古神话中的瑞兽，通晓天下万物之情——愿这套平台也能"通晓"你的全部基础设施。仓库/工程名沿用 `new-ops`。
 >
-> 开发总计划（功能盘点 / 架构设计 / 里程碑任务清单 / 逐场排期 / 开发日志）：[docs/DEV_PLAN.md](docs/DEV_PLAN.md) ｜ 插件开发规范：[docs/plugin-dev-guide.md](docs/plugin-dev-guide.md)
+> 插件开发规范：[docs/plugin-dev-guide.md](docs/plugin-dev-guide.md)
 
 基于 [gin-vue-admin](https://github.com/flipped-aurora/gin-vue-admin)（main, e8d675c）构建的**插件化统一运维开发平台**：把作者历史开源的 autoops、chain、cmdb、seal、go-webssh、raptor、new-jenkins、GPU 算力系列等 20+ 个运维项目的功能，收敛到一个底座上持续演进，避免多套技术栈、多套权限体系的重复维护。
 
@@ -178,23 +176,23 @@ Docker 单机/远程节点的全生命周期纳管，TLS 远程节点与本地 s
 | **发版闭环** | `bizType=release` 工单审批完成自动触发流水线构建（params `{pipelineId, params}`），结果落 hook 流转行；驳回不触发 |
 | 工单中心 | 发起/通过/驳回/撤回 + 定义管理（JSON 模板）；普通用户仅见自己发起的工单 |
 
-### dbops 数据库工单（M6 🔨 可做部分已交付）
+### dbops 数据库工单（M6 ✅ 已交付）
 
 | 功能 | 说明 |
 |---|---|
 | 实例纳管 | MySQL 实例 CRUD：主机/端口/账号/**密码 AES-256-GCM 密文**（复用 asset/crypto 信封加密；独立请求体保证响应永不回显）；TCP 探活回写在线状态 |
 | SQL 上线工单 | 创建（待审核）/取消/分页（普通用户仅本人）；有未结束工单的实例拒绝删除 |
-| 审核引擎预留 | goInception 接入点已留——引擎未配置时审核接口明确报错（错误码 1708）且工单状态不变；审核/执行/备份与 soar 优化建议待 goInception + MySQL 环境 |
+| **goInception 审核引擎** | 真机闭环（v1.3.0 协议实测）：magic 块首行注释指定目标库与动作（`--check=1` 审核 / `--execute=1` 执行），multiStatements 单包提交；errlevel 0/1/2 三态；执行自动备份生成回滚语句（备份库 + `$_$Inception_backup_information$_$` 按 opid_time 定位回滚表）；soar 优化建议与多环境配置待环境 |
 
-### aiops MCP 运维工具（M7 🔨 可做部分已交付）
+### aiops AI 运维（M7 ✅ 已交付）
 
 | 功能 | 说明 |
 |---|---|
 | MCP Server | 复用 GVA 骨架（mark3labs/mcp-go，StreamableHTTP），独立进程 `go run ./cmd/mcp`（默认 :8889，`/mcp` 端点，`/health` 探活） |
 | 运维只读工具 | `ops_asset_overview`（资产概览）/ `ops_alert_recent`（最近告警）/ `ops_ticket_status`（工单状态）——AI 助手经 MCP 协议即可直查平台三域概况 |
+| **LLM 网关** | 统一 OpenAI 兼容 chat/completions 调用；供应商多配置管理，**API Key 复用 asset/crypto AES-256-GCM 密文落库**、解密即用即弃；mock OpenAI E2E 验证通过 |
+| **Pod AI 诊断** | k8s 采集（Pod 详情+事件+日志尾部 50 行）→ 固定 prompt 模板（system 设定角色与输出口径，`<snapshot>` 标签内内容视为不可信数据防注入）→ LLM 网关 → 结论留档可回看 |
 | 鉴权与数据 | 工具经骨架上游代理调用主 server API，调用者身份经 auth_header 透传（沿用平台 JWT + Casbin 权限）；standalone 进程无 DB 连接，不绕过权限体系 |
-| 启动 | `cd server && go run ./cmd/mcp -config ./cmd/mcp/config.yaml`；上游地址/鉴权头/超时在 mcp 段配置 |
-| AI 诊断网关 | 统一 LLM 调用/密钥管理/prompt 模板——待 LLM API 密钥后接入 |
 
 ### 基座能力（gin-vue-admin 自带 ✅）
 
@@ -299,27 +297,28 @@ cd web && npm install && npm run serve
 
 ```
 new-ops/
-├── server/                        # Go 后端（module github.com/hequan2017/new-ops/server）
+├── agent/                        # Go Agent 独立二进制（注册/心跳/指标/任务执行/文件分发/Docker-K8s 代理）
+├── server/                       # Go 后端（module github.com/hequan2017/new-ops/server）
 │   ├── plugin/
-│   │   ├── asset/                 # 资产中心 + 凭据保险库 + 网段发现（M1 ✅）
-│   │   ├── term/                  # WebSSH/级联/审计/SFTP/日志tail（M2 ✅）
-│   │   ├── job/                   # 批量执行/脚本库/变量组（M2 ✅）
-│   │   ├── pipeline/              # 流水线/执行器/SSE/触发器（M3 ✅）
-│   │   ├── container/             # Docker 接入点/容器/镜像/网络卷/事件/stats（M4 ✅）
-│   │   ├── k8s/                   # 集群注册/总览/Node/资源浏览/WebShell/YAML 下发/Helm(values 表单)/命名空间授权（K1+K2+K3 ✅）
-│   │   ├── monitor/               # 性能采集/告警引擎/钉钉（M6 ✅）
-│   │   ├── workflow/              # 工单引擎 + 发版闭环（M7 ✅）
-│   │   ├── dbops/                 # MySQL 纳管/SQL 工单（M6 🔨 审核引擎待环境）
-│   │   ├── gpu/                   # 节点/规格/实例 + 防超卖引擎（M5 🔨 待显卡环境）
-│   │   ├── mcp/(骨架) + cmd/mcp   # MCP Server 独立进程 + aiops 运维工具（M7 🔨）
-│   │   └── org/                   # 骨架就绪（钉钉待企业配置）
-│   └── ...                        # GVA 底座（零修改）
-├── web/src/plugin/                # 各插件前端视图（与 server/plugin 同名对应）
+│   │   ├── asset/                # 资产中心 + 凭据保险库 + 网段发现（M1 ✅）
+│   │   ├── term/                 # WebSSH/级联/审计/SFTP/日志tail（M2 ✅）
+│   │   ├── job/                  # 批量执行（SSH/Agent 双后端）/脚本库/变量组（M2 ✅ + M9 ✅）
+│   │   ├── pipeline/             # 流水线/执行器（本机+Agent 远程）/SSE/触发器（M3 ✅ + M9 ✅）
+│   │   ├── container/            # Docker 接入点/容器/镜像/网络卷/事件/stats/Compose/模板化（M4 ✅）
+│   │   ├── k8s/                  # 集群注册/总览/Node/资源浏览/WebShell/YAML 下发/Helm(values 表单)/命名空间授权（K1+K2+K3 ✅）
+│   │   ├── monitor/              # 性能采集/告警引擎/钉钉（M6 ✅）
+│   │   ├── workflow/             # 工单引擎 + 发版闭环（M7 ✅）
+│   │   ├── dbops/                # MySQL 纳管/SQL 工单/goInception 审核（M6 ✅）
+│   │   ├── gpu/                  # 节点/规格/实例 + 防超卖引擎（M5 🔨 待显卡环境）
+│   │   ├── agent/                # Agent 通道服务端网关（注册表/任务下发/回传）（M9 ✅）
+│   │   ├── aiops/                # LLM 网关 + MCP 运维工具 + Pod AI 诊断（M7 ✅）
+│   │   └── org/                  # 骨架就绪（钉钉待企业配置）
+│   └── ...                       # GVA 底座（零修改）
+├── web/src/plugin/               # 各插件前端视图（与 server/plugin 同名对应）
 ├── docs/
-│   ├── DEV_PLAN.md                # 开发总计划 + 逐场开发日志（进度权威来源）
-│   └── plugin-dev-guide.md        # 插件开发规范
-├── scripts/deploy-test.sh         # 一键部署/增量更新 + 冒烟
-└── .github/workflows/             # CI（server go build/vet/test + web build）
+│   └── plugin-dev-guide.md       # 插件开发规范
+├── scripts/deploy-test.sh        # 一键部署/增量更新 + 冒烟
+└── .github/workflows/            # CI（server go build/vet/test + web build）
 ```
 
 ### 插件开发
@@ -355,8 +354,7 @@ server/plugin/<name>/
 | M8 | **K3 全部完成：Helm 全生命周期（values 表单+YAML 双模式）+ chart 仓库 + 三级 RBAC 命名空间层**（双 k3s 集群验证）；**C2 全部完成 + C3 应用模板化一键部署 ✅**；AI 诊断 ✅（经 aiops 网关）；GPU 资源视图待环境 | 🔨 |
 | M9 | **A1-A4 全链交付**：独立二进制（注册/心跳/指标/任务执行/文件分发/Docker-K8s HTTP 代理）+ 服务端网关 + job 双执行后端 + 流水线远程执行器（工作空间按构建隔离）+ 集群内 ServiceAccount 纳管（一键接入 YAML）；**100 Agent 并发压测通过**；本地全链 E2E 7/7；集群内 daemon 级 E2E 待测试机 | 🔨 |
 
-- 发布：`v0.1.0`（M0-M2）、`v0.2.0`（+M3/M4 主体/M6 monitor/M7 workflow）；**v0.3.0 筹备中**（M9 全链 + goInception + AI 运维 + C3 模板化 + 优化巡检已入主线）
-- 逐场进展与排期见 [DEV_PLAN 开发日志](docs/DEV_PLAN.md)；旧仓库功能并入后将逐一归档标注"功能已并入 new-ops"
+- 发布：`v0.1.0`（M0-M2）、`v0.2.0`（+M3/M4 主体/M6 monitor/M7 workflow）、`v0.3.0-rc1`（+M9 全链 + goInception + AI 运维 + C3 模板化 + 六轮优化巡检）
 
 ---
 

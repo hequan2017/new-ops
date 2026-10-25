@@ -51,7 +51,7 @@ func (s *EndpointService) ListNetworks(endpointID uint) ([]NetworkView, error) {
 	out := make([]NetworkView, 0, len(list))
 	for _, n := range list {
 		subnet := ""
-		if n.IPAM.Config != nil && len(n.IPAM.Config) > 0 {
+		if len(n.IPAM.Config) > 0 {
 			subnet = n.IPAM.Config[0].Subnet
 		}
 		out = append(out, NetworkView{

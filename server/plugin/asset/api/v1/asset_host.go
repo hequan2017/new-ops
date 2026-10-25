@@ -1,4 +1,4 @@
-// Package api 主机资产接口（Swagger 注释按 DEV_PLAN 3.6：/asset/host 前缀）
+// Package api 主机资产接口（Swagger 注释：/asset/host 前缀）
 package api
 
 import (

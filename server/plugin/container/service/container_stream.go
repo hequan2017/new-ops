@@ -53,13 +53,6 @@ func (w *wsSingleWriter) write(msgType int, data []byte) error {
 	return w.ws.WriteMessage(msgType, data)
 }
 
-func (w *wsSingleWriter) writeControl(code int, text string) error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	_ = w.ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	return w.ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, text), time.Now().Add(5*time.Second))
-}
-
 func (s *EndpointService) LogsWS(ws *websocket.Conn, endpointID uint, containerID string, tail int) {
 	if tail <= 0 {
 		tail = 200

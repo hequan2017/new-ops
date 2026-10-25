@@ -1,5 +1,5 @@
 // Package asset 白泽业务插件：资产中心（主机资产/机房机柜/产品线/凭据保险库）
-// 开发规范见 docs/DEV_PLAN.md 与 docs/plugin-dev-guide.md
+// 开发规范见 docs/plugin-dev-guide.md
 package asset
 
 import (

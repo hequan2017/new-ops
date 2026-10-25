@@ -11,13 +11,13 @@
               欢迎使用 白泽 · 统一运维开发平台
             </h1>
             <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              {{ today }} · 项目正在开发中，业务功能按里程碑逐步交付
+              {{ today }} · 资产 / 终端 / 作业 / 流水线 / 容器 / K8s / 监控 / 工单全插件已交付
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <el-button type="primary" class="!ml-0" @click="openRepo">
               <el-icon class="mr-1"><Link /></el-icon>
-              开发计划
+              项目仓库
             </el-button>
           </div>
         </div>
@@ -72,11 +72,11 @@
       </el-card>
 
       <el-alert
-        type="warning"
+        type="success"
         :closable="false"
         show-icon
-        title="🚧 项目正在开发中"
-        description="当前为 gin-vue-admin 底座环境。资产管理、终端作业、流水线、容器与 K8s、GPU 算力等业务插件正在按开发计划（docs/DEV_PLAN.md）分阶段交付。"
+        title="✅ 核心插件已全部交付"
+        description="资产管理、终端与文件、批量作业、流水线、容器、K8s（含 Helm）、监控告警、工单、数据库工单、Agent 通道等插件均已上线；GPU 算力与 goInception 审核引擎部分能力待对应环境联调。"
       />
     </div>
   </div>
@@ -101,7 +101,7 @@
   })
 
   const openRepo = () => {
-    window.open(`${repoUrl}/blob/main/docs/DEV_PLAN.md`, '_blank')
+    window.open(repoUrl, '_blank')
   }
 
   defineOptions({

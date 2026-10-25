@@ -1,5 +1,5 @@
 // Package model 白泽监控指标数据模型（M6：SSH 性能采集）
-// 指标名约定：cpu_percent / mem_percent / disk_percent / load1（DEV_PLAN 3.4）
+// 指标名约定：cpu_percent / mem_percent / disk_percent / load1
 package model
 
 import (

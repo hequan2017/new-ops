@@ -1,5 +1,5 @@
 // Package model 白泽容器管理数据模型（M4 C1：Docker 接入点）
-// 容器实时查询不落库，仅接入点（endpoint）与巡检状态持久化（DEV_PLAN 6.2）。
+// 容器实时查询不落库，仅接入点（endpoint）与巡检状态持久化。
 package model
 
 import (

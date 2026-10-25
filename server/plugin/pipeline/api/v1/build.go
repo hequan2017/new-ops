@@ -276,7 +276,6 @@ func (p *pipelineBuild) StreamBuildLogs(c *gin.Context) {
 					if !writeEvent("log", l) {
 						return
 					}
-					lastID = uint64(l.ID)
 				}
 			}
 			_ = writeEvent("status", gin.H{"status": status})

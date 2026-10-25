@@ -1,5 +1,5 @@
 // Package service SFTP 文件浏览服务（M2 场21）
-// 依赖登记：github.com/pkg/sftp（DEV_PLAN 3.5 已更新），经保险库凭据 DialSSH 后建立 SFTP 会话。
+// 依赖：github.com/pkg/sftp，经保险库凭据 DialSSH 后建立 SFTP 会话。
 package service
 
 import (

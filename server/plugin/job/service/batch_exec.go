@@ -293,7 +293,7 @@ func (w *boundedWriter) Write(p []byte) (int, error) {
 func (w *boundedWriter) Bytes() []byte { return w.buf }
 
 // sshRunTask 构造单主机 SSH 执行体：直连 + 指纹校验/TOFU + ctx 感知中断
-// （跳板级联为 term 通道能力，批量执行暂直连，级联支持登记 DEV_PLAN 待办）
+// （跳板级联为 term 通道能力，批量执行暂直连，级联支持为后续待办）
 func (s *jobService) sshRunTask(ctx context.Context, host *assetModel.AssetHost, credOverride *uint, command string) func(context.Context) (string, error) {
 	return func(ctx context.Context) (string, error) {
 		if host.IP == "" {

@@ -1,5 +1,5 @@
 // Package job 白泽业务插件：批量作业（命令/脚本/变量组）
-// 开发规范见 docs/DEV_PLAN.md 与 docs/plugin-dev-guide.md
+// 开发规范见 docs/plugin-dev-guide.md
 package job
 
 import (

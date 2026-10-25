@@ -16,7 +16,7 @@ import (
 // maxJumpDepth 跳板级联最大层数（不含目标主机，go-webssh 约定）
 const maxJumpDepth = 5
 
-// term 插件错误码段：1100-1199（DEV_PLAN 3.6）
+// term 插件错误码段：1100-1199
 const (
 	ErrCodeJumpTooDeep      = 1101
 	ErrCodeJumpLoop         = 1102

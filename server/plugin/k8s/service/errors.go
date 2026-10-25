@@ -1,6 +1,6 @@
 package service
 
-// k8s 插件错误码段：1500-1599（DEV_PLAN 3.6）
+// k8s 插件错误码段：1500-1599
 const (
 	ErrCodeClusterNameRequired = 1501
 	ErrCodeClusterDuplicate    = 1502

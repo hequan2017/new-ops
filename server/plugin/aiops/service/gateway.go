@@ -249,10 +249,3 @@ func errSnippet(raw []byte) string {
 	}
 	return strings.TrimSpace(string(raw[:i]))
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

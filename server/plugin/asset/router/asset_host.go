@@ -1,4 +1,4 @@
-// Package router 主机资产路由（/asset/host 前缀，错误码段见 DEV_PLAN 3.6）
+// Package router 主机资产路由（/asset/host 前缀，错误码段 1000-1099）
 package router
 
 import (

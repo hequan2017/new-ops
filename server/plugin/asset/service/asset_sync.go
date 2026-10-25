@@ -6,7 +6,6 @@ import (
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/asset/model"
-	"gorm.io/gorm"
 )
 
 // asset 插件错误码补充（云同步）
@@ -162,9 +161,4 @@ func osNameToID(osName string) string {
 		return ""
 	}
 	return strings.ToLower(fields[0])
-}
-
-// isRecordNotFound 判断 gorm not found
-func isRecordNotFound(err error) bool {
-	return err != nil && err.Error() == gorm.ErrRecordNotFound.Error()
 }

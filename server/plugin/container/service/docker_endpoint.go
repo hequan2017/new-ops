@@ -21,7 +21,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// container 插件错误码段：1400-1499（DEV_PLAN 3.6）
+// container 插件错误码段：1400-1499
 const (
 	ErrCodeEpNameRequired       = 1401
 	ErrCodeEpDuplicate          = 1402

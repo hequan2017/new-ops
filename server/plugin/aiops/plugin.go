@@ -1,5 +1,5 @@
 // Package aiops 白泽业务插件：AI 运维（LLM 网关/Pod 诊断）
-// 开发规范见 docs/DEV_PLAN.md 与 docs/plugin-dev-guide.md
+// 开发规范见 docs/plugin-dev-guide.md
 package aiops
 
 import (

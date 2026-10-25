@@ -1,5 +1,5 @@
 // Package container 白泽业务插件：容器管理（Docker 接入点/容器/镜像）
-// 开发规范见 docs/DEV_PLAN.md 与 docs/plugin-dev-guide.md
+// 开发规范见 docs/plugin-dev-guide.md
 package container
 
 import (

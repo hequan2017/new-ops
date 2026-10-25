@@ -22,7 +22,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// agent 错误码段：2000-2199（DEV_PLAN 3.6，agent/org/aiops 共用段）
+// agent 错误码段：2000-2199（agent/org/aiops 共用段）
 const (
 	ErrCodeAgentParamInvalid = 2001
 	ErrCodeAgentAssetMissing = 2002

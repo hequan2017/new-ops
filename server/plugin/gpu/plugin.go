@@ -1,5 +1,5 @@
 // Package gpu 白泽业务插件：GPU 算力平台（节点/规格/实例调度）
-// 开发规范见 docs/DEV_PLAN.md 与 docs/plugin-dev-guide.md
+// 开发规范见 docs/plugin-dev-guide.md
 package gpu
 
 import (

@@ -10,22 +10,6 @@ import (
 
 type k8sWrite struct{}
 
-// parseWriteParams 写操作参数解析（clusterId/namespace/name 公共）
-func parseWriteParams(c *gin.Context) (clusterID uint, namespace, name string, ok bool) {
-	cid, err := strconv.ParseUint(c.Query("clusterId"), 10, 64)
-	if err != nil || cid == 0 {
-		response.FailWithMessage("clusterId 无效", c)
-		return 0, "", "", false
-	}
-	ns := c.PostForm("namespace")
-	name = c.PostForm("name")
-	if ns == "" || name == "" {
-		response.FailWithMessage("namespace/name 必填", c)
-		return 0, "", "", false
-	}
-	return uint(cid), ns, name, true
-}
-
 // ScaleDeployment Deployment 扩缩容
 // @Tags K8sWrite
 // @Summary Deployment 扩缩容

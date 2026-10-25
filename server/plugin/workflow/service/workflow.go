@@ -1,5 +1,5 @@
 // Package service 白泽工单引擎（M7）：定义校验 + 实例流转
-// workflow 插件错误码段：1900-1999（DEV_PLAN 3.6）
+// workflow 插件错误码段：1900-1999
 package service
 
 import (

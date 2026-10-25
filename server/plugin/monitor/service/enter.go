@@ -11,7 +11,7 @@ type containerlessSvc struct {
 	Monitor MonitorService
 }
 
-// monitor 插件错误码段：1800-1899（DEV_PLAN 3.6）
+// monitor 插件错误码段：1800-1899
 const (
 	ErrCodeMetricNameInvalid = 1801
 )

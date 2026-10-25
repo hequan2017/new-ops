@@ -1,5 +1,5 @@
 // Package service 白泽 GPU 算力：节点/规格/实例与防超卖引擎（M5）
-// gpu 插件错误码段：1600-1699（DEV_PLAN 3.6）
+// gpu 插件错误码段：1600-1699
 package service
 
 import (
