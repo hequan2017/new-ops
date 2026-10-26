@@ -64,7 +64,7 @@
 <script setup>
   import { useAppStore } from '@/pinia'
   import OpsSetting from '@/view/layout/setting/index.vue'
-  import { ref } from 'vue'
+  import { ref, onUnmounted } from 'vue'
   import { emitter } from '@/utils/bus.js'
   import CommandMenu from '@/components/commandMenu/index.vue'
   import { isDev } from '@/utils/env.js'
@@ -106,6 +106,8 @@
       }
     }
     window.addEventListener('keydown', handleKeyDown)
+    // 组件重挂载时旧监听器不清理会叠加（Ctrl+K 重复触发）
+    onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
   }
 
   initPage()

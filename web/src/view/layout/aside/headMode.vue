@@ -26,7 +26,7 @@
 
 <script setup>
   import AsideComponent from '@/view/layout/aside/asideComponent/index.vue'
-  import { ref, provide, watchEffect, onMounted, nextTick } from 'vue'
+  import { ref, provide, watchEffect, onMounted, onUnmounted, nextTick } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { useRouterStore } from '@/pinia/modules/router'
   import { useAppStore } from '@/pinia'
@@ -93,6 +93,7 @@
     calculateEllipsis()
     window.addEventListener('resize', calculateEllipsis)
   })
+  onUnmounted(() => window.removeEventListener('resize', calculateEllipsis))
 
   const selectMenuItem = (index) => {
     const query = {}

@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, getCurrentInstance, onMounted } from 'vue'
+import { ref, getCurrentInstance, onMounted, onUnmounted } from 'vue'
 import { ElLoading, ElMessage } from 'element-plus'
 import { RefreshLeft, RefreshRight, Plus, Minus } from '@element-plus/icons-vue'
 import 'vue-cropper/dist/index.css'
@@ -106,6 +106,7 @@ onMounted(() => {
   getWindowResize()
   window.addEventListener('resize', getWindowResize)
 })
+onUnmounted(() => window.removeEventListener('resize', getWindowResize))
 
 const router = useRouter()
 router.isReady().then(() => {
