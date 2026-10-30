@@ -13,6 +13,7 @@ system:
     addr: 8888
     db-type: mysql                  # 生产使用 MySQL（测试环境为 sqlite）
     use-redis: true                 # 生产开启 Redis（多点登录限制/缓存）
+    slow-request-threshold: 2       # 慢请求阈值（秒）：耗时超过输出 warn 日志；0 默认 2s，负数关闭
 
 captcha:
     open-captcha: 0                 # 0 代表验证码常开（生产必须）

@@ -38,6 +38,8 @@ func Routers() *gin.Engine {
 	Router := gin.New()
 	// 使用自定义的 Recovery 中间件，记录 panic 并入库
 	Router.Use(middleware.GinRecovery(true))
+	// 慢请求标记：release 模式无 gin.Logger，超阈请求以 warn 落日志便于暴露慢接口
+	Router.Use(middleware.SlowRequest())
 	if gin.Mode() == gin.DebugMode {
 		Router.Use(gin.Logger())
 	}

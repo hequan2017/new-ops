@@ -87,6 +87,8 @@ system:
     router-prefix: ""
     #  严格角色模式 打开后权限将会存在上下级关系
     use-strict-auth: false
+    # 慢请求阈值（秒）：请求耗时超过该值输出 warn 日志；0 用默认 2 秒，负数关闭
+    slow-request-threshold: 2
 
 # captcha configuration
 captcha:

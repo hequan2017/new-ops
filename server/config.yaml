@@ -93,6 +93,8 @@ system:
     disable-auto-migrate: false
     # 是否暴露 Swagger 文档（/swagger/index.html）：对外网环境建议关闭，内网调试可开启
     enable-swagger: false
+    # 慢请求阈值（秒）：请求耗时超过该值输出 warn 日志（release 模式无路由日志，靠此暴露慢接口）；0 用默认 2 秒，负数关闭
+    slow-request-threshold: 2
 
 # captcha configuration
 captcha:
