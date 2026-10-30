@@ -243,10 +243,21 @@
         <el-table-column label="输出">
           <template #default="{ row }">
             <el-collapse v-if="row.output || row.error">
-              <el-collapse-item title="查看" name="1">
+              <el-collapse-item name="1">
+                <template #title>
+                  <span>查看</span>
+                  <el-button
+                    link
+                    type="primary"
+                    size="small"
+                    style="margin-left: 8px"
+                    @click.stop="copyResultOutput(row)"
+                  >复制</el-button>
+                </template>
                 <pre class="ops-pre">{{ row.error ? 'ERROR: ' + row.error : row.output }}</pre>
               </el-collapse-item>
             </el-collapse>
+            <span v-else style="color: var(--el-text-color-placeholder); font-size: 12px">（无输出）</span>
           </template>
         </el-table-column>
       </el-table>
@@ -484,6 +495,16 @@
 
   const reloadDetailResults = () => {
     if (detailRecord.value) loadDetailResults(detailRecord.value.ID)
+  }
+
+  // 复制单主机执行输出（带主机名/IP/状态上下文，便于贴工单）
+  const copyResultOutput = (row) => {
+    const parts = [`[${row.hostname} (${row.ip})] 结果: ${row.status}`]
+    if (row.command) parts.push(`命令: ${row.command}`)
+    if (row.error) parts.push(`ERROR: ${row.error}`)
+    if (row.output) parts.push(row.output)
+    navigator.clipboard?.writeText(parts.join('\n'))
+    ElMessage.success(`已复制 ${row.hostname} 的执行输出`)
   }
 
   const statusTagType = (s) =>
