@@ -25,5 +25,6 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		alert.DELETE("rule", v1.AlertApi.DeleteRule)
 		alert.GET("rule/list", v1.AlertApi.ListRules)
 		alert.POST("event/list", v1.AlertApi.ListEvents)
+		alert.GET("event/export", v1.AlertApi.ExportEvents)
 	}
 }

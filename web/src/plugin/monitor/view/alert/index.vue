@@ -49,6 +49,19 @@
         </el-tab-pane>
 
         <el-tab-pane label="告警事件" name="events">
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px">
+            <el-date-picker
+              v-model="eventRange"
+              type="datetimerange"
+              start-placeholder="开始时间"
+              end-placeholder="结束时间"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 360px"
+              @change="loadEvents(1)"
+            />
+            <el-button @click="resetEventRange">重 置</el-button>
+            <el-button type="primary" plain @click="exportEventsCsv">导出 CSV</el-button>
+          </div>
           <el-table :data="events" v-loading="eventsLoading" stripe>
             <el-table-column prop="ID" label="ID" width="55" />
             <el-table-column prop="summary" label="摘要" min-width="280" show-overflow-tooltip />
@@ -137,6 +150,7 @@
     createAlertRule, updateAlertRule, deleteAlertRule, getAlertRules, getAlertEvents
   } from '@/plugin/monitor/api/alert'
   import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
+  import { useUserStore } from '@/pinia/modules/user'
 
   defineOptions({ name: 'monitorAlert' })
 
@@ -215,12 +229,18 @@
   const page = ref(1)
   const pageSize = 15
   const total = ref(0)
+  const eventRange = ref([]) // [startAt, endAt] 按触发时间过滤
+
+  const rangeParams = () => ({
+    startAt: eventRange.value?.[0] || undefined,
+    endAt: eventRange.value?.[1] || undefined
+  })
 
   const loadEvents = async (p) => {
     if (p) page.value = p
     eventsLoading.value = true
     try {
-      const res = await getAlertEvents({ page: page.value, pageSize })
+      const res = await getAlertEvents({ page: page.value, pageSize, ...rangeParams() })
       if (res.code === 0) {
         events.value = res.data.list || []
         total.value = res.data.total || 0
@@ -228,6 +248,34 @@
     } finally {
       eventsLoading.value = false
     }
+  }
+
+  const resetEventRange = () => {
+    eventRange.value = []
+    loadEvents(1)
+  }
+
+  // 告警事件 CSV 导出（fetch 直取绕过 JSON 拦截器，手动带 token）
+  const exportEventsCsv = async () => {
+    const userStore = useUserStore()
+    const qs = new URLSearchParams(
+      Object.entries(rangeParams()).filter(([, v]) => v)
+    ).toString()
+    const res = await fetch(
+      import.meta.env.VITE_BASE_API + '/monitor/alert/event/export' + (qs ? `?${qs}` : ''),
+      { headers: { 'x-token': userStore.token } }
+    )
+    if (!res.ok) {
+      ElMessage.error('导出失败')
+      return
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `告警事件_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   onMounted(async () => {

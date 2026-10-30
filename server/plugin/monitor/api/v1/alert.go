@@ -2,8 +2,13 @@
 package api
 
 import (
+	"bytes"
+	"encoding/csv"
+	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -116,29 +121,129 @@ func (a *alertApi) ListRules(c *gin.Context) {
 	response.OkWithDetailed(list, "获取成功", c)
 }
 
+// eventRangeRequest 告警事件查询条件（时间范围按 fired_at 过滤）
+type eventRangeRequest struct {
+	request.PageInfo
+	StartAt string `json:"startAt"` // 起始时间（YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD，含）
+	EndAt   string `json:"endAt"`   // 结束时间（同上格式，日期格式含当日全天）
+}
+
+// parseEventRange 解析时间范围（两种格式兼容；纯日期的 end 取当日 23:59:59）；
+// 两端均为空返回 nil,nil 不加过滤
+func parseEventRange(startAt, endAt string) (start, end *time.Time, err error) {
+	const layoutFull, layoutDate = "2006-01-02 15:04:05", "2006-01-02"
+	parse := func(s string, isEnd bool) (*time.Time, error) {
+		for _, l := range []string{layoutFull, layoutDate} {
+			if t, e := time.ParseInLocation(l, s, time.Local); e == nil {
+				if isEnd && l == layoutDate {
+					t = t.Add(24*time.Hour - time.Second)
+				}
+				return &t, nil
+			}
+		}
+		return nil, fmt.Errorf("时间格式不合法: %s（应为 YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）", s)
+	}
+	if startAt != "" {
+		if start, err = parse(startAt, false); err != nil {
+			return nil, nil, err
+		}
+	}
+	if endAt != "" {
+		if end, err = parse(endAt, true); err != nil {
+			return nil, nil, err
+		}
+	}
+	return start, end, nil
+}
+
 // ListEvents 告警事件分页
 // @Tags MonitorAlert
-// @Summary 告警事件列表（倒序分页）
+// @Summary 告警事件列表（倒序分页，支持时间范围过滤）
 // @Security ApiKeyAuth
 // @Accept application/json
 // @Produce application/json
-// @Param data body request.PageInfo true "页码/页大小"
+// @Param data body eventRangeRequest true "页码/页大小/startAt/endAt(按触发时间过滤)"
 // @Success 200 {object} response.Response{data=response.PageResult} "获取成功"
 // @Router /monitor/alert/event/list [post]
 func (a *alertApi) ListEvents(c *gin.Context) {
-	var info request.PageInfo
-	if err := c.ShouldBindJSON(&info); err != nil {
+	var req eventRangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	var total int64
+	start, end, err := parseEventRange(req.StartAt, req.EndAt)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
 	db := global.GVA_DB.Model(&model.MonitorAlertEvent{})
+	if start != nil {
+		db = db.Where("fired_at >= ?", *start)
+	}
+	if end != nil {
+		db = db.Where("fired_at <= ?", *end)
+	}
+	var total int64
 	db.Count(&total)
 	var list []model.MonitorAlertEvent
-	db.Scopes(info.Paginate()).Order("id DESC").Find(&list)
+	db.Scopes(req.Paginate()).Order("id DESC").Find(&list)
 	response.OkWithDetailed(response.PageResult{
-		List: list, Total: total, Page: info.Page, PageSize: info.PageSize,
+		List: list, Total: total, Page: req.Page, PageSize: req.PageSize,
 	}, "获取成功", c)
+}
+
+// ExportEvents 告警事件 CSV 导出
+// @Tags MonitorAlert
+// @Summary 告警事件导出 CSV（同一时间过滤口径，上限 10000 行）
+// @Security ApiKeyAuth
+// @Produce text/csv
+// @Param startAt query string false "起始时间（YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）"
+// @Param endAt query string false "结束时间（同上格式，日期格式含当日全天）"
+// @Success 200 {string} string "text/csv"
+// @Router /monitor/alert/event/export [get]
+func (a *alertApi) ExportEvents(c *gin.Context) {
+	start, end, err := parseEventRange(c.Query("startAt"), c.Query("endAt"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	db := global.GVA_DB.Model(&model.MonitorAlertEvent{})
+	if start != nil {
+		db = db.Where("fired_at >= ?", *start)
+	}
+	if end != nil {
+		db = db.Where("fired_at <= ?", *end)
+	}
+	var list []model.MonitorAlertEvent
+	if err := db.Order("fired_at DESC").Limit(10000).Find(&list).Error; err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	c.Header("Content-Disposition",
+		fmt.Sprintf(`attachment; filename="alert-events-%s.csv"`, time.Now().Format("20060102-150405")))
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", alertEventsCSV(list))
+}
+
+// alertEventsCSV 事件列表转 CSV（BOM 前缀，Excel 直开中文不乱码）
+func alertEventsCSV(list []model.MonitorAlertEvent) []byte {
+	buf := &bytes.Buffer{}
+	buf.WriteString("\uFEFF")
+	w := csv.NewWriter(buf)
+	_ = w.Write([]string{"触发时间", "恢复时间", "资产ID", "摘要", "触发值", "已通知"})
+	for _, e := range list {
+		resolved := ""
+		if e.ResolvedAt != nil {
+			resolved = e.ResolvedAt.Format("2006-01-02 15:04:05")
+		}
+		_ = w.Write([]string{
+			e.FiredAt.Format("2006-01-02 15:04:05"), resolved,
+			strconv.FormatUint(uint64(e.AssetID), 10), e.Summary,
+			strconv.FormatFloat(e.Value, 'f', -1, 64),
+			map[bool]string{true: "是", false: "否"}[e.Notified],
+		})
+	}
+	w.Flush()
+	return buf.Bytes()
 }
 
 // validateRule 规则校验（类型/字段/http(s) webhook）
