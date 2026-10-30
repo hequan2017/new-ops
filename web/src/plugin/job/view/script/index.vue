@@ -27,6 +27,13 @@
           </template>
         </el-table-column>
         <el-table-column prop="version" label="版本" width="70" />
+        <el-table-column prop="useCount" label="被引用" width="80">
+          <template #default="{ row }">
+            <span :style="row.useCount > 0 ? '' : 'color: var(--el-text-color-placeholder)'">
+              {{ row.useCount }} 次
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column prop="notes" label="备注" min-width="140" show-overflow-tooltip />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">

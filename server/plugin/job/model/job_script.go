@@ -25,6 +25,7 @@ type JobScript struct {
 	Content  string `json:"content" gorm:"type:longtext;comment:当前版本内容"`
 	Version  int    `json:"version" gorm:"comment:当前版本号;default:1"`
 	Notes    string `json:"notes" gorm:"type:text;comment:备注"`
+	UseCount int    `json:"useCount" gorm:"-"` // 批次引用次数（列表接口聚合填充，不落库）
 }
 
 // JobScriptVersion 脚本历史版本（更新时归档旧内容）

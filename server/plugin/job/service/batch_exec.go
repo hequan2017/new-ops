@@ -42,12 +42,14 @@ const (
 func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, isSuperAdmin bool, operator string) (*model.JobExecRecord, error) {
 	// 命令解析：脚本优先，其次直接命令；变量组渲染 {{key}} 后作为批次快照
 	command := req.Command
+	var scriptID *uint
 	if req.ScriptID != nil && *req.ScriptID != 0 {
 		var sc model.JobScript
 		if err := global.GVA_DB.First(&sc, *req.ScriptID).Error; err != nil {
 			return nil, newJobErr(ErrCodeParamInvalid, fmt.Sprintf("脚本不存在(id=%d)", *req.ScriptID))
 		}
 		command = sc.Content
+		scriptID = req.ScriptID // 落库引用关系，供脚本库引用计数
 	}
 	if command == "" || len(req.HostIDs) == 0 {
 		return nil, newJobErr(ErrCodeParamInvalid, "命令（或脚本）与目标主机不能为空")
@@ -138,6 +140,7 @@ func (s *jobService) CreateBatchExec(req jobRequest.BatchExecReq, userID uint, i
 		TimeoutSec:      req.TimeoutSec,
 		CredentialID:    req.CredentialID,
 		VariableGroupID: req.VariableGroupID, // 原漏写：autoInject 判定恒真，显式变量组后仍二次按主机资产组渲染（变量跨组泄漏）
+		ScriptID:        scriptID,
 		ExecBackend:     backend,
 		Total:           len(hosts),
 		Status:          model.ExecStatusRunning,

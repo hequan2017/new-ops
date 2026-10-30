@@ -39,6 +39,7 @@ type JobExecRecord struct {
 	TimeoutSec      int        `json:"timeoutSec" gorm:"comment:单机超时秒"`
 	CredentialID    *uint      `json:"credentialId" gorm:"comment:统一凭据ID(空则用主机绑定凭据)"`
 	VariableGroupID *uint      `json:"variableGroupId" gorm:"comment:显式变量组ID(空则按主机资产组自动注入)"`
+	ScriptID        *uint      `json:"scriptId" gorm:"comment:引用脚本ID(可空,脚本发起的批次记录)"`
 	ExecBackend     string     `json:"execBackend" gorm:"size:16;default:ssh;comment:执行后端(ssh/agent)"`
 	Total           int        `json:"total" gorm:"comment:主机总数"`
 	Success         int        `json:"success" gorm:"comment:成功数"`

@@ -94,7 +94,7 @@ func (s *ScriptService) DeleteScript(id uint) error {
 	})
 }
 
-// GetScriptList 脚本列表（keyword 过滤，含 content 供执行页填充）
+// GetScriptList 脚本列表（keyword 过滤，含 content 供执行页填充；附带批次引用计数）
 func (s *ScriptService) GetScriptList(keyword, language string) (list []*model.JobScript, err error) {
 	db := global.GVA_DB.Model(&model.JobScript{})
 	if keyword != "" {
@@ -104,8 +104,35 @@ func (s *ScriptService) GetScriptList(keyword, language string) (list []*model.J
 	if language != "" {
 		db = db.Where("language = ?", language)
 	}
-	err = db.Order("id DESC").Find(&list).Error
-	return list, err
+	if err = db.Order("id DESC").Find(&list).Error; err != nil {
+		return list, err
+	}
+	// 引用计数：一次 GROUP BY 聚合（批次创建时记录 script_id）；聚合失败不阻塞列表，计数显示 0
+	if len(list) > 0 {
+		ids := make([]uint, 0, len(list))
+		for _, sc := range list {
+			ids = append(ids, sc.ID)
+		}
+		type cnt struct {
+			ScriptID uint
+			C        int64
+		}
+		var counts []cnt
+		if err := global.GVA_DB.Model(&model.JobExecRecord{}).
+			Select("script_id, COUNT(*) AS c").
+			Where("script_id IN ?", ids).
+			Group("script_id").
+			Scan(&counts).Error; err == nil {
+			m := make(map[uint]int64, len(counts))
+			for _, c := range counts {
+				m[c.ScriptID] = c.C
+			}
+			for _, sc := range list {
+				sc.UseCount = int(m[sc.ID])
+			}
+		}
+	}
+	return list, nil
 }
 
 // GetScriptVersions 脚本历史版本
