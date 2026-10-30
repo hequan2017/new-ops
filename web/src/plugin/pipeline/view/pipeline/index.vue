@@ -79,14 +79,19 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="定时触发">
-              <div style="display: flex; align-items: center; gap: 8px; width: 100%">
-                <el-switch v-model="form.cronEnabled" />
-                <el-input
-                  v-if="form.cronEnabled"
-                  v-model="form.cronSpec"
-                  placeholder="cron 表达式，如 0 9 * * *"
-                  style="flex: 1"
-                />
+              <div style="width: 100%">
+                <div style="display: flex; align-items: center; gap: 8px; width: 100%">
+                  <el-switch v-model="form.cronEnabled" />
+                  <el-input
+                    v-if="form.cronEnabled"
+                    v-model="form.cronSpec"
+                    placeholder="cron 表达式，如 0 9 * * *"
+                    style="flex: 1"
+                  />
+                </div>
+                <div v-if="form.cronEnabled && cronDesc" class="cron-desc">
+                  {{ cronDesc }}
+                </div>
               </div>
             </el-form-item>
           </el-col>
@@ -275,6 +280,46 @@
   const saving = ref(false)
   const formRef = ref(null)
   const emptyForm = () => ({ ID: 0, name: '', description: '', enabled: true, webhookEnabled: false, webhookToken: '', cronEnabled: false, cronSpec: '', stages: [emptyStage()] })
+
+  // cron 表达式人类可读描述：覆盖 @every 与常见 5 段模式，
+  // 复杂表达式回退空串（不显示描述，避免误导）；纯前端实现不引第三方库
+  const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六']
+  const pad2 = (n) => String(n).padStart(2, '0')
+  const describeCron = (spec) => {
+    const s = (spec || '').trim()
+    if (!s) return ''
+    const every = /^@every\s+(\d+)\s*([smh])$/.exec(s)
+    if (every) {
+      const unit = { s: '秒', m: '分钟', h: '小时' }[every[2]]
+      return `每 ${Number(every[1])} ${unit}执行一次`
+    }
+    // robfig 固定别名
+    const fixed = {
+      '@yearly': '每年执行一次', '@annually': '每年执行一次', '@monthly': '每月执行一次',
+      '@weekly': '每周执行一次', '@daily': '每天 00:00 执行', '@midnight': '每天 00:00 执行',
+      '@hourly': '每小时执行一次'
+    }[s.toLowerCase()]
+    if (fixed) return fixed
+    const f = s.split(/\s+/)
+    if (f.length !== 5 || f.some((x) => x === '')) return ''
+    const [min, hour, dom, mon, dow] = f
+    const hm = (h, m) => `${pad2(h)}:${pad2(m)}`
+    // 分钟步进：每 N 分钟
+    if (/^\*\/(\d+)$/.test(min) && hour === '*' && dom === '*' && mon === '*' && dow === '*') {
+      return `每 ${min.slice(2)} 分钟执行一次`
+    }
+    // 小时步进：第 M 分、每 N 小时
+    if (/^\*\/(\d+)$/.test(hour) && /^\d+$/.test(min) && dom === '*' && mon === '*' && dow === '*') {
+      return `每 ${hour.slice(2)} 小时执行一次（第 ${Number(min)} 分）`
+    }
+    if (!/^\d+$/.test(min) || !/^\d+$/.test(hour) || mon !== '*') return ''
+    const time = hm(Number(hour), Number(min))
+    if (dom === '*' && dow === '*') return `每天 ${time} 执行`
+    if (dom !== '*' && /^\d+$/.test(dom) && dow === '*') return `每月 ${Number(dom)} 日 ${time} 执行`
+    if (dow !== '*' && /^\d+$/.test(dow) && dom === '*') return `每周${WEEKDAY_CN[Number(dow) % 7]} ${time} 执行`
+    return ''
+  }
+  const cronDesc = computed(() => describeCron(form.cronSpec))
   const form = reactive(emptyForm())
   const rules = { name: [{ required: true, message: '请输入名称', trigger: 'blur' }] }
 
@@ -516,6 +561,12 @@
 </script>
 
 <style scoped>
+  .cron-desc {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
   .stage-dots {
     display: inline-flex;
     gap: 4px;
