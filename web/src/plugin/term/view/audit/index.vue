@@ -10,6 +10,14 @@
           @keyup.enter="getList"
           @clear="getList"
         />
+        <el-input
+          v-model="keyword"
+          placeholder="主机名 / IP"
+          clearable
+          style="width: 200px"
+          @keyup.enter="getList"
+          @clear="getList"
+        />
         <el-select v-model="status" placeholder="状态" clearable style="width: 140px" @change="getList">
           <el-option label="进行中" value="进行中" />
           <el-option label="已结束" value="已结束" />
@@ -81,6 +89,7 @@
 
   const username = ref('')
   const status = ref('')
+  const keyword = ref('') // 主机名/IP 模糊搜索
   const list = ref([])
   const page = ref(1)
   const pageSize = ref(20)
@@ -91,7 +100,8 @@
       page: page.value,
       pageSize: pageSize.value,
       username: username.value || undefined,
-      status: status.value || undefined
+      status: status.value || undefined,
+      keyword: keyword.value || undefined
     })
     if (res.code === 0) {
       list.value = res.data.list || []

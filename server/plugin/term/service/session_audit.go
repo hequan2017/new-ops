@@ -45,13 +45,17 @@ func (s *TermAuditService) AppendCommand(sessionID uint, seq int64, command stri
 }
 
 // GetSessionList 会话分页列表
-func (s *TermAuditService) GetSessionList(info request.PageInfo, username, status string) (list []*model.TermSession, total int64, err error) {
+func (s *TermAuditService) GetSessionList(info request.PageInfo, username, status, keyword string) (list []*model.TermSession, total int64, err error) {
 	db := global.GVA_DB.Model(&model.TermSession{})
 	if username != "" {
 		db = db.Where("username LIKE ?", "%"+username+"%")
 	}
 	if status != "" {
 		db = db.Where("status = ?", status)
+	}
+	if keyword != "" {
+		kw := "%" + keyword + "%"
+		db = db.Where("hostname LIKE ? OR ip LIKE ?", kw, kw)
 	}
 	if err = db.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -148,9 +152,9 @@ func stripControl(s string) string {
 
 // ---------- API 层查询入口（挂在 TermService 统一出口） ----------
 
-// GetSessionList 会话分页列表（username/status 过滤）
-func (t *termService) GetSessionList(info request.PageInfo, username, status string) ([]*model.TermSession, int64, error) {
-	return TermAudit.GetSessionList(info, username, status)
+// GetSessionList 会话分页列表（username/status/keyword 过滤，keyword 匹配主机名/IP）
+func (t *termService) GetSessionList(info request.PageInfo, username, status, keyword string) ([]*model.TermSession, int64, error) {
+	return TermAudit.GetSessionList(info, username, status, keyword)
 }
 
 // GetSessionStreams 会话流镜像（审计回放数据；afterSeq 游标分页）

@@ -19,6 +19,7 @@ type termSession struct{}
 // @Param data body request.PageInfo true "页码/页大小"
 // @Param username query string false "操作用户"
 // @Param status query string false "状态(进行中/已结束)"
+// @Param keyword query string false "主机名/IP 模糊搜索"
 // @Success 200 {object} response.Response{data=response.PageResult,msg=string} "获取成功"
 // @Router /term/session/list [post]
 func (t *termSession) GetTermSessionList(c *gin.Context) {
@@ -27,7 +28,7 @@ func (t *termSession) GetTermSessionList(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	list, total, err := service.Service.TermAuditService.GetSessionList(info, c.Query("username"), c.Query("status"))
+	list, total, err := service.Service.TermAuditService.GetSessionList(info, c.Query("username"), c.Query("status"), c.Query("keyword"))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
