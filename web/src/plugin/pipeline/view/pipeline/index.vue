@@ -189,6 +189,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="operator" label="触发人" width="90" />
+        <el-table-column label="来源IP" width="120">
+          <template #default="{ row }">{{ row.triggerIp || '—' }}</template>
+        </el-table-column>
         <el-table-column label="开始时间" width="150">
           <template #default="{ row }">{{ (row.startedAt || '—').replace('T', ' ').slice(0, 19) }}</template>
         </el-table-column>

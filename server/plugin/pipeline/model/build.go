@@ -35,6 +35,7 @@ type PipelineBuild struct {
 	Snapshot     string     `json:"snapshot" gorm:"type:longtext;comment:定义快照JSON(变量已替换)"`
 	Operator     string     `json:"operator" gorm:"comment:触发人"`
 	UserID       uint       `json:"userId" gorm:"comment:触发用户ID;index"`
+	TriggerIP    string     `json:"triggerIp" gorm:"size:64;comment:触发来源IP(手动/webhook为客户端地址)"`
 	StartedAt    *time.Time `json:"startedAt" gorm:"comment:开始时间"`
 	FinishedAt   *time.Time `json:"finishedAt" gorm:"comment:结束时间"`
 }

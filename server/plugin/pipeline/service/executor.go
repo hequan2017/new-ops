@@ -76,7 +76,8 @@ func renderVars(content string, params map[string]string) string {
 }
 
 // CreateBuild 触发构建：校验 → 快照渲染 → 落库 → 后台执行，立即返回构建记录
-func (s *PipelineBuildService) CreateBuild(pipelineID uint, params map[string]string, operator string, userID uint) (*model.PipelineBuild, error) {
+// triggerIP 为触发来源客户端地址（cron 为空），落库供审计追溯
+func (s *PipelineBuildService) CreateBuild(pipelineID uint, params map[string]string, operator string, userID uint, triggerIP string) (*model.PipelineBuild, error) {
 	pl, err := pipelineSvcForBuild.GetPipelineDetail(pipelineID)
 	if err != nil {
 		return nil, err
@@ -132,6 +133,7 @@ func (s *PipelineBuildService) CreateBuild(pipelineID uint, params map[string]st
 		Snapshot:     string(snapJSON),
 		Operator:     operator,
 		UserID:       userID,
+		TriggerIP:    triggerIP,
 	}
 	// 取号为先读 MAX 后写，并发触发会撞号：模型有 (pipeline_id, build_no) 唯一索引兜底，
 	// 撞号时 Create 报错，重取一次（webhook/手动/cron 并发窗口内概率极低，重试一次足够）
@@ -674,7 +676,7 @@ func (s *PipelineBuildService) GetBuildStatus(buildID uint) (string, error) {
 }
 
 // RestartBuild 复用历史参数重跑：以原构建的参数对当前定义重新触发（新构建新快照）
-func (s *PipelineBuildService) RestartBuild(buildID uint, operator string, userID uint) (*model.PipelineBuild, error) {
+func (s *PipelineBuildService) RestartBuild(buildID uint, operator string, userID uint, triggerIP string) (*model.PipelineBuild, error) {
 	var old model.PipelineBuild
 	if err := global.GVA_DB.First(&old, buildID).Error; err != nil {
 		return nil, newPlErr(ErrCodePlNotFound, "构建不存在")
@@ -685,7 +687,7 @@ func (s *PipelineBuildService) RestartBuild(buildID uint, operator string, userI
 			params = map[string]string{}
 		}
 	}
-	build, err := s.CreateBuild(old.PipelineID, params, operator, userID)
+	build, err := s.CreateBuild(old.PipelineID, params, operator, userID, triggerIP)
 	if err != nil {
 		return nil, err
 	}
@@ -694,7 +696,7 @@ func (s *PipelineBuildService) RestartBuild(buildID uint, operator string, userI
 }
 
 // WebhookTrigger webhook 触发：令牌即凭据（public 端点无登录态），未开启/令牌不符一律 404 语义
-func (s *PipelineBuildService) WebhookTrigger(token string, params map[string]string) (*model.PipelineBuild, error) {
+func (s *PipelineBuildService) WebhookTrigger(token string, params map[string]string, ip string) (*model.PipelineBuild, error) {
 	if token == "" {
 		return nil, newPlErr(ErrCodePlNotFound, "无效的 webhook 令牌")
 	}
@@ -703,5 +705,5 @@ func (s *PipelineBuildService) WebhookTrigger(token string, params map[string]st
 		token, true, true).First(&pl).Error; err != nil {
 		return nil, newPlErr(ErrCodePlNotFound, "无效的 webhook 令牌")
 	}
-	return s.CreateBuild(pl.ID, params, "webhook", 0)
+	return s.CreateBuild(pl.ID, params, "webhook", 0, ip)
 }

@@ -38,7 +38,7 @@ func (p *pipelineBuild) StartBuild(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	build, err := buildSvc.CreateBuild(req.PipelineID, req.Params, utils.GetUserName(c), utils.GetUserID(c))
+	build, err := buildSvc.CreateBuild(req.PipelineID, req.Params, utils.GetUserName(c), utils.GetUserID(c), c.ClientIP())
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -164,7 +164,7 @@ func (p *pipelineBuild) RestartBuild(c *gin.Context) {
 		response.FailWithMessage("id 无效", c)
 		return
 	}
-	build, err := buildSvc.RestartBuild(uint(id), utils.GetUserName(c), utils.GetUserID(c))
+	build, err := buildSvc.RestartBuild(uint(id), utils.GetUserName(c), utils.GetUserID(c), c.ClientIP())
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -186,7 +186,7 @@ func (p *pipelineBuild) WebhookTrigger(c *gin.Context) {
 		Params map[string]string `json:"params"`
 	}
 	_ = c.ShouldBindJSON(&req)
-	build, err := buildSvc.WebhookTrigger(c.Param("token"), req.Params)
+	build, err := buildSvc.WebhookTrigger(c.Param("token"), req.Params, c.ClientIP())
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

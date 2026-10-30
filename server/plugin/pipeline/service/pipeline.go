@@ -130,7 +130,7 @@ func (s *PipelineService) SyncPipelineCron(pl *model.Pipeline) {
 	}
 	buildSvcCron := new(PipelineBuildService)
 	_, err := global.GVA_Timer.AddTaskByFunc(pipelineCronName, pl.CronSpec, func() {
-		if _, err := buildSvcCron.CreateBuild(pl.ID, nil, "cron", 0); err != nil {
+		if _, err := buildSvcCron.CreateBuild(pl.ID, nil, "cron", 0, ""); err != nil {
 			global.GVA_LOG.Error(fmt.Sprintf("cron 触发流水线 %s 失败: %v", pl.Name, err))
 		}
 	}, taskName)

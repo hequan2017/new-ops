@@ -297,7 +297,7 @@ func (s *WorkflowService) fireReleaseHook(ins *model.WfInstance, operator string
 		return
 	}
 	buildSvc := new(pipelineBuild.PipelineBuildService)
-	build, err := buildSvc.CreateBuild(p.PipelineID, p.Params, "工单#"+fmt.Sprintf("%d", ins.ID), ins.UserID)
+	build, err := buildSvc.CreateBuild(p.PipelineID, p.Params, "工单#"+fmt.Sprintf("%d", ins.ID), ins.UserID, "")
 	if err != nil {
 		s.appendHookLog(ins.ID, "发版钩子触发失败: "+err.Error())
 		return
