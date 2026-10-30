@@ -13,6 +13,8 @@ import (
 	"io"
 	"os"
 	"sync"
+
+	"github.com/hequan2017/new-ops/server/utils"
 )
 
 // MasterKeyEnv 主密钥环境变量名
@@ -91,9 +93,5 @@ func Decrypt(encoded string) (string, error) {
 
 // Last4 返回明文末4位（不足4位返回全量占位）
 func Last4(plaintext string) string {
-	r := []rune(plaintext)
-	if len(r) <= 4 {
-		return string(r)
-	}
-	return string(r[len(r)-4:])
+	return utils.MaskTail(plaintext, 4)
 }
