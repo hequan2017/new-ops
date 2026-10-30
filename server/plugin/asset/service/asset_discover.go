@@ -4,10 +4,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +29,25 @@ const maxDiscoverHosts = 4096
 type DiscoveredHost struct {
 	IP     string `json:"ip"`
 	Banner string `json:"banner"` // SSH 服务横幅（如 SSH-2.0-OpenSSH_8.9p1 Ubuntu-...）
+}
+
+// DiscoverResult 网段发现结果：hosts 按 IPv4 数值升序（探测为并发完成序，返回前归一），
+// total 为 CIDR 展开的探测地址总数，durationMs 为整轮探测耗时
+type DiscoverResult struct {
+	Hosts      []DiscoveredHost `json:"hosts"`
+	Total      int              `json:"total"`
+	DurationMs int64            `json:"durationMs"`
+}
+
+// sortDiscoveredByIP 按 IPv4 数值升序（字符串序会把 10.0.0.10 排在 10.0.0.2 之前）
+func sortDiscoveredByIP(list []DiscoveredHost) {
+	sort.Slice(list, func(i, j int) bool {
+		a4, b4 := net.ParseIP(list[i].IP).To4(), net.ParseIP(list[j].IP).To4()
+		if a4 == nil || b4 == nil {
+			return list[i].IP < list[j].IP
+		}
+		return bytes.Compare(a4, b4) < 0
+	})
 }
 
 // ExpandCIDR 展开 CIDR 为全部 IPv4 地址（纯逻辑，可单测；超过 max 上限报错）
@@ -90,8 +111,9 @@ func probeSSH(ctx context.Context, ip string, port int, timeout time.Duration) (
 	return DiscoveredHost{IP: ip, Banner: banner}, true
 }
 
-// DiscoverHosts 并发探测网段内 SSH 服务（concurrency<=0 取 50，上限 200）
-func (s *AssetHostService) DiscoverHosts(ctx context.Context, cidr string, port, concurrency, timeoutMs int) ([]DiscoveredHost, error) {
+// DiscoverHosts 并发探测网段内 SSH 服务（concurrency<=0 取 50，上限 200）。
+// 返回 hosts 按 IP 升序，附探测地址总数与整轮耗时
+func (s *AssetHostService) DiscoverHosts(ctx context.Context, cidr string, port, concurrency, timeoutMs int) (DiscoverResult, error) {
 	if port <= 0 || port > 65535 {
 		port = 22
 	}
@@ -109,8 +131,9 @@ func (s *AssetHostService) DiscoverHosts(ctx context.Context, cidr string, port,
 	}
 	addrs, err := ExpandCIDR(cidr, maxDiscoverHosts)
 	if err != nil {
-		return nil, err
+		return DiscoverResult{}, err
 	}
+	start := time.Now()
 	timeout := time.Duration(timeoutMs) * time.Millisecond
 	sem := make(chan struct{}, concurrency)
 	var mu sync.Mutex
@@ -134,7 +157,8 @@ func (s *AssetHostService) DiscoverHosts(ctx context.Context, cidr string, port,
 		}(ip)
 	}
 	wg.Wait()
-	return out, nil
+	sortDiscoveredByIP(out)
+	return DiscoverResult{Hosts: out, Total: len(addrs), DurationMs: time.Since(start).Milliseconds()}, nil
 }
 
 // ImportDiscoveredHosts 将发现的主机导入为资产（已存在跳过；主机名先取 IP，后续可人工改）

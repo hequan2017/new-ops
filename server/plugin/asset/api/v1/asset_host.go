@@ -337,7 +337,7 @@ func (a *assetHost) SyncAliyunECS(c *gin.Context) {
 // @Accept application/json
 // @Produce application/json
 // @Param data body object true "cidr(如 192.168.1.0/24)/port(默认22)/concurrency(默认50)/timeoutMs(默认1500)"
-// @Success 200 {object} response.Response{data=[]service.DiscoveredHost} "探测完成"
+// @Success 200 {object} response.Response{data=service.DiscoverResult} "探测完成（hosts 按 IP 升序，附 total 扫描地址数与 durationMs 耗时）"
 // @Router /asset/host/discover [post]
 func (a *assetHost) DiscoverHosts(c *gin.Context) {
 	var req struct {
@@ -353,12 +353,12 @@ func (a *assetHost) DiscoverHosts(c *gin.Context) {
 	// 探测整体限时，防超大段长阻塞
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
 	defer cancel()
-	list, err := assetHostService.DiscoverHosts(ctx, req.CIDR, req.Port, req.Concurrency, req.TimeoutMs)
+	result, err := assetHostService.DiscoverHosts(ctx, req.CIDR, req.Port, req.Concurrency, req.TimeoutMs)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	response.OkWithDetailed(list, "探测完成", c)
+	response.OkWithDetailed(result, "探测完成", c)
 }
 
 // ImportDiscoveredHosts 导入发现的资产

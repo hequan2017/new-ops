@@ -346,6 +346,14 @@
         </el-form-item>
       </el-form>
 
+      <div
+        v-if="discoverMeta"
+        style="margin-bottom: 8px; color: var(--el-text-color-secondary); font-size: 12px"
+      >
+        共扫描 {{ discoverMeta.total }} 个地址 · 耗时 {{ (discoverMeta.durationMs / 1000).toFixed(1) }}s ·
+        发现 {{ discoverResults.length }} 台
+      </div>
+
       <el-table
         ref="discoverTableRef"
         :data="discoverResults"
@@ -791,11 +799,13 @@
   const importing = ref(false)
   const discoverForm = reactive({ cidr: '', port: 22, concurrency: 50, timeoutMs: 1500 })
   const discoverResults = ref([])
+  const discoverMeta = ref(null) // { total, durationMs } 扫描地址总数与整轮耗时
   const discoverSelection = ref([])
 
   const openDiscover = () => {
     discoverResults.value = []
     discoverSelection.value = []
+    discoverMeta.value = null
     discoverVisible.value = true
   }
 
@@ -808,8 +818,11 @@
     try {
       const res = await discoverHosts(discoverForm)
       if (res.code === 0) {
-        discoverResults.value = res.data || []
-        ElMessage.success(`探测完成：发现 ${discoverResults.value.length} 台 SSH 主机`)
+        discoverResults.value = res.data.hosts || []
+        discoverMeta.value = { total: res.data.total || 0, durationMs: res.data.durationMs || 0 }
+        ElMessage.success(
+          `探测完成：扫描 ${discoverMeta.value.total} 个地址发现 ${discoverResults.value.length} 台 SSH 主机，耗时 ${(discoverMeta.value.durationMs / 1000).toFixed(1)}s`
+        )
       }
     } finally {
       discovering.value = false

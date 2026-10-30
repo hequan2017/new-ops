@@ -48,3 +48,23 @@ func TestIsSSHBanner(t *testing.T) {
 		}
 	}
 }
+
+func TestSortDiscoveredByIP(t *testing.T) {
+	in := []DiscoveredHost{{IP: "10.0.0.10"}, {IP: "10.0.0.2"}, {IP: "192.168.1.5"}, {IP: "9.9.9.9"}}
+	sortDiscoveredByIP(in)
+	want := []string{"9.9.9.9", "10.0.0.2", "10.0.0.10", "192.168.1.5"}
+	for i, w := range want {
+		if in[i].IP != w {
+			t.Fatalf("IPv4 数值序 want[%d]=%s got %s", i, w, in[i].IP)
+		}
+	}
+
+	// 空表与非 IPv4 输入不 panic（回退字符串序）
+	empty := []DiscoveredHost{}
+	sortDiscoveredByIP(empty)
+	bad := []DiscoveredHost{{IP: "b"}, {IP: "a"}}
+	sortDiscoveredByIP(bad)
+	if bad[0].IP != "a" {
+		t.Fatalf("非法 IP 应回退字符串序, got %s", bad[0].IP)
+	}
+}
