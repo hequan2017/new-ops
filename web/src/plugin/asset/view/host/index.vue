@@ -52,6 +52,21 @@
         >批量删除</el-button>
       </div>
 
+      <el-alert
+        v-if="importFailed.length"
+        type="warning"
+        :closable="true"
+        class="mb-2"
+        @close="importFailed = []"
+      >
+        <template #title>
+          本次导入有 {{ importFailed.length }} 行失败（其余行已正常入库）
+          <el-button link type="primary" size="small" @click="downloadImportFailedCsv">
+            下载失败明细 CSV
+          </el-button>
+        </template>
+      </el-alert>
+
       <el-table
         :data="tableData"
         style="width: 100%"
@@ -950,13 +965,41 @@
   }
 
   // Excel 导入
+  const importFailed = ref([]) // 最近一次导入的失败明细（"第N行: 原因"）
+
   const onImport = async (opt) => {
     const res = await importAssetHost(opt.file)
     if (res.code === 0) {
       const d = res.data
-      ElMessage.success(`导入完成：新建 ${d.created}，更新 ${d.updated}，失败 ${(d.failed || []).length}`)
+      importFailed.value = d.failed || []
+      if (importFailed.value.length) {
+        ElMessage.warning(`导入完成：新建 ${d.created}，更新 ${d.updated}，失败 ${importFailed.value.length}（可在顶部下载失败明细）`)
+      } else {
+        ElMessage.success(`导入完成：新建 ${d.created}，更新 ${d.updated}，无失败行`)
+      }
       getTableData()
     }
+  }
+
+  // 失败明细转 CSV 下载（带 BOM，Excel 直开不乱码；CRLF 行尾）
+  const downloadImportFailedCsv = () => {
+    const rows = [['Excel行号', '失败原因']]
+    for (const item of importFailed.value) {
+      const m = /^第(\d+)行[:：]\s*(.*)$/.exec(item)
+      rows.push(m ? [m[1], m[2]] : ['', item])
+    }
+    const csv =
+      '\uFEFF' +
+      rows
+        .map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(','))
+        .join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `主机导入失败明细_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   // Excel 导出（fetch 直取，绕过 JSON 拦截器，手动带 token）
