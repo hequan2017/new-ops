@@ -91,6 +91,7 @@ func (b *batchExec) GetBatchList(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Produce application/json
 // @Param id query int true "批次ID"
+// @Param resultStatus query string false "结果状态过滤：成功/失败/超时/取消/跳过（留空返回全部）"
 // @Success 200 {object} response.Response{data=model.JobExecRecord} "获取成功（results 字段附带每主机结果）"
 // @Router /job/exec/detail [get]
 func (b *batchExec) GetBatchDetail(c *gin.Context) {
@@ -99,7 +100,7 @@ func (b *batchExec) GetBatchDetail(c *gin.Context) {
 		response.FailWithMessage("id 无效", c)
 		return
 	}
-	record, results, err := service.JobService.GetRecordDetail(id, utils.GetUserID(c), utils.GetUserAuthorityId(c) == 888)
+	record, results, err := service.JobService.GetRecordDetail(id, utils.GetUserID(c), utils.GetUserAuthorityId(c) == 888, c.Query("resultStatus"))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

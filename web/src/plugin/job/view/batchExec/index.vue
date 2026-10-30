@@ -216,6 +216,19 @@
         <el-descriptions-item label="成功">{{ detailRecord?.success }}</el-descriptions-item>
         <el-descriptions-item label="失败">{{ detailRecord?.failed }}</el-descriptions-item>
       </el-descriptions>
+      <div style="margin-bottom: 8px">
+        <span style="font-size: 13px; color: var(--el-text-color-secondary); margin-right: 8px">结果过滤</span>
+        <el-select
+          v-model="detailStatusFilter"
+          size="small"
+          style="width: 120px"
+          placeholder="全部"
+          @change="reloadDetailResults"
+        >
+          <el-option label="全部" value="" />
+          <el-option v-for="s in ['成功', '失败', '超时', '取消', '跳过']" :key="s" :label="s" :value="s" />
+        </el-select>
+      </div>
       <el-table :data="detailResults" stripe>
         <el-table-column prop="hostname" label="主机" width="140" show-overflow-tooltip />
         <el-table-column prop="ip" label="IP" width="130" />
@@ -450,14 +463,27 @@
   const detailVisible = ref(false)
   const detailRecord = ref(null)
   const detailResults = ref([])
+  const detailStatusFilter = ref('') // 每主机结果状态过滤（空=全部，服务端过滤口径）
 
-  const openDetail = async (row) => {
-    const res = await getBatchDetail({ id: row.ID })
+  const loadDetailResults = async (id) => {
+    const res = await getBatchDetail({
+      id,
+      resultStatus: detailStatusFilter.value || undefined
+    })
     if (res.code === 0) {
       detailRecord.value = res.data.record
       detailResults.value = res.data.results || []
-      detailVisible.value = true
     }
+  }
+
+  const openDetail = async (row) => {
+    detailStatusFilter.value = ''
+    await loadDetailResults(row.ID)
+    detailVisible.value = true
+  }
+
+  const reloadDetailResults = () => {
+    if (detailRecord.value) loadDetailResults(detailRecord.value.ID)
   }
 
   const statusTagType = (s) =>

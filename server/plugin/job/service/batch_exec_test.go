@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/hequan2017/new-ops/server/plugin/job/model"
 )
 
 func TestTruncateRunes(t *testing.T) {
@@ -32,5 +34,18 @@ func TestBoundedWriter(t *testing.T) {
 	}
 	if len(w.Bytes()) != 1024 {
 		t.Fatalf("应保留头部: %d", len(w.Bytes()))
+	}
+}
+
+func TestValidResultStatus(t *testing.T) {
+	for _, s := range []string{model.ResultSuccess, model.ResultFailed, model.ResultTimeout, model.ResultCanceled, model.ResultSkipped} {
+		if !validResultStatus(s) {
+			t.Fatalf("模型常量 %q 应为合法过滤值", s)
+		}
+	}
+	for _, s := range []string{"", "success", "成功 ", "任意"} {
+		if validResultStatus(s) {
+			t.Fatalf("%q 不应通过校验", s)
+		}
 	}
 }

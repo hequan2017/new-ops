@@ -439,8 +439,21 @@ func (s *jobService) GetRecordList(info request.PageInfo, userID uint, isSuperAd
 	return list, total, err
 }
 
+// validResultStatuses 每主机结果状态过滤的合法取值（与 model 状态常量同源）
+var validResultStatuses = map[string]struct{}{
+	model.ResultSuccess: {}, model.ResultFailed: {}, model.ResultTimeout: {},
+	model.ResultCanceled: {}, model.ResultSkipped: {},
+}
+
+// validResultStatus 结果状态过滤值是否合法
+func validResultStatus(s string) bool {
+	_, ok := validResultStatuses[s]
+	return ok
+}
+
 // GetRecordDetail 批次详情 + 每主机结果（发起人本人或 888 可见）
-func (s *jobService) GetRecordDetail(recordID uint, userID uint, isSuperAdmin bool) (*model.JobExecRecord, []*model.JobExecResult, error) {
+// resultStatus 非空时按状态过滤结果行（成功/失败/超时/取消/跳过），非法值报错
+func (s *jobService) GetRecordDetail(recordID uint, userID uint, isSuperAdmin bool, resultStatus string) (*model.JobExecRecord, []*model.JobExecResult, error) {
 	var record model.JobExecRecord
 	if err := global.GVA_DB.First(&record, recordID).Error; err != nil {
 		return nil, nil, err
@@ -448,8 +461,15 @@ func (s *jobService) GetRecordDetail(recordID uint, userID uint, isSuperAdmin bo
 	if !isSuperAdmin && record.UserID != userID {
 		return nil, nil, newJobErr(ErrCodeHostNotAuthorized, "只能查看自己发起的批次")
 	}
+	db := global.GVA_DB.Where("record_id = ?", recordID)
+	if resultStatus != "" {
+		if !validResultStatus(resultStatus) {
+			return nil, nil, newJobErr(ErrCodeHostNotAuthorized, "非法的结果状态，可选：成功/失败/超时/取消/跳过")
+		}
+		db = db.Where("status = ?", resultStatus)
+	}
 	var results []*model.JobExecResult
-	if err := global.GVA_DB.Where("record_id = ?", recordID).Order("id ASC").Limit(1000).Find(&results).Error; err != nil {
+	if err := db.Order("id ASC").Limit(1000).Find(&results).Error; err != nil {
 		return nil, nil, err
 	}
 	return &record, results, nil
