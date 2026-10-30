@@ -156,12 +156,30 @@ func (s *PipelineBuildService) CreateBuild(pipelineID uint, params map[string]st
 
 // run 执行主体（后台 goroutine）：状态机推进 + 审批 gate + 串行阶段
 func (s *PipelineBuildService) run(buildID uint) {
+	// 阶段进度跟踪：状态数组与快照阶段序对齐，供列表页渲染进度点（崩溃收档兜底见 defer）
+	var stageStates []string
+	setStageStates := func(states []string) {
+		stageStates = states
+		if b, err := json.Marshal(states); err == nil {
+			global.GVA_DB.Model(&model.PipelineBuild{}).Where("id = ?", buildID).Update("stage_progress", string(b))
+		}
+	}
 	// 后台执行 goroutine 无 cron 级 panic 恢复兜底：不 recover 会打死整个 server 进程，
 	// 且构建永久停留"执行中"（审批/取消入口全部失效）——收档为失败并留痕
 	defer func() {
 		if r := recover(); r != nil {
 			global.GVA_LOG.Error(fmt.Sprintf("构建 %d 执行 panic: %v\n%s", buildID, r, debug.Stack()))
 			s.appendLog(buildID, "", "", model.LogSystem, fmt.Sprintf("构建执行异常崩溃: %v", r))
+			if stageStates != nil {
+				collapse := make([]string, len(stageStates))
+				copy(collapse, stageStates)
+				for i, st := range collapse {
+					if st == "running" {
+						collapse[i] = "failed"
+					}
+				}
+				setStageStates(collapse)
+			}
 			s.finish(buildID, model.BuildFailed)
 		}
 	}()
@@ -192,6 +210,11 @@ func (s *PipelineBuildService) run(buildID uint) {
 
 	s.appendLog(buildID, "", "", model.LogSystem,
 		fmt.Sprintf("构建 #%d 启动（触发人 %s），共 %d 个阶段", build.BuildNo, build.Operator, len(snap.Stages)))
+	stageStates = make([]string, len(snap.Stages))
+	for i := range stageStates {
+		stageStates[i] = "pending"
+	}
+	setStageStates(stageStates)
 	failed := false
 	for si, st := range snap.Stages {
 		if failed {
@@ -212,13 +235,19 @@ func (s *PipelineBuildService) run(buildID uint) {
 		}
 		s.appendLog(buildID, st.Name, "", model.LogSystem,
 			fmt.Sprintf("开始阶段 %d/%d「%s」", si+1, len(snap.Stages), st.Name))
+		stageStates[si] = "running"
+		setStageStates(stageStates)
 		if err := s.runStageSteps(ctx, buildID, &st); err != nil {
 			if ctx.Err() != nil {
 				return // 用户取消：CancelBuild 已收档为已取消
 			}
+			stageStates[si] = "failed"
+			setStageStates(stageStates)
 			failed = true
 			break
 		}
+		stageStates[si] = "done"
+		setStageStates(stageStates)
 	}
 	if failed {
 		s.finish(buildID, model.BuildFailed)

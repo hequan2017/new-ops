@@ -27,17 +27,18 @@ const (
 // PipelineBuild 构建记录（触发时对定义做快照，之后改定义不影响本次构建）
 type PipelineBuild struct {
 	global.GVA_MODEL
-	PipelineID   uint       `json:"pipelineId" gorm:"comment:流水线ID;uniqueIndex:idx_pipeline_build_no,priority:1"`
-	PipelineName string     `json:"pipelineName" gorm:"comment:流水线名快照"`
-	BuildNo      int        `json:"buildNo" gorm:"comment:构建序号(按流水线递增);uniqueIndex:idx_pipeline_build_no,priority:2"`
-	Status       string     `json:"status" gorm:"comment:状态;index"`
-	Params       string     `json:"params" gorm:"type:text;comment:触发参数JSON"`
-	Snapshot     string     `json:"snapshot" gorm:"type:longtext;comment:定义快照JSON(变量已替换)"`
-	Operator     string     `json:"operator" gorm:"comment:触发人"`
-	UserID       uint       `json:"userId" gorm:"comment:触发用户ID;index"`
-	TriggerIP    string     `json:"triggerIp" gorm:"size:64;comment:触发来源IP(手动/webhook为客户端地址)"`
-	StartedAt    *time.Time `json:"startedAt" gorm:"comment:开始时间"`
-	FinishedAt   *time.Time `json:"finishedAt" gorm:"comment:结束时间"`
+	PipelineID    uint       `json:"pipelineId" gorm:"comment:流水线ID;uniqueIndex:idx_pipeline_build_no,priority:1"`
+	PipelineName  string     `json:"pipelineName" gorm:"comment:流水线名快照"`
+	BuildNo       int        `json:"buildNo" gorm:"comment:构建序号(按流水线递增);uniqueIndex:idx_pipeline_build_no,priority:2"`
+	Status        string     `json:"status" gorm:"comment:状态;index"`
+	Params        string     `json:"params" gorm:"type:text;comment:触发参数JSON"`
+	Snapshot      string     `json:"snapshot" gorm:"type:longtext;comment:定义快照JSON(变量已替换)"`
+	Operator      string     `json:"operator" gorm:"comment:触发人"`
+	UserID        uint       `json:"userId" gorm:"comment:触发用户ID;index"`
+	TriggerIP     string     `json:"triggerIp" gorm:"size:64;comment:触发来源IP(手动/webhook为客户端地址)"`
+	StageProgress string     `json:"stageProgress" gorm:"size:255;comment:阶段进度JSON(状态数组与快照阶段序对齐:pending/running/done/failed)"`
+	StartedAt     *time.Time `json:"startedAt" gorm:"comment:开始时间"`
+	FinishedAt    *time.Time `json:"finishedAt" gorm:"comment:结束时间"`
 }
 
 // BuildLog 构建日志（按阶段/步骤归类）

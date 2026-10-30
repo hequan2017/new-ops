@@ -189,6 +189,25 @@
           </template>
         </el-table-column>
         <el-table-column prop="operator" label="触发人" width="90" />
+        <el-table-column label="阶段" width="120">
+          <template #default="{ row }">
+            <el-tooltip
+              v-if="stageStates(row).length"
+              :content="stageTooltip(row)"
+              placement="top"
+            >
+              <span class="stage-dots">
+                <i
+                  v-for="(st, i) in stageStates(row)"
+                  :key="i"
+                  class="stage-dot"
+                  :class="'stage-dot--' + st"
+                />
+              </span>
+            </el-tooltip>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="来源IP" width="120">
           <template #default="{ row }">{{ row.triggerIp || '—' }}</template>
         </el-table-column>
@@ -456,6 +475,21 @@
   const buildTagType = (s) =>
     ({ 成功: 'success', 失败: 'danger', 已取消: 'info', 执行中: 'primary', 等待审批: 'warning' }[s] || 'info')
 
+  // 阶段进度状态数组（后端 stageProgress JSON，与快照阶段序对齐）
+  const stageStates = (row) => {
+    try {
+      const arr = JSON.parse(row.stageProgress || '[]')
+      return Array.isArray(arr) ? arr : []
+    } catch {
+      return []
+    }
+  }
+  const stageStateLabel = { pending: '待执行', running: '执行中', done: '完成', failed: '失败' }
+  const stageTooltip = (row) => {
+    const arr = stageStates(row)
+    return `共 ${arr.length} 个阶段：` + arr.map((s, i) => `${i + 1}.${stageStateLabel[s] || s}`).join(' ')
+  }
+
   const doRestart = async (row) => {
     const res = await restartBuild({ id: row.ID })
     if (res.code === 0) {
@@ -482,6 +516,31 @@
 </script>
 
 <style scoped>
+  .stage-dots {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    cursor: default;
+  }
+  .stage-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .stage-dot--pending {
+    background: var(--el-border-color);
+  }
+  .stage-dot--running {
+    background: var(--el-color-primary);
+  }
+  .stage-dot--done {
+    background: var(--el-color-success);
+  }
+  .stage-dot--failed {
+    background: var(--el-color-danger);
+  }
+
   .build-log {
     height: calc(100vh - 160px);
     overflow: auto;
