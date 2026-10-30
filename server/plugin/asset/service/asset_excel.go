@@ -24,7 +24,7 @@ func (s *AssetHostService) ExportAssetHostsForUser(scope *HostUserScope) (*excel
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
 		f.SetCellValue(sheet, cell, h)
 	}
-	list, _, err := s.GetAssetHostList(request.PageInfo{Page: 1, PageSize: 100000}, "", nil, nil, scope)
+	list, _, err := s.GetAssetHostList(request.PageInfo{Page: 1, PageSize: 100000}, "", nil, nil, scope, "", "")
 	if err != nil {
 		return nil, err
 	}

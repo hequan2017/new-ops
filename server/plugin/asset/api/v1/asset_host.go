@@ -151,7 +151,7 @@ func (a *assetHost) FindAssetHost(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Accept application/json
 // @Produce application/json
-// @Param data body assetReq.AssetHostSearch true "页码/页大小/keyword/status/roomId/productLineId"
+// @Param data body assetReq.AssetHostSearch true "页码/页大小/keyword/status/roomId/productLineId/sortField(id|updatedAt|lastCollectAt 白名单)/sortOrder(asc|desc)"
 // @Success 200 {object} response.Response{data=response.PageResult,msg=string} "获取成功"
 // @Router /asset/host/list [post]
 func (a *assetHost) GetAssetHostList(c *gin.Context) {
@@ -164,7 +164,7 @@ func (a *assetHost) GetAssetHostList(c *gin.Context) {
 		IsSuperAdmin: utils.GetUserAuthorityId(c) == 888,
 		UserID:       utils.GetUserID(c),
 	}
-	list, total, err := assetHostService.GetAssetHostList(req.PageInfo, req.Status, req.RoomID, req.ProductLineID, scope)
+	list, total, err := assetHostService.GetAssetHostList(req.PageInfo, req.Status, req.RoomID, req.ProductLineID, scope, req.SortField, req.SortOrder)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

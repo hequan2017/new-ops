@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/model/common/request"
@@ -171,9 +172,31 @@ type HostUserScope struct {
 	UserID       uint
 }
 
+// hostSortColumns 主机列表排序白名单：API 字段名 → 数据库列（防注入，白名单外回退默认 id DESC）
+var hostSortColumns = map[string]string{
+	"id":            "asset_hosts.id",
+	"updatedAt":     "asset_hosts.updated_at",
+	"lastCollectAt": "asset_hosts.last_collect_at",
+}
+
+// resolveHostSort 解析排序参数：sortField 未命中白名单整体回退默认 asset_hosts.id DESC；
+// 命中白名单时 sortOrder 仅接受 asc/desc（大小写不敏感），其余一律按 desc
+func resolveHostSort(sortField, sortOrder string) (column, order string) {
+	col, ok := hostSortColumns[sortField]
+	if !ok {
+		return "asset_hosts.id", "DESC"
+	}
+	order = "DESC"
+	if strings.ToLower(sortOrder) == "asc" {
+		order = "ASC"
+	}
+	return col, order
+}
+
 // GetAssetHostList 分页查询主机资产
-// 过滤：keyword（主机名/IP/SN/负责人模糊）、status、roomId、productLineId、数据权限 scope
-func (s *AssetHostService) GetAssetHostList(info request.PageInfo, status string, roomID, productLineID *uint, scope *HostUserScope) (list []*model.AssetHost, total int64, err error) {
+// 过滤：keyword（主机名/IP/SN/负责人模糊）、status、roomId、productLineId、数据权限 scope；
+// 排序：sortField/sortOrder 白名单解析（见 resolveHostSort），默认 id 倒序
+func (s *AssetHostService) GetAssetHostList(info request.PageInfo, status string, roomID, productLineID *uint, scope *HostUserScope, sortField, sortOrder string) (list []*model.AssetHost, total int64, err error) {
 	db := global.GVA_DB.Model(&model.AssetHost{})
 	if scope != nil && !scope.IsSuperAdmin {
 		ids, err := new(AssetGroupService).GetUserAuthorizedHostIDs(scope.UserID)
@@ -202,8 +225,9 @@ func (s *AssetHostService) GetAssetHostList(info request.PageInfo, status string
 	if err = db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
+	sortColumn, sortDir := resolveHostSort(sortField, sortOrder)
 	err = db.Scopes(info.Paginate()).Preload("Room").Preload("Rack").Preload("ProductLines").
-		Order("id DESC").Find(&list).Error
+		Order(sortColumn + " " + sortDir).Find(&list).Error
 	return list, total, err
 }
 

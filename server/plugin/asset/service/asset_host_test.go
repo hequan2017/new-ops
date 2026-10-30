@@ -51,3 +51,27 @@ func Test_validateHost(t *testing.T) {
 		}
 	})
 }
+
+// Test_resolveHostSort 排序白名单解析：白名单外回退默认 id DESC，防注入
+func Test_resolveHostSort(t *testing.T) {
+	cases := []struct {
+		name       string
+		sortField  string
+		sortOrder  string
+		wantColumn string
+		wantOrder  string
+	}{
+		{"空参数回退默认", "", "", "asset_hosts.id", "DESC"},
+		{"白名单内更新时间", "updatedAt", "asc", "asset_hosts.updated_at", "ASC"},
+		{"白名单内采集时间", "lastCollectAt", "DESC", "asset_hosts.last_collect_at", "DESC"},
+		{"白名单外回退默认", "ip; DROP TABLE asset_hosts;--", "asc", "asset_hosts.id", "DESC"},
+		{"方向非法按desc", "updatedAt", "sideways", "asset_hosts.updated_at", "DESC"},
+		{"方向大小写不敏感", "id", "ASC", "asset_hosts.id", "ASC"},
+	}
+	for _, c := range cases {
+		col, order := resolveHostSort(c.sortField, c.sortOrder)
+		if col != c.wantColumn || order != c.wantOrder {
+			t.Fatalf("%s: want (%s %s) got (%s %s)", c.name, c.wantColumn, c.wantOrder, col, order)
+		}
+	}
+}
