@@ -20,6 +20,7 @@ const (
 	ErrCodeVarGroupRequired   = 1205
 	ErrCodeVarGroupDuplicate  = 1206
 	ErrCodeVariablesInvalid   = 1207
+	ErrCodeVarGroupInUse      = 1208
 )
 
 // ScriptService 脚本库服务
@@ -171,8 +172,16 @@ func (s *VariableGroupService) CreateVariableGroup(vg *model.JobVariableGroup) e
 	return global.GVA_DB.Create(vg).Error
 }
 
-// DeleteVariableGroup 删除变量组
+// DeleteVariableGroup 删除变量组（已被执行批次引用时拒绝，防误删破坏历史批次口径追溯）
 func (s *VariableGroupService) DeleteVariableGroup(id uint) error {
+	var used int64
+	if err := global.GVA_DB.Model(&model.JobExecRecord{}).
+		Where("variable_group_id = ?", id).Limit(1).Count(&used).Error; err != nil {
+		return err
+	}
+	if used > 0 {
+		return newJobErr(ErrCodeVarGroupInUse, "该变量组已被执行批次引用，不能删除")
+	}
 	return global.GVA_DB.Delete(&model.JobVariableGroup{}, id).Error
 }
 
