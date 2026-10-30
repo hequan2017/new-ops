@@ -4,11 +4,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/hequan2017/new-ops/server/docs"
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/middleware"
 	"github.com/hequan2017/new-ops/server/router"
-	"github.com/gin-gonic/gin"
+	"github.com/hequan2017/new-ops/server/utils"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -71,10 +72,8 @@ func Routers() *gin.Engine {
 	PrivateGroup.Use(middleware.JWTAuth()).Use(middleware.CasbinHandler())
 
 	{
-		// 健康监测
-		PublicGroup.GET("/health", func(c *gin.Context) {
-			c.JSON(http.StatusOK, "ok")
-		})
+		// 健康监测（结构化返回版本/运行时长，供监控探针与部署冒烟使用）
+		PublicGroup.GET("/health", utils.HealthDetail)
 	}
 	{
 		systemRouter.InitBaseRouter(PublicGroup) // 注册基础功能路由 不做鉴权
