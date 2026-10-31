@@ -70,8 +70,10 @@
       <el-table
         :data="tableData"
         style="width: 100%"
+        border
         tooltip-effect="dark"
         @selection-change="handleSelectionChange"
+        @header-dragend="onHeaderDragend"
       >
         <template #empty>
           <div class="py-8 flex flex-col items-center gap-2">
@@ -86,38 +88,38 @@
           </div>
         </template>
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="hostname" label="主机名" min-width="140" />
-        <el-table-column prop="ip" label="内网IP" min-width="130" />
-        <el-table-column label="配置" min-width="150">
+        <el-table-column prop="hostname" label="主机名" :width="colW('hostname')" min-width="140" />
+        <el-table-column prop="ip" label="内网IP" :width="colW('ip')" min-width="130" />
+        <el-table-column label="配置" :width="colW('配置')" min-width="150">
           <template #default="{ row }">
             {{ row.cpuCores || '-' }}C / {{ row.memGb || '-' }}G / {{ row.diskGb || '-' }}G
           </template>
         </el-table-column>
-        <el-table-column prop="os" label="操作系统" min-width="120">
+        <el-table-column prop="os" label="操作系统" :width="colW('os')" min-width="120">
           <template #default="{ row }">
             {{ row.os ? `${row.os} ${row.osVersion || ''}` : '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="vendor" label="厂商" min-width="100">
+        <el-table-column prop="vendor" label="厂商" :width="colW('vendor')" min-width="100">
           <template #default="{ row }">{{ row.vendor || '-' }}</template>
         </el-table-column>
-        <el-table-column prop="room.name" label="机房" min-width="100">
+        <el-table-column prop="room.name" label="机房" :width="colW('机房')" min-width="100">
           <template #default="{ row }">{{ row.room?.name || '-' }}</template>
         </el-table-column>
-        <el-table-column prop="owner" label="负责人" min-width="90">
+        <el-table-column prop="owner" label="负责人" :width="colW('owner')" min-width="90">
           <template #default="{ row }">{{ row.owner || '-' }}</template>
         </el-table-column>
-        <el-table-column label="最近采集" width="150">
+        <el-table-column label="最近采集" :width="colW('最近采集', 150)">
           <template #default="{ row }">
             {{ fmtTime(row.lastCollectAt, '未采集') }}
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90">
+        <el-table-column label="状态" :width="colW('状态', 90)">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)">{{ row.status || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="Agent" width="90">
+        <el-table-column label="Agent" :width="colW('Agent', 90)">
           <template #default="{ row }">
             <el-tag
               :type="agentStatus(row.ID).type"
@@ -495,6 +497,10 @@
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import XtermShell from '@/plugin/term/components/XtermShell.vue'
   import { fmtTime } from '@/utils/format'
+  import { useColWidthMemory } from '@/hooks/useColWidth'
+
+  // 主机列表列宽拖拽记忆（localStorage 持久化，border 开启拖拽）
+  const { colW, onHeaderDragend } = useColWidthMemory('colWidth:assetHost')
   import LogTail from '@/plugin/term/components/LogTail.vue'
   import PerfChart from '@/plugin/monitor/components/PerfChart.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'

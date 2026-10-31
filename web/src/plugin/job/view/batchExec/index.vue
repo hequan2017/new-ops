@@ -163,10 +163,16 @@
         </el-form-item>
       </el-form>
 
-      <el-table :data="tableData" v-loading="listLoading" stripe>
-        <el-table-column prop="ID" label="批次" width="70" />
-        <el-table-column prop="command" label="命令" show-overflow-tooltip />
-        <el-table-column label="进度" width="130">
+      <el-table
+        :data="tableData"
+        v-loading="listLoading"
+        stripe
+        border
+        @header-dragend="onHeaderDragend"
+      >
+        <el-table-column prop="ID" label="批次" :width="colW('ID', 70)" />
+        <el-table-column prop="command" label="命令" :width="colW('command')" min-width="200" show-overflow-tooltip />
+        <el-table-column label="进度" :width="colW('进度', 130)">
           <template #default="{ row }">
             <span :class="row.failed > 0 ? 'ops-text-danger' : ''">
               {{ row.success + row.failed }}/{{ row.total }}
@@ -174,17 +180,17 @@
             <span class="ops-text-muted">（成功 {{ row.success }} / 失败 {{ row.failed }}）</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90">
+        <el-table-column label="状态" :width="colW('状态', 90)">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="concurrency" label="并发" width="60" />
-        <el-table-column prop="timeoutSec" label="超时s" width="70" />
-        <el-table-column prop="operator" label="操作人" width="100" />
-        <el-table-column label="开始时间" width="160">
+        <el-table-column prop="concurrency" label="并发" :width="colW('concurrency', 60)" />
+        <el-table-column prop="timeoutSec" label="超时s" :width="colW('timeoutSec', 70)" />
+        <el-table-column prop="operator" label="操作人" :width="colW('operator', 100)" />
+        <el-table-column label="开始时间" :width="colW('开始时间', 160)">
           <template #default="{ row }">
-            {{ (row.startedAt || '').replace('T', ' ').slice(0, 19) }}
+            {{ fmtTime(row.startedAt) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
@@ -270,6 +276,11 @@
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { createBatchExec, cancelBatchExec, getBatchList, getBatchDetail } from '@/plugin/job/api/batchExec'
   import { getScriptList, getVarGroupList } from '@/plugin/job/api/jobScript'
+  import { useColWidthMemory } from '@/hooks/useColWidth'
+  import { fmtTime } from '@/utils/format'
+
+  // 批次列表列宽拖拽记忆
+  const { colW, onHeaderDragend } = useColWidthMemory('colWidth:jobBatch')
   import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import { getAgentInstanceList, pushAgentFile } from '@/plugin/agent/api/agentInstance'
