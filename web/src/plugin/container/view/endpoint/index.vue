@@ -513,22 +513,40 @@
     }
   }
 
+  const ACTION_LABEL = { start: '启动', stop: '停止', restart: '重启', remove: '删除' }
+
   const doAction = async (row, action) => {
+    // 危险操作确认（带接入点+容器名）：停止/重启有运行面影响，启动无破坏面不拦截
+    if (action === 'stop' || action === 'restart') {
+      try {
+        await ElMessageBox.confirm(
+          `确定${ACTION_LABEL[action]}接入点「${ctEndpoint.value?.name || ''}」上的容器「${prettyName(row.names)}」吗？`,
+          '危险操作',
+          { confirmButtonText: ACTION_LABEL[action], cancelButtonText: '取消', type: 'warning' }
+        )
+      } catch {
+        return
+      }
+    }
     const res = await containerAction({
       endpointId: ctEndpoint.value.ID,
       id: row.id,
       action
     })
     if (res.code === 0) {
-      ElMessage.success(`${action} 成功`)
+      ElMessage.success(`${ACTION_LABEL[action] || action}成功`)
       loadContainers()
     }
   }
 
   const doRemove = (row) => {
-    ElMessageBox.confirm(`确定删除容器 ${prettyName(row.names)} 吗？`, '危险操作', {
-      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
-    }).then(async () => {
+    ElMessageBox.confirm(
+      `确定删除接入点「${ctEndpoint.value?.name || ''}」上的容器「${prettyName(row.names)}」吗？（force 强制删除，未落卷数据将丢失）`,
+      '危险操作',
+      {
+        confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+      }
+    ).then(async () => {
       const res = await containerAction({
         endpointId: ctEndpoint.value.ID,
         id: row.id,
@@ -660,9 +678,13 @@
 
   const doRemoveImage = (row) => {
     const ref = row.tags.length ? row.tags[0] : row.id
-    ElMessageBox.confirm(`确定删除镜像 ${ref} 吗？（force，容器占用将解除）`, '危险操作', {
-      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
-    }).then(async () => {
+    ElMessageBox.confirm(
+      `确定删除接入点「${ctEndpoint.value?.name || ''}」上的镜像 ${ref} 吗？（force，占用容器将被解除）`,
+      '危险操作',
+      {
+        confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+      }
+    ).then(async () => {
       const res = await removeImage({ endpointId: ctEndpoint.value.ID, ref })
       if (res.code === 0) {
         ElMessage.success('已删除')
