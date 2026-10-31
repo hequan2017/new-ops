@@ -39,6 +39,7 @@ func (s *AssetHostService) SyncFromAliyunECS(credentialID uint, region, operator
 
 	instances, err := fetchECSInstances(accessKeyID, accessKeySecret, region, 100)
 	if err != nil {
+		global.GVA_LOG.Warn(fmt.Sprintf("阿里云 ECS 同步拉取失败: credential=%d region=%s operator=%s err=%v", credentialID, region, operator, err))
 		return nil, err
 	}
 
@@ -83,6 +84,8 @@ func (s *AssetHostService) SyncFromAliyunECS(credentialID uint, region, operator
 			res.Updated++
 		}
 	}
+	global.GVA_LOG.Info(fmt.Sprintf("阿里云 ECS 同步完成: region=%s operator=%s 拉取 %d 台，新建 %d 更新 %d 失败 %d",
+		region, operator, res.Total, res.Created, res.Updated, len(res.Failed)))
 	return res, nil
 }
 
