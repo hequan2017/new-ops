@@ -33,7 +33,7 @@
             </el-table-column>
             <el-table-column label="状态" width="80">
               <template #default="{ row }">
-                <el-tag :type="row.status === '在线' ? 'success' : 'info'" size="small">{{ row.status }}</el-tag>
+                <el-tag :type="nodeStatusType(row.status)" size="small">{{ row.status }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="操作" width="130" fixed="right">
@@ -88,7 +88,7 @@
             </el-table-column>
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
-                <el-tag :type="{ 运行中: 'success', 创建失败: 'danger' }[row.status] || 'info'" size="small">{{ row.status }}</el-tag>
+                <el-tag :type="instanceStatusType(row.status)" :effect="instanceStatusEffect(row.status)" size="small">{{ row.status }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="creator" label="开通人" width="90" />
@@ -195,6 +195,7 @@
     startGpuInstance, releaseGpuInstance, getGpuInstanceList
   } from '@/plugin/gpu/api/gpu'
   import { useUserStore } from '@/pinia/modules/user'
+  import { nodeStatusType, instanceStatusType, instanceStatusEffect } from '@/plugin/gpu/status'
 
   defineOptions({ name: 'gpuInstance' })
 
