@@ -258,6 +258,19 @@ cd web && npm install && npm run serve
 
 首次启动走 GVA 数据库引导页；凭据主密钥务必通过环境变量注入，勿写配置文件。
 
+#### 开发环境要求与系统差异
+
+| 项 | 要求 | 说明 |
+|---|---|---|
+| Go | **≥ 1.21**（建议直接装 1.26+） | `server/go.mod` 声明 `go 1.26.0`：Go 1.21+ 配合默认 `GOTOOLCHAIN=auto` 会自动拉取 1.26 工具链；**1.18 等旧版本连 go.mod 都解析不了**（报 `invalid go version`） |
+| Node | ≥ 18 | 前端 Vite 构建 |
+| Bash | 任意类 Unix shell | `scripts/smoke.sh`、`deploy-test.sh` 均为 bash 脚本 |
+
+- **macOS**：`brew install go node` 即可；交叉编译目标为 linux/amd64（`make build-server` / `build-agent`），与本地架构无关。
+- **Windows**：无 make 环境，直接执行 Makefile 内等价命令（如 `cd server && go build ./...`）；smoke/部署脚本需在 Git Bash / WSL 下运行；前端命令与 macOS 完全一致。
+- **一键部署**（方式一）的执行端可以是 macOS/Windows(WSL)，目标机为 Linux（Ubuntu 推荐）。
+- **多版本 Go 共存**：机器上装有多个 Go 时注意 PATH 优先级（别名如 `go126` 不会在非交互 shell 生效，CI/脚本用完整路径）。
+
 ### 上手路径
 
 1. **凭据保险库**创建 SSH 凭据 → **主机管理**新增主机绑定凭据（或网段发现批量导入）→ 点「采集」回填硬件信息；
