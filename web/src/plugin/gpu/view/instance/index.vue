@@ -11,8 +11,19 @@
           <el-table :data="nodes" v-loading="nodesLoading" stripe>
             <el-table-column prop="name" label="节点" min-width="120" />
             <el-table-column prop="gpuModel" label="显卡" min-width="110" />
-            <el-table-column label="GPU（已用/总）" width="130">
-              <template #default="{ row }">{{ row.gpuUsed }} / {{ row.gpuTotal }}</template>
+            <el-table-column label="GPU（已用/总）" width="160">
+              <template #default="{ row }">
+                <div style="display: flex; align-items: center; gap: 6px">
+                  <el-progress
+                    style="flex: 1; min-width: 0"
+                    :percentage="row.gpuTotal > 0 ? Math.round((row.gpuUsed / row.gpuTotal) * 100) : 0"
+                    :stroke-width="8"
+                    :show-text="false"
+                    :color="usageColor(row)"
+                  />
+                  <span style="font-size: 12px; white-space: nowrap">{{ row.gpuUsed }}/{{ row.gpuTotal }}</span>
+                </div>
+              </template>
             </el-table-column>
             <el-table-column label="CPU（已用/总）" width="130">
               <template #default="{ row }">{{ row.cpuUsed }} / {{ row.cpuTotal }} 核</template>
@@ -190,6 +201,15 @@
   const tab = ref('nodes')
   const nodes = ref([])
   const nodesLoading = ref(false)
+
+  // GPU 占用三档色：满载红 / ≥80% 橙 / 常规绿（防超卖引擎的余量口径在 UI 上的直观化）
+  const usageColor = (row) => {
+    if (row.gpuTotal <= 0) return '#67c23a'
+    const ratio = row.gpuUsed / row.gpuTotal
+    if (ratio >= 1) return '#f56c6c'
+    if (ratio >= 0.8) return '#e6a23c'
+    return '#67c23a'
+  }
   const specs = ref([])
   const specsLoading = ref(false)
   const instances = ref([])
