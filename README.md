@@ -284,6 +284,24 @@ cd web && npm install && npm run serve
 9. **Agent**：资产页签发令牌 → 目标机跑 `baize-agent -server http://<server>:8888 -token <令牌>`；
 10. **AI 运维**：`cd server && go run ./cmd/mcp` 后把 `http://127.0.0.1:8889/mcp` 接入 AI 助手；配置 LLM 供应商后在 Pod 页用 AI 诊断。
 
+#### Agent 接入速查（内网免 SSH 场景）
+
+```bash
+# 1) 交叉编译 linux/amd64 单文件二进制
+make build-agent          # 产物 agent/baize-agent，scp 到目标机即可（零依赖，无需装运行时）
+
+# 2) 平台侧签发令牌：资产页 → Agent 接入 → 签发（令牌仅此一次显示，请立即保存）
+
+# 3) 目标机运行（令牌无效时进程会明确报错退出而非静默重试）
+./baize-agent -server http://<server>:8888 -token <令牌>
+# 常用可选参数：
+#   -interval 30s     心跳与指标上报周期（默认 30s）
+#   -hostname web01   上报主机名（默认取 os.Hostname）
+#   -docker-addr unix:///var/run/docker.sock   docker daemon 地址覆盖（默认自动探测 socket）
+```
+
+接入成功后：资产页「Agent」标签变绿（在线/离线按心跳时效计算），批量作业可切换 Agent 后端执行，文件分发/Docker/K8s 内网代理经同一 WS 通道。压测验证见 [agent/loadtest/README.md](agent/loadtest/README.md)。
+
 ---
 
 ## 安全设计
