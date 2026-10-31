@@ -73,6 +73,18 @@
         tooltip-effect="dark"
         @selection-change="handleSelectionChange"
       >
+        <template #empty>
+          <div class="py-8 flex flex-col items-center gap-2">
+            <el-icon :size="40" class="text-gray-300"><Monitor /></el-icon>
+            <p class="text-sm text-gray-500">还没有主机资产</p>
+            <p class="text-xs text-gray-400">从下面任一方式开始建立资产台账</p>
+            <div class="flex items-center gap-2 mt-1">
+              <el-button type="primary" size="small" @click="openDialog">手动新增</el-button>
+              <el-button size="small" @click="openDiscover">网段发现</el-button>
+              <el-button size="small" @click="openSync">阿里云同步</el-button>
+            </div>
+          </div>
+        </template>
         <el-table-column type="selection" width="55" />
         <el-table-column prop="hostname" label="主机名" min-width="140" />
         <el-table-column prop="ip" label="内网IP" min-width="130" />
