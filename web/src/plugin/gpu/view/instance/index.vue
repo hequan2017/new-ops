@@ -46,7 +46,10 @@
               <template #default="{ row }">{{ row.gpuCount }} GPU / {{ row.cpuCores }} 核 / {{ row.memGb }} GB</template>
             </el-table-column>
             <el-table-column label="单价" width="110">
-              <template #default="{ row }">￥{{ row.pricePerHour }}/小时</template>
+              <template #default="{ row }">
+                <span v-if="row.pricePerHour > 0">￥{{ row.pricePerHour }}/小时</span>
+                <span v-else class="ops-text-muted">未定价</span>
+              </template>
             </el-table-column>
             <el-table-column prop="description" label="描述" min-width="160" show-overflow-tooltip />
             <el-table-column label="操作" width="80" fixed="right">
@@ -134,6 +137,7 @@
         </el-form-item>
         <el-form-item label="单价/时">
           <el-input-number v-model="specForm.pricePerHour" :min="0" :precision="2" style="width: 160px" />
+          <span class="ops-text-muted" style="font-size: 12px; margin-left: 8px">元/小时，0 表示未定价</span>
         </el-form-item>
       </el-form>
       <template #footer>
