@@ -243,7 +243,7 @@ func collectViaSSH(ip string, auth SSHAuth) (*CollectedInfo, string, error) {
 func (s *AssetHostService) CollectHostFromCredential(hostID, credentialID uint, operator string) (*CollectedInfo, error) {
 	var host model.AssetHost
 	if err := global.GVA_DB.First(&host, hostID).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("查询主机失败: %w", err)
 	}
 	if host.IP == "" {
 		return nil, newServiceErr(ErrCodeIPInvalid, "主机缺少内网IP，无法采集")
@@ -259,7 +259,7 @@ func (s *AssetHostService) CollectHostFromCredential(hostID, credentialID uint, 
 	auth := SSHAuth{Username: username, Password: secret, PrivateKey: secret, ExpectedFingerprint: host.SSHFP}
 	info, actualFP, err := collectViaSSH(host.IP, auth)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("SSH 采集失败: %w", err)
 	}
 
 	// 回填（仅更新采集到的非空字段）
@@ -288,7 +288,7 @@ func (s *AssetHostService) CollectHostFromCredential(hostID, credentialID uint, 
 	}
 	err = global.GVA_DB.Model(&model.AssetHost{}).Where("id = ?", hostID).Updates(updates).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("采集结果回填失败: %w", err)
 	}
 	recordHostHistory(global.GVA_DB, hostID, model.HostHistoryUpdate,
 		map[string]any{"action": "SSH采集", "collected": info, "fingerprint": actualFP}, operator)
