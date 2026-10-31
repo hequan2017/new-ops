@@ -254,6 +254,18 @@
         <el-form-item :minlength="6" label="新密码" prop="newPassword">
           <el-input v-model="pwdModify.newPassword" show-password />
         </el-form-item>
+        <el-form-item v-if="pwdStrength" label-width="0">
+          <div class="pwd-strength">
+            <el-progress
+              class="pwd-strength__bar"
+              :percentage="pwdStrength.percent"
+              :color="pwdStrength.color"
+              :stroke-width="6"
+              :show-text="false"
+            />
+            <span :style="{ color: pwdStrength.color }">强度：{{ pwdStrength.label }}</span>
+          </div>
+        </el-form-item>
         <el-form-item :minlength="6" label="确认密码" prop="confirmPassword">
           <el-input v-model="pwdModify.confirmPassword" show-password />
         </el-form-item>
@@ -358,7 +370,7 @@
 
 <script setup>
   import { setSelfInfo, changePassword } from '@/api/user.js'
-  import { reactive, ref, watch } from 'vue'
+  import { computed, reactive, ref, watch } from 'vue'
   import { ElMessage } from 'element-plus'
   import { useUserStore } from '@/pinia/modules/user'
   import SelectImage from '@/components/selectImage/selectImage.vue'
@@ -396,6 +408,20 @@
         trigger: 'blur'
       }
     ]
+  })
+
+  // 新密码强度实时提示：评分 0-3（长度≥8 / 字母+数字 / 大写或特殊字符），≥12 位再加分
+  const pwdStrength = computed(() => {
+    const v = pwdModify.value.newPassword
+    if (!v) return null
+    let s = 0
+    if (v.length >= 8) s++
+    if (/[a-z]/.test(v) && /\d/.test(v)) s++
+    if (/[A-Z]/.test(v) || /[^A-Za-z0-9]/.test(v)) s++
+    if (v.length >= 12 && s === 3) s = 3
+    if (s <= 1) return { label: '弱', color: '#f56c6c', percent: 33 }
+    if (s === 2) return { label: '中', color: '#e6a23c', percent: 66 }
+    return { label: '强', color: '#67c23a', percent: 100 }
   })
 
   const savePassword = async () => {
@@ -552,6 +578,16 @@
 </script>
 
 <style scoped lang="scss">
+  .pwd-strength {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    &__bar {
+      flex: 1;
+    }
+  }
   .profile-container {
     @apply p-4 lg:p-6 min-h-screen bg-gray-50 dark:bg-slate-900;
 
