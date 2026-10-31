@@ -1,7 +1,11 @@
 <template>
   <div class="logtail">
-    <div class="ops-text-muted" style="margin-bottom: 8px">
-      {{ statusText }}
+    <div style="margin-bottom: 8px; display: flex; gap: 8px; align-items: center">
+      <span class="ops-text-muted" style="font-size: 12px">初始行数</span>
+      <el-select v-model="lineCount" size="small" style="width: 90px" :disabled="connected" @change="saveLines">
+        <el-option v-for="n in [50, 100, 200, 500, 1000]" :key="n" :label="String(n)" :value="n" />
+      </el-select>
+      <span class="ops-text-muted" style="font-size: 12px">{{ statusText }}</span>
     </div>
     <div ref="boxEl" class="log-box"><pre ref="preEl">{{ text }}</pre></div>
   </div>
@@ -25,6 +29,18 @@
   let ws = null
   let closed = false
   let follow = true
+
+  // 初始行数选择记忆（localStorage 持久化；连接中禁改，改行数需断开重连）
+  const LS_LINES_KEY = 'logtail:lines'
+  const connected = ref(false)
+  const lineCount = ref(Number(localStorage.getItem(LS_LINES_KEY)) || props.lines || 200)
+  const saveLines = (v) => {
+    try {
+      localStorage.setItem(LS_LINES_KEY, String(v))
+    } catch (e) {
+      /* 配额满忽略 */
+    }
+  }
 
   const cleanup = () => {
     closed = true
@@ -50,12 +66,13 @@
       hostId: String(props.hostId),
       credentialId: String(props.credentialId),
       path: props.path,
-      lines: String(props.lines)
+      lines: String(lineCount.value)
     })
     ws = new WebSocket(`${proto}://${location.host}${base}/term/logtail?${qs}`)
     ws.binaryType = 'arraybuffer'
 
     ws.onopen = () => {
+      connected.value = true
       statusText.value = `tail -f ${props.path}（滚动到上方即暂停跟随，拉到底恢复）`
     }
     ws.onmessage = (ev) => {
@@ -67,6 +84,7 @@
       scrollToBottom()
     }
     ws.onclose = (ev) => {
+      connected.value = false
       if (closed) return
       statusText.value = ev.code === 4000 ? `连接断开：${ev.reason || ''}` : `连接已关闭 code=${ev.code}`
     }
