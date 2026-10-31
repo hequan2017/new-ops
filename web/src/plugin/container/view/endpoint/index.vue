@@ -554,7 +554,7 @@
         force: true
       })
       if (res.code === 0) {
-        ElMessage.success('已删除')
+        ElMessage.success('删除成功')
         loadContainers()
       }
     })
@@ -687,7 +687,7 @@
     ).then(async () => {
       const res = await removeImage({ endpointId: ctEndpoint.value.ID, ref })
       if (res.code === 0) {
-        ElMessage.success('已删除')
+        ElMessage.success('删除成功')
         loadImages()
       }
     })
@@ -911,7 +911,7 @@
     }).then(async () => {
       const res = await removeNetwork({ endpointId: ctEndpoint.value.ID, name: row.name })
       if (res.code === 0) {
-        ElMessage.success('已删除')
+        ElMessage.success('删除成功')
         loadNetworks()
       }
     })
@@ -933,7 +933,7 @@
     }).then(async () => {
       const res = await removeVolume({ endpointId: ctEndpoint.value.ID, name: row.name })
       if (res.code === 0) {
-        ElMessage.success('已删除')
+        ElMessage.success('删除成功')
         loadVolumes()
       }
     })

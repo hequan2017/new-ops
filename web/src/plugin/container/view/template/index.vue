@@ -178,7 +178,7 @@
     }
     const res = await saveAppTemplate({ ...form })
     if (res.code === 0) {
-      ElMessage.success('已保存')
+      ElMessage.success('保存成功')
       editVisible.value = false
       loadAll()
     }
@@ -190,7 +190,7 @@
     }).then(async () => {
       const res = await deleteAppTemplate({ id: row.ID })
       if (res.code === 0) {
-        ElMessage.success('已删除')
+        ElMessage.success('删除成功')
         loadAll()
       }
     })

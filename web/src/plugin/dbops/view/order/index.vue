@@ -290,7 +290,7 @@
   const submitIncConfig = async () => {
     const res = await saveInceptionConfig({ ...incForm })
     if (res.code === 0) {
-      ElMessage.success('已保存')
+      ElMessage.success('保存成功')
       incVisible.value = false
     }
   }

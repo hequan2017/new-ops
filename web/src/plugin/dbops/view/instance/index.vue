@@ -150,7 +150,7 @@
     }).then(async () => {
       const res = await deleteInstance({ id: row.ID })
       if (res.code === 0) {
-        ElMessage.success('已删除')
+        ElMessage.success('删除成功')
         getList()
       }
     })
