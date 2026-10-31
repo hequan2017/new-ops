@@ -8,10 +8,17 @@
       <span v-if="lastRefreshAt" class="ops-text-muted" style="font-size: 12px; margin-left: 8px">
         最近刷新 {{ fmtTime(lastRefreshAt) }} · {{ relTime(lastRefreshAt) }}
       </span>
+      <el-input
+        v-model="kw"
+        size="small"
+        clearable
+        placeholder="按名称过滤"
+        style="width: 180px; margin-left: 8px"
+      />
     </div>
     <el-tabs v-model="activeTab">
       <el-tab-pane label="Pods" name="pods">
-        <el-table :data="pods" size="small" v-loading="loading">
+        <el-table :data="pods.filter(matchKw)" size="small" v-loading="loading">
           <el-table-column prop="name" label="名称" min-width="200" />
           <el-table-column prop="namespace" label="命名空间" min-width="110" />
           <el-table-column prop="status" label="状态" width="110">
@@ -37,7 +44,7 @@
         </el-table>
       </el-tab-pane>
       <el-tab-pane label="Deployments" name="deployments">
-        <el-table :data="deployments" size="small" v-loading="loading">
+        <el-table :data="deployments.filter(matchKw)" size="small" v-loading="loading">
           <el-table-column prop="name" label="名称" min-width="160" />
           <el-table-column prop="namespace" label="命名空间" min-width="110" />
           <el-table-column label="副本" width="120">
@@ -877,6 +884,10 @@
 
   // 最近刷新时间（loadAll 成功后更新，tabs 行展示绝对+相对时间）
   const lastRefreshAt = ref('')
+
+  // 名称关键字本地过滤（当前覆盖 Pods/Deployments 两页签，其余待续）
+  const kw = ref('')
+  const matchKw = (row) => !kw.value || (row.name || '').toLowerCase().includes(kw.value.toLowerCase())
   const loadAll = async () => {
     loading.value = true
     const ns = nsFilter.value || ''
