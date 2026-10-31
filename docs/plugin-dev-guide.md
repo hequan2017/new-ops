@@ -33,6 +33,57 @@ web/src/plugin/<name>/
 
 参考已生成的骨架：`server/plugin/asset/plugin.go`（M0 注册 10 个业务插件骨架，后续新增 agent/aiops 通道类插件共 12 个）。
 
+### 2.1 最小可运行插件骨架
+
+以 monitor 为真实样板（完整实现见 `server/plugin/monitor/`），新插件的 `plugin.go` 最小骨架：
+
+```go
+// Package <name> 白泽业务插件：<一句话职责>
+// 开发规范见 docs/plugin-dev-guide.md
+package <name>
+
+import (
+	"context"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/hequan2017/new-ops/server/plugin/<name>/initialize"
+	interfaces "github.com/hequan2017/new-ops/server/utils/plugin/v2"
+)
+
+var _ interfaces.Plugin = (*plugin)(nil)
+
+var Plugin = new(plugin)
+
+type plugin struct{}
+
+func init() {
+	interfaces.Register(Plugin) // init() 自注册，无需改底座任何注册表
+}
+
+// Register 插件加载时调用：表迁移 → API/菜单种子 → 授权种子 → 路由
+func (p *plugin) Register(group *gin.Engine) {
+	ctx := context.Background()
+	initialize.Gorm(ctx)     // AutoMigrate（幂等）
+	initialize.Api(ctx)      // API 记录种子
+	initialize.Menu(ctx)     // 菜单种子
+	initialize.Casbin(ctx)   // 角色-API 授权种子
+	initialize.Router(group) // 业务路由（显式挂 JWT + Casbin）
+}
+```
+
+`initialize/router.go` 路由注册最小样板（摘自 monitor，**显式**挂 JWT + Casbin，不依赖底座隐式继承）：
+
+```go
+func Router(engine *gin.Engine) {
+	private := engine.Group(global.GVA_CONFIG.System.RouterPrefix).Group("")
+	private.Use(middleware.JWTAuth()).Use(middleware.CasbinHandler())
+	router.RouterGroupApp.Init(private) // 插件内 router/ 包定义业务分组
+}
+```
+
+要点：`init()` 自注册 + `Register` 内按序初始化；种子一律幂等（见第 3 节）；删除插件时全仓 grep 结构体名/路由名（见第 3 节教训）。
+
 ## 3. 初始化数据（菜单/API/Casbin）规范
 
 - 菜单、API、casbin 策略一律通过 **initialize/ 下的幂等种子**下发：先查后插（`errors.Is(db.Where(...).First(&x).Error, gorm.ErrRecordNotFound)` 判重），保证重复启动/初始化安全。
