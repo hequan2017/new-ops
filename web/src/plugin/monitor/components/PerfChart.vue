@@ -18,10 +18,11 @@
 </template>
 
 <script setup>
-  import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+  import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
   import * as echarts from 'echarts'
   import { ElMessage } from 'element-plus'
   import { getMetrics, collectNow } from '@/plugin/monitor/api/monitor'
+  import { useAppStore } from '@/pinia/modules/app'
 
   const props = defineProps({
     assetId: { type: Number, required: true },
@@ -53,8 +54,23 @@
     net_tx_kbs: ' KB/s'
   }
 
+  // 暗色适配：轴/图例/tooltip 文字色跟随主题（ECharts 不吃 CSS 变量，需 JS 计算）
+  const appStore = useAppStore()
+  const chartText = () => (appStore.isDark ? '#cbd5e1' : '#475569')
+  const chartAxis = () => (appStore.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(148,163,184,0.25)')
+
+  // 主题切换时用缓存数据重渲染（lastRows 由 render 维护）
+  let lastRows = []
+  watch(
+    () => appStore.isDark,
+    () => {
+      if (chart) render(lastRows)
+    }
+  )
+
   const render = (rows) => {
     if (!chart) return
+    lastRows = rows
     const byName = {}
     const tsSet = new Map()
     rows.forEach((r) => {
@@ -66,6 +82,9 @@
     chart.setOption({
       tooltip: {
         trigger: 'axis',
+        backgroundColor: appStore.isDark ? 'rgba(15,23,42,0.95)' : '#ffffff',
+        borderColor: chartAxis(),
+        textStyle: { color: chartText() },
         formatter: (params) => {
           const lines = params.map((p) => {
             const unit = UNIT_BY_SERIES[p.seriesName]
@@ -75,12 +94,12 @@
           return `${params[0]?.axisValueLabel || ''}<br/>${lines.join('<br/>')}`
         }
       },
-      legend: { data: SERIES.map((s) => s.name), top: 0 },
+      legend: { data: SERIES.map((s) => s.name), top: 0, textStyle: { color: chartText() } },
       grid: { left: 48, right: 24, top: 32, bottom: 32 },
-      xAxis: { type: 'time' },
+      xAxis: { type: 'time', axisLabel: { color: chartText() }, splitLine: { lineStyle: { color: chartAxis() } } },
       yAxis: [
-        { type: 'value', max: 100, name: '%' },
-        { type: 'value', name: 'load', position: 'right', splitLine: false }
+        { type: 'value', max: 100, name: '%', axisLabel: { color: chartText() }, splitLine: { lineStyle: { color: chartAxis() } } },
+        { type: 'value', name: 'load', position: 'right', splitLine: false, axisLabel: { color: chartText() } }
       ],
       series: SERIES.map((s, i) => ({
         name: s.name,

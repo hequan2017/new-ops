@@ -278,7 +278,8 @@
   font-size: 12px;
   max-height: 45vh;
   overflow: auto;
-  background: #f5f7fa;
+  /* 对齐其他视图 ops-pre 口径：主题填充色变量，暗色模式自动适配 */
+  background: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 10px;
 }
