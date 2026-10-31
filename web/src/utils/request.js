@@ -155,6 +155,9 @@ service.interceptors.request.use(
 )
 
 function getErrorMessage(error) {
+  // 无响应场景细分（error.response 为空）：超时与断网文案区分，避免统一"请求失败"无从排查
+  if (error.code === 'ECONNABORTED') return '请求超时，请稍后重试或检查网络'
+  if (error.code === 'ERR_NETWORK') return '网络连接失败，请检查网络或服务状态'
   return error.response?.data?.msg || error.response?.statusText || '请求失败'
 }
 
