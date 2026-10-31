@@ -113,6 +113,9 @@
     </el-dialog>
 
     <el-drawer v-model="logsVisible" :title="`流转记录 · ${logsTitle}`" size="45%">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
+        <el-button size="small" :disabled="!logsList.length" @click="copyLogsText">复制为文本时间线</el-button>
+      </div>
       <el-timeline style="padding-left: 8px">
         <el-timeline-item v-for="l in logsList" :key="l.ID" :timestamp="fmtTime(l.createdAt) + ' · ' + relTime(l.createdAt)">
           <b>{{ l.action }}</b> {{ l.fromState || '∅' }} → {{ l.toState }}
@@ -250,6 +253,19 @@
   const logsVisible = ref(false)
   const logsList = ref([])
   const logsTitle = ref('')
+
+  // 流转记录复制为文本时间线（贴工单/邮件留痕用）
+  const copyLogsText = () => {
+    const lines = [`【流转记录】${logsTitle.value}`]
+    for (const l of logsList.value) {
+      lines.push(
+        `${fmtTime(l.createdAt)}  ${l.action}  ${l.fromState || '∅'} → ${l.toState}（${l.operator}）${l.comment ? '\n  备注：' + l.comment : ''}`
+      )
+    }
+    navigator.clipboard?.writeText(lines.join('\n'))
+    ElMessage.success('流转记录已复制')
+  }
+
   const openLogs = async (row) => {
     logsTitle.value = row.title
     const res = await getInstanceLogs({ id: row.ID })
