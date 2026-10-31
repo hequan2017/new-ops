@@ -19,6 +19,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		def.PUT("", v1.WorkflowApi.UpdateDefinition)
 		def.DELETE("", v1.WorkflowApi.DeleteDefinition)
 		def.GET("list", v1.WorkflowApi.ListDefinitions)
+		def.POST("toggle", v1.WorkflowApi.ToggleDefinition)
 	}
 	ins := Router.Group("workflow/instance")
 	{

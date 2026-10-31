@@ -38,6 +38,7 @@ type WfDefinition struct {
 	Transitions string `json:"transitions" gorm:"type:text;comment:迁移JSON"`
 	StartState  string `json:"startState" gorm:"comment:起始状态"`
 	Notes       string `json:"notes" gorm:"type:text;comment:备注"`
+	Enabled     bool   `json:"enabled" gorm:"default:true;comment:是否启用(停用后禁止发起新工单)"`
 }
 
 // WfInstance 工单实例

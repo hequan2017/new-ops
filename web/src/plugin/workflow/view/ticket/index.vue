@@ -52,6 +52,17 @@
           <el-table :data="defs" v-loading="defsLoading" stripe>
             <el-table-column prop="ID" label="ID" width="60" />
             <el-table-column prop="name" label="名称" min-width="140" />
+            <el-table-column label="启用" width="80">
+              <template #default="{ row }">
+                <el-switch
+                  :model-value="row.enabled"
+                  inline-prompt
+                  active-text="启"
+                  inactive-text="停"
+                  @change="(v) => onToggleDef(row, v)"
+                />
+              </template>
+            </el-table-column>
             <el-table-column prop="startState" label="起始状态" width="100" />
             <el-table-column label="节点" min-width="200">
               <template #default="{ row }">
@@ -76,7 +87,7 @@
       <el-form label-width="80px">
         <el-form-item label="类型">
           <el-select v-model="startForm.definitionId" style="width: 100%">
-            <el-option v-for="d in defs" :key="d.ID" :label="d.name" :value="d.ID" />
+            <el-option v-for="d in defs.filter((x) => x.enabled)" :key="d.ID" :label="d.name" :value="d.ID" />
           </el-select>
         </el-form-item>
         <el-form-item label="标题">
@@ -135,7 +146,7 @@
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { fmtTime, relTime } from '@/utils/format'
   import {
-    createDefinition, updateDefinition, deleteDefinition, getDefinitions,
+    createDefinition, updateDefinition, deleteDefinition, getDefinitions, toggleDefinition,
     startInstance, submitAction, getInstances, getInstanceLogs
   } from '@/plugin/workflow/api/workflow'
 
@@ -161,6 +172,17 @@
   }
 
   // 本地关键字过滤：标题与发起人（大小写不敏感，空值直通）
+  // 定义启用/停用（仅开关位；停用后发起工单下拉自动隐藏）
+  const onToggleDef = async (row, v) => {
+    const res = await toggleDefinition({ id: row.ID, enabled: v })
+    if (res.code === 0) {
+      row.enabled = v
+      ElMessage.success(v ? '已启用' : '已停用')
+    } else {
+      loadDefs()
+    }
+  }
+
   const matchTicketKw = (row) => {
     if (!ticketKw.value) return true
     const kw = ticketKw.value.toLowerCase()
@@ -203,7 +225,7 @@
 
   const defVisible = ref(false)
   const emptyDef = () => ({
-    ID: 0, name: '', startState: 'submitted',
+    ID: 0, name: '', startState: 'submitted', enabled: true,
     states: '[{"name":"submitted"},{"name":"approving","isApproval":true},{"name":"archived","isFinal":true}]',
     transitions: '[{"from":"submitted","action":"submit","to":"approving"},{"from":"approving","action":"approve","to":"archived"},{"from":"approving","action":"reject","to":"archived"}]'
   })

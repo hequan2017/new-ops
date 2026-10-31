@@ -117,6 +117,18 @@ func (s *WorkflowService) UpdateDefinition(d *model.WfDefinition) error {
 	}).Error
 }
 
+// ToggleDefinition 启用/停用定义（仅改开关位，不动结构，无进行中实例限制）
+func (s *WorkflowService) ToggleDefinition(id uint, enabled bool) error {
+	res := global.GVA_DB.Model(&model.WfDefinition{}).Where("id = ?", id).Update("enabled", enabled)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return newWfErr(ErrCodeWfNotFound, "工单定义不存在")
+	}
+	return nil
+}
+
 // DeleteDefinition 删除定义（有进行中实例时拒绝）
 func (s *WorkflowService) DeleteDefinition(id uint) error {
 	var running int64
@@ -143,6 +155,9 @@ func (s *WorkflowService) StartInstance(definitionID uint, title, bizType, param
 	var d model.WfDefinition
 	if err := global.GVA_DB.First(&d, definitionID).Error; err != nil {
 		return nil, newWfErr(ErrCodeWfNotFound, "工单定义不存在")
+	}
+	if !d.Enabled {
+		return nil, newWfErr(ErrCodeWfStructInvalid, "工单定义已停用，无法发起新工单")
 	}
 	if strings.TrimSpace(title) == "" {
 		return nil, newWfErr(ErrCodeWfNameRequired, "工单标题不能为空")

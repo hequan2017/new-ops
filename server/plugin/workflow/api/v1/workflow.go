@@ -63,6 +63,35 @@ func (a *workflowApi) UpdateDefinition(c *gin.Context) {
 	response.OkWithMessage("更新成功", c)
 }
 
+// ToggleDefinition 启用/停用工单定义
+// @Tags Workflow
+// @Summary 启用/停用工单定义（停用后禁止发起新工单，不动结构）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body object true "{id, enabled}"
+// @Success 200 {object} response.Response{msg=string} "操作成功"
+// @Router /workflow/definition/toggle [post]
+func (a *workflowApi) ToggleDefinition(c *gin.Context) {
+	var req struct {
+		ID      uint `json:"id" binding:"required"`
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if err := wfSvc.ToggleDefinition(req.ID, req.Enabled); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	msg := "已停用"
+	if req.Enabled {
+		msg = "已启用"
+	}
+	response.OkWithMessage(msg, c)
+}
+
 // DeleteDefinition 删除工单定义
 // @Tags Workflow
 // @Summary 删除工单定义（有进行中实例拒绝）

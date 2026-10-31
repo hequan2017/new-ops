@@ -5,6 +5,7 @@ export const createDefinition = (data) => service({ url: '/workflow/definition',
 export const updateDefinition = (data) => service({ url: '/workflow/definition', method: 'put', data })
 export const deleteDefinition = (params) => service({ url: '/workflow/definition', method: 'delete', params })
 export const getDefinitions = (params) => service({ url: '/workflow/definition/list', method: 'get', params })
+export const toggleDefinition = (data) => service({ url: '/workflow/definition/toggle', method: 'post', data })
 
 // ---------- 实例 ----------
 export const startInstance = (data) => service({ url: '/workflow/instance', method: 'post', data })
