@@ -21,7 +21,7 @@ services:
     container_name: new-ops-web
     restart: always
     ports:
-      - '8080:8080'
+      - '${WEB_PORT:-8080}:8080'
     depends_on:
       - server
     command: [ 'nginx-debug', '-g', 'daemon off;' ]
@@ -36,7 +36,7 @@ services:
     container_name: new-ops-server
     restart: always
     ports:
-      - '8888:8888'
+      - '${API_PORT:-8888}:8888'
     depends_on:
       mysql:
         condition: service_healthy
@@ -45,6 +45,9 @@ services:
     links:
       - mysql
       - redis
+    environment:
+      # 凭据保险库主密钥仅环境变量注入（.env 的 CREDENTIAL_MASTER_KEY）
+      - NEW_OPS_CREDENTIAL_MASTER_KEY=${CREDENTIAL_MASTER_KEY:-}
     networks:
       network:
         ipv4_address: 177.7.0.12
@@ -55,14 +58,13 @@ services:
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci #设置utf8字符集
     restart: always
     ports:
-      - "13306:3306"  # host物理直接映射端口为13306
+      - "${MYSQL_PORT:-13306}:3306"  # host物理直接映射端口为13306
     environment:
-      #MYSQL_ROOT_PASSWORD: 'Aa@6447985' # root管理员用户密码
-      MYSQL_DATABASE: 'qmPlus' # 初始化启动时要创建的数据库的名称
+      MYSQL_DATABASE: '${MYSQL_DATABASE:-qmPlus}' # 初始化启动时要创建的数据库的名称
       MYSQL_USER: 'gva'
-      MYSQL_PASSWORD: 'Aa@6447985'
+      MYSQL_PASSWORD: '${MYSQL_PASSWORD:-Aa@6447985}' # 生产/长期运行务必在 .env 修改
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "gva", "-pAa@6447985"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u gva -p${MYSQL_PASSWORD:-Aa@6447985}"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -77,7 +79,7 @@ services:
     container_name: ops-redis # 容器名
     restart: always
     ports:
-      - '16379:6379'
+      - '${REDIS_PORT:-16379}:6379'
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep PONG || exit 1"]
       interval: 10s
