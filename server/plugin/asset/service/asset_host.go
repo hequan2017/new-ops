@@ -34,7 +34,7 @@ func (s *AssetHostService) CreateAssetHost(h *model.AssetHost, operator string) 
 	}
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(h).Error; err != nil {
-			return err
+			return fmt.Errorf("创建主机失败: %w", err)
 		}
 		if err := s.replaceProductLines(tx, h); err != nil {
 			return err
@@ -55,10 +55,10 @@ func (s *AssetHostService) DeleteAssetHost(id uint, operator string) error {
 			return err
 		}
 		if err := tx.Model(&host).Association("ProductLines").Clear(); err != nil {
-			return err
+			return fmt.Errorf("清理产品线关联失败: %w", err)
 		}
 		if err := tx.Delete(&host).Error; err != nil {
-			return err
+			return fmt.Errorf("删除主机失败: %w", err)
 		}
 		recordHostHistory(tx, host.ID, model.HostHistoryDelete, host, operator)
 		return nil
