@@ -286,6 +286,8 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 	if err := writeRegisterAck(conn, agentFrame{Type: "register_ok", TS: now.Unix()}); err != nil {
 		return
 	}
+	global.GVA_LOG.Info(fmt.Sprintf("agent 注册成功: asset=%d version=%s os_arch=%s hostname=%s",
+		inst.AssetID, first.Agent.Version, first.Agent.Os+"/"+first.Agent.Arch, first.Agent.Hostname))
 
 	ac := &agentConn{AssetID: inst.AssetID, Conn: conn}
 	if old := registerConn(inst.AssetID, ac); old != nil {
@@ -301,6 +303,7 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 	for {
 		var f agentFrame
 		if err := conn.ReadJSON(&f); err != nil {
+			global.GVA_LOG.Warn(fmt.Sprintf("agent 连接断开: asset=%d（将触发重连注册）", inst.AssetID))
 			return
 		}
 		now := time.Now()
