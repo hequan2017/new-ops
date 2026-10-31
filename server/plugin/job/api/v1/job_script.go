@@ -89,6 +89,12 @@ func (j *jobScript) DeleteScript(c *gin.Context) {
 // @Produce application/json
 // @Param keyword query string false "名称/备注模糊"
 // @Param language query string false "语言过滤"
+// @Tags JobScript
+// @Summary 脚本列表（keyword 过滤名称/备注，language 过滤语言；附批次引用计数）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param keyword query string false "名称/备注模糊搜索"
+// @Param language query string false "语言过滤(shell/python/yaml)"
 // @Success 200 {object} response.Response{data=[]model.JobScript} "获取成功"
 // @Router /job/script/list [get]
 func (j *jobScript) GetScriptList(c *gin.Context) {
