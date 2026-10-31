@@ -344,7 +344,7 @@
         </el-table-column>
         <el-table-column prop="id" label="ID" width="130" />
         <el-table-column label="大小" width="100">
-          <template #default="{ row }">{{ row.sizeMb }} MB</template>
+          <template #default="{ row }">{{ fmtSizeMb(row.sizeMb) }}</template>
         </el-table-column>
         <el-table-column label="创建时间" width="170" sortable :sort-method="(a, b) => a.createdAt - b.createdAt">
           <template #default="{ row }">{{ fmtTime(row.createdAt * 1000) }}</template>
@@ -505,6 +505,9 @@
     navigator.clipboard?.writeText(id)
     ElMessage.success('容器 ID 已复制')
   }
+
+  // 镜像大小人类可读：≥1024MB 显示 GB（数据库镜像常超 1GB，纯 MB 不直观）
+  const fmtSizeMb = (mb) => (mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb ?? 0} MB`)
 
   const openContainers = (row) => {
     ctEndpoint.value = row
