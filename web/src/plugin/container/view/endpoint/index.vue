@@ -342,8 +342,8 @@
         <el-table-column label="大小" width="100">
           <template #default="{ row }">{{ row.sizeMb }} MB</template>
         </el-table-column>
-        <el-table-column label="创建时间" width="170">
-          <template #default="{ row }">{{ new Date(row.createdAt * 1000).toLocaleString() }}</template>
+        <el-table-column label="创建时间" width="170" sortable :sort-method="(a, b) => a.createdAt - b.createdAt">
+          <template #default="{ row }">{{ fmtTime(row.createdAt * 1000) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
