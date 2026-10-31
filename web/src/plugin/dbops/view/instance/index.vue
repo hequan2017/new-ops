@@ -26,7 +26,7 @@
         <el-table-column prop="database" label="默认库" width="110" show-overflow-tooltip />
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="{ 在线: 'success', 离线: 'danger' }[row.status] || 'info'" size="small">{{ row.status }}</el-tag>
+            <el-tag :type="instanceStatusType(row.status)" size="small">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="最近检测" width="160">
@@ -78,6 +78,7 @@
 <script setup>
   import { ref, reactive, onMounted } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { instanceStatusType } from '@/plugin/dbops/status'
   import {
     createInstance, updateInstance, deleteInstance, getInstanceList, testInstance
   } from '@/plugin/dbops/api/dbops'

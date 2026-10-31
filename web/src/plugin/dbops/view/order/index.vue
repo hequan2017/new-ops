@@ -24,7 +24,7 @@
         <el-table-column prop="instanceName" label="实例" width="130" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">{{ row.status }}</el-tag>
+            <el-tag :type="orderStatusType(row.status)" :effect="orderStatusEffect(row.status)" size="small">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="creator" label="发起人" width="90" />
@@ -152,6 +152,7 @@
 <script setup>
   import { ref, reactive, onMounted } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { orderStatusType, orderStatusEffect } from '@/plugin/dbops/status'
   import {
     createOrder, auditOrder, executeOrder, cancelOrder, getOrderList, getInstanceList,
     getInceptionConfig, saveInceptionConfig, testInception
@@ -167,9 +168,6 @@
   const pageSize = 15
   const total = ref(0)
   const instances = ref([])
-
-  const statusType = (s) =>
-    ({ 待审核: 'warning', 审核通过: 'primary', 执行中: 'primary', 成功: 'success', 失败: 'danger', 已取消: 'info' }[s] || 'info')
 
   const getList = async (p) => {
     if (p) page.value = p
