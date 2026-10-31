@@ -233,6 +233,9 @@
       </el-table>
 
       <el-drawer v-model="logsVisible" :title="`日志 · 构建 #${logsBuild?.buildNo || ''}`" size="55%" append-to-body>
+        <div class="flex items-center justify-end mb-2">
+          <el-checkbox v-model="autoScroll" size="small">自动滚动到底</el-checkbox>
+        </div>
         <div ref="logBox" class="build-log">
           <div v-for="l in logsList" :key="l.ID" :class="['log-line', 'lv-' + l.level]">
             <span class="log-prefix">[{{ l.stageName || '系统' }}{{ l.stepName ? '/' + l.stepName : '' }}]</span>
@@ -380,6 +383,7 @@
   const logsBuild = ref(null)
   const logsList = ref([])
   const logBox = ref(null)
+  const autoScroll = ref(true) // 日志自动滚动到底开关（默认开）
   let buildTimer = null
 
   const openBuild = (row) => {
@@ -515,7 +519,8 @@
   }
 
   const scrollLogBox = () => {
-    if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight
+    // 自动滚动开关（默认开）：关闭后停在当前位置便于回看历史日志
+    if (logBox.value && autoScroll.value) logBox.value.scrollTop = logBox.value.scrollHeight
   }
 
   const buildTagType = (s) =>
