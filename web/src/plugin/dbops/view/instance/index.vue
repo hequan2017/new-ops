@@ -24,6 +24,11 @@
         </el-table-column>
         <el-table-column prop="username" label="账号" width="100" />
         <el-table-column prop="database" label="默认库" width="110" show-overflow-tooltip />
+        <el-table-column label="版本" width="110" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span :style="row.version ? '' : 'color: var(--el-text-color-placeholder)'">{{ row.version || '未检测' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
             <el-tag :type="instanceStatusType(row.status)" size="small">{{ row.status }}</el-tag>

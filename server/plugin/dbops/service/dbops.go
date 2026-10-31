@@ -3,12 +3,14 @@
 package service
 
 import (
+	"database/sql"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/asset/crypto"
 	"github.com/hequan2017/new-ops/server/plugin/dbops/model"
@@ -154,7 +156,7 @@ func (s *DbopsService) GetInstanceCredential(id uint) (host string, port int, us
 	return inst.Host, inst.Port, inst.Username, password, nil
 }
 
-// TestConnection 实例连通检测（TCP 探活级；SQL 层检测待 mysql 驱动引入）
+// TestConnection 实例连通检测：TCP 探活 → 成功后尝试 SELECT VERSION() 回填版本（凭据/权限问题仅忽略版本，不影响在线判定）
 func (s *DbopsService) TestConnection(id uint) (bool, string, error) {
 	inst, err := s.GetInstance(id)
 	if err != nil {
@@ -169,9 +171,34 @@ func (s *DbopsService) TestConnection(id uint) (bool, string, error) {
 		return false, "", err
 	}
 	_ = conn.Close()
-	global.GVA_DB.Model(&model.DbopsInstance{}).Where("id = ?", id).
-		Updates(map[string]any{"status": model.InstanceOnline, "last_check_at": now})
-	return true, "TCP 可达", nil
+
+	detail := "TCP 可达"
+	updates := map[string]any{"status": model.InstanceOnline, "last_check_at": now}
+	if v, vErr := s.fetchVersion(inst); vErr == nil && v != "" {
+		updates["version"] = v
+		detail = "TCP 可达，MySQL " + v
+	}
+	global.GVA_DB.Model(&model.DbopsInstance{}).Where("id = ?", id).Updates(updates)
+	return true, detail, nil
+}
+
+// fetchVersion 连接 MySQL 执行 SELECT VERSION()（2s 连接/读取超时，密码解密即用即毁）
+func (s *DbopsService) fetchVersion(inst *model.DbopsInstance) (string, error) {
+	host, port, user, password, err := s.GetInstanceCredential(inst.ID)
+	if err != nil {
+		return "", err
+	}
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?timeout=2s&readTimeout=2s", user, password, host, port)
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return "", err
+	}
+	defer db.Close()
+	var v string
+	if err = db.QueryRow("SELECT VERSION()").Scan(&v); err != nil {
+		return "", err
+	}
+	return v, nil
 }
 
 // ---------- SQL 工单 ----------
