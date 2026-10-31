@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -46,6 +47,25 @@ func TestValidResultStatus(t *testing.T) {
 	for _, s := range []string{"", "success", "成功 ", "任意"} {
 		if validResultStatus(s) {
 			t.Fatalf("%q 不应通过校验", s)
+		}
+	}
+}
+
+// Test_resultStatus 池结果 → 结果状态映射（优先级契约：取消 > 超时 > 成功 > 失败）
+func Test_resultStatus(t *testing.T) {
+	cases := []struct {
+		name string
+		r    PoolResult
+		want string
+	}{
+		{"取消优先于一切", PoolResult{Canceled: true, TimedOut: true}, model.ResultCanceled},
+		{"仅超时", PoolResult{TimedOut: true}, model.ResultTimeout},
+		{"无错误成功", PoolResult{}, model.ResultSuccess},
+		{"有错误失败", PoolResult{Err: errors.New("boom")}, model.ResultFailed},
+	}
+	for _, c := range cases {
+		if got := resultStatus(c.r); got != c.want {
+			t.Fatalf("%s: want %s got %s", c.name, c.want, got)
 		}
 	}
 }
