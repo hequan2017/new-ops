@@ -12,6 +12,13 @@
       </el-form>
 
       <el-table :data="tableData" v-loading="loading" stripe>
+        <template #empty>
+          <div class="py-8 flex flex-col items-center gap-2">
+            <p class="text-sm text-gray-500">还没有 Compose 编排项目</p>
+            <p class="text-xs text-gray-400">粘贴 compose 文件即可创建，支持一键 up/down</p>
+            <el-button type="primary" size="small" @click="openCreate">新建项目</el-button>
+          </div>
+        </template>
         <el-table-column prop="ID" label="ID" width="60" />
         <el-table-column prop="name" label="项目名" min-width="140" show-overflow-tooltip />
         <el-table-column prop="endpointName" label="接入点" min-width="130" show-overflow-tooltip />
