@@ -86,3 +86,34 @@ func TestComposeStatusMarshal(t *testing.T) {
 		t.Fatalf("回读不一致: %+v", back)
 	}
 }
+
+// Test_publishPorts 端口映射展示口径：Publishers 数组（docker compose ps --format json）与 Ports 字符串兜底（legacy）
+func Test_publishPorts(t *testing.T) {
+	cases := []struct {
+		name string
+		in   map[string]any
+		want string
+	}{
+		{
+			"Publishers 数组含 host:container",
+			map[string]any{"Publishers": []any{
+				map[string]any{"PublishedPort": float64(8080), "TargetPort": float64(80)},
+				map[string]any{"PublishedPort": float64(443), "TargetPort": float64(443)},
+			}},
+			"8080->80,443->443",
+		},
+		{
+			"未发布端口跳过",
+			map[string]any{"Publishers": []any{map[string]any{"PublishedPort": float64(0), "TargetPort": float64(80)}}},
+			"80", // 未发布端口展示容器端口
+		},
+		{"Ports 字符串兜底", map[string]any{"Ports": "0.0.0.0:3306->3306/tcp"}, "0.0.0.0:3306->3306/tcp"},
+		{"两者皆空", map[string]any{}, ""},
+	}
+	for _, c := range cases {
+		got := strings.Join(publishPorts(c.in), ",")
+		if got != c.want {
+			t.Fatalf("%s: want %q got %q", c.name, c.want, got)
+		}
+	}
+}
