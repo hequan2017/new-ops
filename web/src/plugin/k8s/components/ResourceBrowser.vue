@@ -16,7 +16,11 @@
               <el-tag :type="row.status === 'Running' ? 'success' : 'warning'" size="small">{{ row.status }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="restarts" label="重启" width="70" />
+          <el-table-column label="重启" width="80">
+            <template #default="{ row }">
+              <span :class="{ 'restart-warn': row.restarts > 5 }" style="font-size: 12px">{{ row.restarts }}</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="node" label="节点" min-width="130" />
           <el-table-column prop="age" label="年龄" width="80" />
           <el-table-column label="操作" width="260" fixed="right">
@@ -1128,6 +1132,11 @@
 </script>
 
 <style scoped>
+/* 重启次数超过阈值（>5）提示异常：CrashLoopBackOff 类问题先兆 */
+.restart-warn {
+  color: var(--el-color-danger);
+  font-weight: 600;
+}
 .logs-pre {
   white-space: pre-wrap;
   word-break: break-all;
