@@ -118,3 +118,33 @@ func TestBuildWSURL(t *testing.T) {
 		}
 	}
 }
+
+// TestSample_PointsContract 指标名协议契约（monitor 图表序列与告警规则 metric_name 依赖这些名字，漂移即图表空白+告警失效）：
+// 六指标全量时按 cpu/mem/disk/load/rx/tx 序输出，负值（不可得）跳过。
+func TestSample_PointsContract(t *testing.T) {
+	full := Sample{CPUPercent: 12.5, MemPercent: 40.1, DiskPercent: 55.0, Load1: 0.8, NetRxKBs: 100, NetTxKBs: 50}
+	pts := full.Points()
+	wantNames := []string{"cpu_percent", "mem_percent", "disk_percent", "load1", "net_rx_kbs", "net_tx_kbs"}
+	if len(pts) != len(wantNames) {
+		t.Fatalf("期望 %d 个指标点 got %d", len(wantNames), len(pts))
+	}
+	for i, w := range wantNames {
+		if pts[i].Name != w {
+			t.Fatalf("指标序[%d] want %s got %s", i, w, pts[i].Name)
+		}
+	}
+
+	// 负值=不可得：跳过对应点，其余保留
+	partial := Sample{CPUPercent: 10, MemPercent: -1, DiskPercent: -1, Load1: -1, NetRxKBs: -1, NetTxKBs: -1}
+	pts = partial.Points()
+	got := map[string]float64{}
+	for _, p := range pts {
+		got[p.Name] = p.Value
+	}
+	if len(pts) != 1 || got["cpu_percent"] != 10 {
+		t.Fatalf("负值跳过口径不符: %+v", pts)
+	}
+	if _, ok := got["load1"]; ok {
+		t.Fatal("load1=-1 应被跳过")
+	}
+}
