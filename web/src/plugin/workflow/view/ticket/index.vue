@@ -9,12 +9,15 @@
                 <el-option v-for="s in ['进行中', '已完成', '已驳回', '已取消']" :key="s" :label="s" :value="s" />
               </el-select>
             </el-form-item>
+            <el-form-item label="关键字">
+              <el-input v-model="ticketKw" clearable placeholder="标题/发起人" style="width: 160px" />
+            </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="openStart">发起工单</el-button>
               <el-button @click="loadTickets">刷 新</el-button>
             </el-form-item>
           </el-form>
-          <el-table :data="tickets" v-loading="ticketsLoading" stripe>
+          <el-table :data="tickets.filter(matchTicketKw)" v-loading="ticketsLoading" stripe>
             <el-table-column prop="ID" label="ID" width="60" />
             <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
             <el-table-column prop="definitionName" label="类型" width="130" />
@@ -26,7 +29,7 @@
             </el-table-column>
             <el-table-column prop="creator" label="发起人" width="90" />
             <el-table-column label="发起时间" width="160">
-              <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
+              <template #default="{ row }">{{ fmtTime(row.CreatedAt) }}</template>
             </el-table-column>
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="{ row }">
@@ -117,7 +120,7 @@
         <el-button size="small" :disabled="!logsList.length" @click="copyLogsText">复制为文本时间线</el-button>
       </div>
       <el-timeline style="padding-left: 8px">
-        <el-timeline-item v-for="l in logsList" :key="l.ID" :timestamp="fmtTime(l.createdAt) + ' · ' + relTime(l.createdAt)">
+        <el-timeline-item v-for="l in logsList" :key="l.ID" :timestamp="fmtTime(l.CreatedAt) + ' · ' + relTime(l.CreatedAt)">
           <b>{{ l.action }}</b> {{ l.fromState || '∅' }} → {{ l.toState }}
           <span class="ops-text-muted">（{{ l.operator }}）</span>
           <div v-if="l.comment" class="ops-text-muted">{{ l.comment }}</div>
@@ -142,6 +145,7 @@
   const tickets = ref([])
   const ticketsLoading = ref(false)
   const ticketStatus = ref('')
+  const ticketKw = ref('') // 标题/发起人本地过滤（pageSize 50 内）
 
   const statusType = (s) =>
     ({ 进行中: 'primary', 已完成: 'success', 已驳回: 'danger', 已取消: 'info' }[s] || 'info')
@@ -154,6 +158,13 @@
     } finally {
       ticketsLoading.value = false
     }
+  }
+
+  // 本地关键字过滤：标题与发起人（大小写不敏感，空值直通）
+  const matchTicketKw = (row) => {
+    if (!ticketKw.value) return true
+    const kw = ticketKw.value.toLowerCase()
+    return (row.title || '').toLowerCase().includes(kw) || (row.creator || '').toLowerCase().includes(kw)
   }
 
   const doAction = (row, action, label) => {
@@ -259,7 +270,7 @@
     const lines = [`【流转记录】${logsTitle.value}`]
     for (const l of logsList.value) {
       lines.push(
-        `${fmtTime(l.createdAt)}  ${l.action}  ${l.fromState || '∅'} → ${l.toState}（${l.operator}）${l.comment ? '\n  备注：' + l.comment : ''}`
+        `${fmtTime(l.CreatedAt)}  ${l.action}  ${l.fromState || '∅'} → ${l.toState}（${l.operator}）${l.comment ? '\n  备注：' + l.comment : ''}`
       )
     }
     navigator.clipboard?.writeText(lines.join('\n'))
