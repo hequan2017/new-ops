@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/asset/model"
 	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
 	"github.com/pkg/sftp"
@@ -104,7 +105,11 @@ func (s *SftpService) SftpMkdir(host *model.AssetHost, credentialID uint, remote
 		return err
 	}
 	defer cleanup()
-	return cl.MkdirAll(normalizeSftpPath(remotePath))
+	if err := cl.MkdirAll(normalizeSftpPath(remotePath)); err != nil {
+		return err
+	}
+	global.GVA_LOG.Info(fmt.Sprintf("SFTP 建目录: %s@%s %s", host.Hostname, host.IP, remotePath))
+	return nil
 }
 
 // SftpDelete 删除文件或空目录（目录递归删除）
@@ -120,11 +125,20 @@ func (s *SftpService) SftpDelete(host *model.AssetHost, credentialID uint, remot
 		return fmt.Errorf("目标不存在: %w", err)
 	}
 	if fi.IsDir() {
-		return s.removeDir(cl, target)
+		if err := s.removeDir(cl, target); err != nil {
+			return err
+		}
+		global.GVA_LOG.Info(fmt.Sprintf("SFTP 递归删除目录: %s@%s %s", host.Hostname, host.IP, target))
+		return nil
 	}
-	return cl.Remove(target)
+	if err := cl.Remove(target); err != nil {
+		return err
+	}
+	global.GVA_LOG.Info(fmt.Sprintf("SFTP 删除文件: %s@%s %s", host.Hostname, host.IP, target))
+	return nil
 }
 
+// removeDir 递归删除目录
 func (s *SftpService) removeDir(cl *sftp.Client, dir string) error {
 	entries, err := cl.ReadDir(dir)
 	if err != nil {
@@ -150,7 +164,11 @@ func (s *SftpService) SftpRename(host *model.AssetHost, credentialID uint, from,
 		return err
 	}
 	defer cleanup()
-	return cl.PosixRename(normalizeSftpPath(from), normalizeSftpPath(to))
+	if err := cl.PosixRename(normalizeSftpPath(from), normalizeSftpPath(to)); err != nil {
+		return err
+	}
+	global.GVA_LOG.Info(fmt.Sprintf("SFTP 重命名: %s@%s %s → %s", host.Hostname, host.IP, from, to))
+	return nil
 }
 
 // SftpDownload 打开远端文件读流（调用方负责关闭）
