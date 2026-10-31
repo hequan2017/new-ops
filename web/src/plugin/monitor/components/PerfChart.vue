@@ -43,6 +43,16 @@
     { name: 'net_tx_kbs', color: '#fb923c' }
   ]
 
+  // 指标单位（tooltip 展示口径，与 server 采集字段一一对应）
+  const UNIT_BY_SERIES = {
+    cpu_percent: '%',
+    mem_percent: '%',
+    disk_percent: '%',
+    load1: '',
+    net_rx_kbs: ' KB/s',
+    net_tx_kbs: ' KB/s'
+  }
+
   const render = (rows) => {
     if (!chart) return
     const byName = {}
@@ -54,7 +64,17 @@
     })
     points.value = tsSet.size
     chart.setOption({
-      tooltip: { trigger: 'axis' },
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params) => {
+          const lines = params.map((p) => {
+            const unit = UNIT_BY_SERIES[p.seriesName]
+            const v = Array.isArray(p.value) ? p.value[1] : p.value
+            return `${p.marker}${p.seriesName}&nbsp;&nbsp;<b>${v ?? '—'}${unit ?? ''}</b>`
+          })
+          return `${params[0]?.axisValueLabel || ''}<br/>${lines.join('<br/>')}`
+        }
+      },
       legend: { data: SERIES.map((s) => s.name), top: 0 },
       grid: { left: 48, right: 24, top: 32, bottom: 32 },
       xAxis: { type: 'time' },
