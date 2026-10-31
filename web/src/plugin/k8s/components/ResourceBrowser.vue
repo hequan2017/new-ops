@@ -5,6 +5,9 @@
       <el-select v-model="nsFilter" size="small" style="width: 220px" clearable placeholder="全部（授权范围）" @change="loadAll">
         <el-option v-for="n in nsOptions" :key="n.name" :label="n.name" :value="n.name" />
       </el-select>
+      <span v-if="lastRefreshAt" class="ops-text-muted" style="font-size: 12px; margin-left: 8px">
+        最近刷新 {{ fmtTime(lastRefreshAt) }} · {{ relTime(lastRefreshAt) }}
+      </span>
     </div>
     <el-tabs v-model="activeTab">
       <el-tab-pane label="Pods" name="pods">
@@ -483,6 +486,7 @@
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { ref, watch , onBeforeUnmount } from 'vue'
   import PodShell from '@/plugin/k8s/components/PodShell.vue'
+  import { fmtTime, relTime } from '@/utils/format'
 
   const visible = defineModel('visible', { type: Boolean })
   const props = defineProps({
@@ -870,6 +874,8 @@
   const logsPod = ref('')
   const logsText = ref('')
 
+  // 最近刷新时间（loadAll 成功后更新，tabs 行展示绝对+相对时间）
+  const lastRefreshAt = ref('')
   const loadAll = async () => {
     loading.value = true
     const ns = nsFilter.value || ''
@@ -898,6 +904,7 @@
       pvcs.value = pvc.code === 0 ? pvc.data : []
       ingresses.value = ing.code === 0 ? ing.data : []
       events.value = ev.code === 0 ? ev.data : []
+      lastRefreshAt.value = new Date().toISOString()
       loadHelm()
     } finally {
       loading.value = false
