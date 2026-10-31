@@ -3,6 +3,8 @@ package service
 import (
 	"strings"
 	"testing"
+
+	"github.com/hequan2017/new-ops/server/plugin/dbops/model"
 )
 
 // TestWrapMagicBlock goInception magic 块组装（use 前置/选项注入/非法凭据与库名拦截）
@@ -49,5 +51,34 @@ func TestWrapMagicBlock(t *testing.T) {
 	// 库名白名单：拼接 use 前强校验（防库名夹带语句）
 	if _, err := wrapMagicBlock(inceptionTarget{InstanceHost: "h", InstancePort: 3306, Username: "u", Password: "p", Database: "a;drop"}, "select 1;", false); err == nil {
 		t.Fatalf("非法库名应被拦截")
+	}
+}
+
+// Test_engineDSN goInception 连接 DSN 组装：超时/多语句/字符集口径固化（inception 需 multiStatements 支持魔法块定界）
+func Test_engineDSN(t *testing.T) {
+	got := engineDSN(&model.DbopsInceptionConfig{Host: "127.0.0.1", Port: 4000})
+	want := "tcp(127.0.0.1:4000)/?timeout=10s&readTimeout=120s&writeTimeout=10s&multiStatements=true&charset=utf8mb4"
+	if got != want {
+		t.Fatalf("want %q got %q", want, got)
+	}
+}
+
+// Test_magicOptionSafe 凭据嵌入注释选项的安全字符校验（; */ 换行会截断或逃逸 magic 块）
+func Test_magicOptionSafe(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{"普通密码", "p@ssw0rd-123", true},
+		{"含分号拒绝", "pass;drop", false},
+		{"含注释符拒绝", "pass*/x", false},
+		{"含换行拒绝", "pass\nline", false},
+		{"含回车拒绝", "pass\rline", false},
+	}
+	for _, c := range cases {
+		if got := magicOptionSafe(c.in); got != c.want {
+			t.Fatalf("%s: want %v got %v", c.name, c.want, got)
+		}
 	}
 }
