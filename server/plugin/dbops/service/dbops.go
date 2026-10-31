@@ -75,7 +75,10 @@ func (s *DbopsService) CreateInstance(inst *model.DbopsInstance) error {
 		inst.PasswordEnc = enc
 	}
 	inst.Status = model.InstanceUnknown
-	return global.GVA_DB.Create(inst).Error
+	if err := global.GVA_DB.Create(inst).Error; err != nil {
+		return fmt.Errorf("创建实例失败: %w", err)
+	}
+	return nil
 }
 
 // UpdateInstance 更新实例（密码留空不改）
@@ -97,7 +100,10 @@ func (s *DbopsService) UpdateInstance(inst *model.DbopsInstance) error {
 		}
 		updates["password_enc"] = enc
 	}
-	return global.GVA_DB.Model(&model.DbopsInstance{}).Where("id = ?", inst.ID).Updates(updates).Error
+	if err := global.GVA_DB.Model(&model.DbopsInstance{}).Where("id = ?", inst.ID).Updates(updates).Error; err != nil {
+		return fmt.Errorf("更新实例失败: %w", err)
+	}
+	return nil
 }
 
 // DeleteInstance 删除实例（有未结束工单拒绝）
@@ -133,7 +139,7 @@ func (s *DbopsService) GetInstance(id uint) (*model.DbopsInstance, error) {
 		if err == gorm.ErrRecordNotFound {
 			return nil, newDbErr(ErrCodeInstNotFound, "实例不存在")
 		}
-		return nil, err
+		return nil, fmt.Errorf("查询实例失败: %w", err)
 	}
 	inst.PasswordEnc = ""
 	return &inst, nil
