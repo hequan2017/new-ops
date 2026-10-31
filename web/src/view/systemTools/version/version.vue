@@ -563,7 +563,6 @@ const getMenuAndApiList = async () => {
     // 获取API列表
     const apiRes = await getApiList({ page: 1, pageSize: 9999 })
     if (apiRes.code === 0) {
-      console.log('原始API数据:', apiRes.data)
       const apis = apiRes.data.list || []
       apiTreeData.value = buildApiTree(apis)
     }

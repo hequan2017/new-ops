@@ -195,7 +195,6 @@ const rotate = (degree) => {
 // 实时预览
 const handleRealTime = (data) => {
   previews.value = data
-  //console.log(data)
 }
 
 // 上传处理

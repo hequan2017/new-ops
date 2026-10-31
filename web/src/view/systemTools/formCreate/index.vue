@@ -168,7 +168,6 @@ const submitForm = async () => {
   await formRef.value.validate((valid) => {
     if (valid) {
       ElMessage.success('表单校验通过，准备提交')
-      console.log('提交的数据: ', formData)
     } else {
       ElMessage.error('表单校验失败')
     }

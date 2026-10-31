@@ -54,7 +54,6 @@ const createQrCode = () => {
   const local = window.location
   codeUrl.value = local.protocol + '//' + local.host + '/#/scanUpload?id=' + props.classId + '&token=' + userStore.token + '&t=' + Date.now()
   dialogVisible.value = true
-  console.log(codeUrl.value)
 }
 
 const onFinished = () => {
