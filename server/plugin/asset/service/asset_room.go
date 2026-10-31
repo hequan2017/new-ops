@@ -41,7 +41,10 @@ func (s *AssetRoomService) CreateAssetRoom(r *model.AssetRoom) error {
 	if count > 0 {
 		return newServiceErr(ErrCodeRoomDuplicate, fmt.Sprintf("机房已存在: %s", r.Name))
 	}
-	return global.GVA_DB.Create(r).Error
+	if err := global.GVA_DB.Create(r).Error; err != nil {
+		return fmt.Errorf("创建机房失败: %w", err)
+	}
+	return nil
 }
 
 // DeleteAssetRoom 删除机房（存在机柜时禁止删除）
@@ -51,7 +54,10 @@ func (s *AssetRoomService) DeleteAssetRoom(id uint) error {
 	if count > 0 {
 		return newServiceErr(ErrCodeRoomHasRacks, "该机房下存在机柜，请先删除机柜")
 	}
-	return global.GVA_DB.Delete(&model.AssetRoom{}, id).Error
+	if err := global.GVA_DB.Delete(&model.AssetRoom{}, id).Error; err != nil {
+		return fmt.Errorf("删除机房失败: %w", err)
+	}
+	return nil
 }
 
 // UpdateAssetRoom 更新机房
@@ -64,12 +70,15 @@ func (s *AssetRoomService) UpdateAssetRoom(r *model.AssetRoom) error {
 	if count > 0 {
 		return newServiceErr(ErrCodeRoomDuplicate, fmt.Sprintf("机房已存在: %s", r.Name))
 	}
-	return global.GVA_DB.Model(&model.AssetRoom{}).Where("id = ?", r.ID).Omit("ID").Updates(map[string]any{
+	if err := global.GVA_DB.Model(&model.AssetRoom{}).Where("id = ?", r.ID).Omit("ID").Updates(map[string]any{
 		"name":    r.Name,
 		"region":  r.Region,
 		"address": r.Address,
 		"notes":   r.Notes,
-	}).Error
+	}).Error; err != nil {
+		return fmt.Errorf("更新机房失败: %w", err)
+	}
+	return nil
 }
 
 // GetAssetRoomList 机房全量列表（机房数量有限，不分页，供下拉与页面使用）
@@ -79,8 +88,10 @@ func (s *AssetRoomService) GetAssetRoomList(keyword string) (list []*model.Asset
 		kw := "%" + keyword + "%"
 		db = db.Where("name LIKE ? OR region LIKE ?", kw, kw)
 	}
-	err = db.Order("id DESC").Find(&list).Error
-	return list, err
+	if err = db.Order("id DESC").Find(&list).Error; err != nil {
+		return nil, fmt.Errorf("查询机房列表失败: %w", err)
+	}
+	return list, nil
 }
 
 // AssetRackService 机柜服务
@@ -112,12 +123,18 @@ func (s *AssetRackService) CreateAssetRack(r *model.AssetRack) error {
 		}
 		return err
 	}
-	return global.GVA_DB.Create(r).Error
+	if err := global.GVA_DB.Create(r).Error; err != nil {
+		return fmt.Errorf("创建机柜失败: %w", err)
+	}
+	return nil
 }
 
 // DeleteAssetRack 删除机柜
 func (s *AssetRackService) DeleteAssetRack(id uint) error {
-	return global.GVA_DB.Delete(&model.AssetRack{}, id).Error
+	if err := global.GVA_DB.Delete(&model.AssetRack{}, id).Error; err != nil {
+		return fmt.Errorf("删除机柜失败: %w", err)
+	}
+	return nil
 }
 
 // UpdateAssetRack 更新机柜
@@ -125,12 +142,15 @@ func (s *AssetRackService) UpdateAssetRack(r *model.AssetRack) error {
 	if err := validateRack(r); err != nil {
 		return err
 	}
-	return global.GVA_DB.Model(&model.AssetRack{}).Where("id = ?", r.ID).Omit("ID").Updates(map[string]any{
+	if err := global.GVA_DB.Model(&model.AssetRack{}).Where("id = ?", r.ID).Omit("ID").Updates(map[string]any{
 		"room_id": r.RoomID,
 		"name":    r.Name,
 		"total_u": r.TotalU,
 		"notes":   r.Notes,
-	}).Error
+	}).Error; err != nil {
+		return fmt.Errorf("更新机柜失败: %w", err)
+	}
+	return nil
 }
 
 // GetAssetRackList 机柜列表（可按机房过滤）
@@ -139,8 +159,10 @@ func (s *AssetRackService) GetAssetRackList(roomID *uint) (list []*model.AssetRa
 	if roomID != nil && *roomID > 0 {
 		db = db.Where("room_id = ?", *roomID)
 	}
-	err = db.Preload("Room").Order("id DESC").Find(&list).Error
-	return list, err
+	if err = db.Preload("Room").Order("id DESC").Find(&list).Error; err != nil {
+		return nil, fmt.Errorf("查询机柜列表失败: %w", err)
+	}
+	return list, nil
 }
 
 // AssetProductLineService 产品线服务
@@ -164,7 +186,10 @@ func (s *AssetProductLineService) CreateAssetProductLine(p *model.AssetProductLi
 	if count > 0 {
 		return newServiceErr(ErrCodePLDuplicate, fmt.Sprintf("产品线已存在: %s", p.Name))
 	}
-	return global.GVA_DB.Create(p).Error
+	if err := global.GVA_DB.Create(p).Error; err != nil {
+		return fmt.Errorf("创建产品线失败: %w", err)
+	}
+	return nil
 }
 
 // DeleteAssetProductLine 删除产品线（先清空主机关联）
@@ -178,9 +203,12 @@ func (s *AssetProductLineService) DeleteAssetProductLine(id uint) error {
 			return err
 		}
 		if err := tx.Model(&pl).Association("Hosts").Clear(); err != nil {
-			return err
+			return fmt.Errorf("清空产品线主机关联失败: %w", err)
 		}
-		return tx.Delete(&pl).Error
+		if err := tx.Delete(&pl).Error; err != nil {
+			return fmt.Errorf("删除产品线失败: %w", err)
+		}
+		return nil
 	})
 }
 
