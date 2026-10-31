@@ -118,7 +118,7 @@
 | 集群注册 | kubeconfig AES-256-GCM 加密落库（不回显）；连接测试、离线状态标记 |
 | 集群总览 | 版本/节点统计/命名空间/Pod 数 + metrics-server 资源用量（不可用时降级） |
 | Node 管理 | 列表/详情、cordon/uncordon、drain（policy/v1 Eviction，自动跳过 DaemonSet） |
-| 资源浏览 | Pods / Deployments / StatefulSets / DaemonSets / Nodes / Services / ConfigMaps / Secrets / PVC / Ingress / Events 十一类只读列表（Secret 值永不回显） |
+| 资源浏览 | Pods / Deployments / StatefulSets / DaemonSets / Nodes / Services / ConfigMaps / Secrets / PVC / Ingress / Events 十一类只读列表（Secret 值永不回显）；Pod 重启数>5 标红、镜像排序、名称关键字过滤、最近刷新时间 |
 | Pod 详情/日志/终端 | 详情含容器状态与相关事件、日志 tail、WebShell（client-go SPDY ⇄ WebSocket，query token + casbin 双验） |
 | 工作负载写操作 | Deployment 扩缩容（0-500 校验）与滚动重启 |
 | YAML 下发 | 三类工作负载 YAML 查看（剔 managedFields）→ 编辑 → **服务端 dry-run diff 红绿预览** → 确认下发（乐观锁 resourceVersion、防跨对象写） |
