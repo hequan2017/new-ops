@@ -234,12 +234,25 @@ func (s *MonitorService) CollectPerf(host *assetModel.AssetHost) (*PerfSample, e
 // collectMu 防重入锁：上一轮未结束（存在挂死主机）时跳过本轮，避免 goroutine/连接叠加
 var collectMu sync.Mutex
 
+// collectLastDone 上轮完成时刻（unix 秒）；TryLock 只防并发，冷却窗口防背靠背连点
+var collectLastDone atomic.Int64
+
+// collectCoolingDown 冷却窗口判定：上轮 10s 内完成过则本轮跳过（last<=0 表示从未采集过不冷却）
+func collectCoolingDown(last, now int64) bool {
+	return last > 0 && now-last < 10
+}
+
 // CollectAll 全量采集：对所有绑定 SSH 凭据且非报废的主机并发采样（上限 5）并落库
 func (s *MonitorService) CollectAll() {
 	if !collectMu.TryLock() {
 		return
 	}
 	defer collectMu.Unlock()
+	// 手动连点冷却：上轮 10s 内刚完成则跳过本轮（与 TryLock 互补——一个防并发，一个防背靠背）
+	if collectCoolingDown(collectLastDone.Load(), time.Now().Unix()) {
+		return
+	}
+	defer func() { collectLastDone.Store(time.Now().Unix()) }()
 	// 跳过已装在线 agent 的资产：SSH 采样（1s 窗口口径）与 agent 30s 上报双通道并行，
 	// 同一指标序列混入两种口径的点（图表毛刺）且白白消耗 SSH 并发与凭据解密。
 	// 直查表名避免 monitor→agent import 环（agent 已依赖 monitor 指标模型）；90s 为 agent 在线 TTL
