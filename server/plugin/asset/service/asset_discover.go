@@ -158,7 +158,11 @@ func (s *AssetHostService) DiscoverHosts(ctx context.Context, cidr string, port,
 	}
 	wg.Wait()
 	sortDiscoveredByIP(out)
-	return DiscoverResult{Hosts: out, Total: len(addrs), DurationMs: time.Since(start).Milliseconds()}, nil
+	duration := time.Since(start)
+	// 长扫描留痕（/24 上限 4096 地址、60s 超时窗口）：起止/发现数/耗时可追溯
+	global.GVA_LOG.Info(fmt.Sprintf("网段发现完成: cidr=%s 扫描 %d 地址，发现 %d 台 SSH，耗时 %dms",
+		cidr, len(addrs), len(out), duration.Milliseconds()))
+	return DiscoverResult{Hosts: out, Total: len(addrs), DurationMs: duration.Milliseconds()}, nil
 }
 
 // ImportDiscoveredHosts 将发现的主机导入为资产（已存在跳过；主机名先取 IP，后续可人工改）
