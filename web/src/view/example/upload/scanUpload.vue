@@ -111,11 +111,10 @@ onUnmounted(() => window.removeEventListener('resize', getWindowResize))
 const router = useRouter()
 router.isReady().then(() => {
   let query = router.currentRoute.value.query
-  //console.log(query)
   classId.value = query.id
   token.value = query.token
 }).catch((err) => {
-  console.log(err)
+  console.error('分片上传页路由初始化失败:', err)
 })
 
 const uploadRef = ref(null)
