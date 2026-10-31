@@ -112,10 +112,11 @@ type agentFrame struct {
 }
 
 type agentMeta struct {
-	Version  string `json:"version"`
-	Os       string `json:"os"`
-	Arch     string `json:"arch"`
-	Hostname string `json:"hostname"`
+	Version   string `json:"version"`
+	Os        string `json:"os"`
+	Arch      string `json:"arch"`
+	Hostname  string `json:"hostname"`
+	UptimeSec int64  `json:"uptimeSec"` // 进程运行时长（旧版本 agent 无此字段则不更新启动时刻）
 }
 
 type agentPoint struct {
@@ -272,10 +273,16 @@ func (s *AgentService) HandleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := time.Now()
-	global.GVA_DB.Model(&inst).Updates(map[string]any{
+	updates := map[string]any{
 		"version": first.Agent.Version, "os_arch": first.Agent.Os + "/" + first.Agent.Arch,
 		"hostname": first.Agent.Hostname, "last_heartbeat": &now,
-	})
+	}
+	if first.Agent.UptimeSec > 0 {
+		// 进程启动时刻 = 注册时刻 - 运行时长（旧版本 agent 不上报则保持原值）
+		startedAt := now.Add(-time.Duration(first.Agent.UptimeSec) * time.Second)
+		updates["started_at"] = &startedAt
+	}
+	global.GVA_DB.Model(&inst).Updates(updates)
 	if err := writeRegisterAck(conn, agentFrame{Type: "register_ok", TS: now.Unix()}); err != nil {
 		return
 	}

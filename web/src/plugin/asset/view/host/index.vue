@@ -268,6 +268,7 @@
         <el-descriptions-item label="版本">{{ agentCurrent.version || '未上报' }}</el-descriptions-item>
         <el-descriptions-item label="系统">{{ agentCurrent.osArch || '-' }}</el-descriptions-item>
         <el-descriptions-item label="上报主机名">{{ agentCurrent.hostname || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="运行时长">{{ agentUptimeText }}</el-descriptions-item>
         <el-descriptions-item label="最近心跳" :span="2">
           {{ agentCurrent.lastHeartbeat ? agentCurrent.lastHeartbeat.replace('T', ' ').slice(0, 19) : '—' }}
         </el-descriptions-item>
@@ -703,6 +704,20 @@
   const agentCurrent = ref(null)
   const agentTokenOnce = ref('')
   const agentIssuing = ref(false)
+
+  // Agent 进程运行时长（按注册时上报换算的 startedAt 实时计算）
+  const agentUptimeText = computed(() => {
+    const sa = agentCurrent.value?.startedAt
+    if (!sa) return '未知'
+    const ms = Date.now() - new Date(sa).getTime()
+    if (!(ms > 0)) return '未知'
+    const min = Math.floor(ms / 60000)
+    if (min < 1) return '刚刚启动'
+    if (min < 60) return `${min} 分钟`
+    const h = Math.floor(min / 60)
+    if (h < 24) return `${h} 小时 ${min % 60} 分`
+    return `${Math.floor(h / 24)} 天 ${h % 24} 小时`
+  })
 
   const loadAgentMap = async () => {
     const res = await getAgentInstanceList()

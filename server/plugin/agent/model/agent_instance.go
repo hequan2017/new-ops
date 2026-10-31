@@ -18,4 +18,5 @@ type AgentInstance struct {
 	Hostname      string     `json:"hostname" gorm:"size:128;comment:上报主机名"`
 	Labels        string     `json:"labels" gorm:"size:255;comment:标签(逗号分隔)"`
 	LastHeartbeat *time.Time `json:"lastHeartbeat" gorm:"comment:最近心跳"`
+	StartedAt     *time.Time `json:"startedAt" gorm:"comment:Agent进程启动时刻(注册时按上报运行时长换算)"`
 }

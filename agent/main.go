@@ -52,10 +52,11 @@ type frame struct {
 }
 
 type agentMeta struct {
-	Version  string `json:"version"`
-	Os       string `json:"os"`
-	Arch     string `json:"arch"`
-	Hostname string `json:"hostname"`
+	Version   string `json:"version"`
+	Os        string `json:"os"`
+	Arch      string `json:"arch"`
+	Hostname  string `json:"hostname"`
+	UptimeSec int64  `json:"uptimeSec"` // 进程运行时长（注册时上报，server 换算启动时刻）
 }
 
 var (
@@ -64,6 +65,8 @@ var (
 	flagInterval = flag.Duration("interval", 30*time.Second, "心跳与指标上报周期")
 	flagHostname = flag.String("hostname", "", "上报主机名（默认取 os.Hostname）")
 	flagDocker   = flag.String("docker-addr", "", "docker daemon 地址覆盖（unix://… 或 tcp://…，默认自动探测 socket）")
+
+	procStart = time.Now() // 进程启动时刻（运行时长上报口径）
 )
 
 func main() {
@@ -152,7 +155,8 @@ func runSession(wsURL, token string, meta agentMeta, interval time.Duration, exe
 		return conn.WriteJSON(f)
 	}
 
-	// 注册
+	// 注册（每次重连重算运行时长，server 端换算进程启动时刻）
+	meta.UptimeSec = int64(time.Since(procStart).Seconds())
 	if err := send(frame{Type: "register", Token: token, TS: time.Now().Unix(), Agent: meta}); err != nil {
 		return err
 	}
