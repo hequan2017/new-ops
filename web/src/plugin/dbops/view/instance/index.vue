@@ -30,7 +30,7 @@
           </template>
         </el-table-column>
         <el-table-column label="最近检测" width="160">
-          <template #default="{ row }">{{ (row.lastCheckAt || '—').replace('T', ' ').slice(0, 19) }}</template>
+          <template #default="{ row }">{{ fmtTime(row.lastCheckAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
@@ -79,6 +79,7 @@
   import { ref, reactive, onMounted } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { instanceStatusType } from '@/plugin/dbops/status'
+  import { fmtTime } from '@/utils/format'
   import {
     createInstance, updateInstance, deleteInstance, getInstanceList, testInstance
   } from '@/plugin/dbops/api/dbops'
