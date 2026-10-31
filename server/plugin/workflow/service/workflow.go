@@ -170,7 +170,7 @@ func (s *WorkflowService) StartInstance(definitionID uint, title, bizType, param
 	}
 	return ins, global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(ins).Error; err != nil {
-			return err
+			return fmt.Errorf("创建工单失败: %w", err)
 		}
 		return tx.Create(&model.WfActionLog{
 			InstanceID: ins.ID, FromState: "", Action: "start",
@@ -272,7 +272,7 @@ func (s *WorkflowService) SubmitAction(instanceID uint, action, comment, operato
 		}).Error
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("工单流转失败: %w", err)
 	}
 	// 发版闭环：审批完成（非驳回）的 release 工单自动触发流水线（M3 末项）
 	if finishedNow && ins.BizType == BizTypeRelease {
