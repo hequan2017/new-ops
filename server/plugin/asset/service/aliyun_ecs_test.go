@@ -94,3 +94,24 @@ func Test_parseECSDescribeResponse_error(t *testing.T) {
 		t.Fatalf("非JSON应报错")
 	}
 }
+
+// Test_osNameToID 云侧 OSName → 系统 ID 映射（阿里云 OsName 实况格式：带版本号与多词）
+func Test_osNameToID(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"阿里云 Ubuntu 实况", "Ubuntu 22.04 64位", "ubuntu"},
+		{"CentOS 带版本", "CentOS 7.9 64位", "centos"},
+		{"Windows Server", "Windows Server 2019 数据中心版", "windows"},
+		{"Alibaba Cloud Linux", "Alibaba Cloud Linux 3.2104 LTS 64位", "alibaba"},
+		{"空串", "", ""},
+		{"纯空格", "   ", ""},
+	}
+	for _, c := range cases {
+		if got := osNameToID(c.in); got != c.want {
+			t.Fatalf("%s: want %q got %q", c.name, c.want, got)
+		}
+	}
+}
