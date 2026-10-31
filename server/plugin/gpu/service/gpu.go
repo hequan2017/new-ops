@@ -88,7 +88,7 @@ func (s *GpuService) UpdateNode(n *model.GpuNode) error {
 		}
 		gpuUsed, cpuUsed, memUsed, err := nodeUsage(tx, n.ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("查询节点占用失败: %w", err)
 		}
 		if n.GpuTotal < gpuUsed || n.CpuTotal < cpuUsed || n.MemTotalGb < memUsed {
 			return newGpuErr(ErrCodeGpuOversold, "总量不可低于运行中实例的已分配量")
@@ -123,7 +123,7 @@ type NodeWithUsage struct {
 func (s *GpuService) GetNodeList() ([]NodeWithUsage, error) {
 	var nodes []model.GpuNode
 	if err := global.GVA_DB.Order("id DESC").Find(&nodes).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("查询节点列表失败: %w", err)
 	}
 	// 一次 GROUP BY 批量取占用（原逐节点查询的 N+1）
 	usage := map[uint]nodeUsageAgg{}
@@ -137,7 +137,7 @@ func (s *GpuService) GetNodeList() ([]NodeWithUsage, error) {
 			Select("node_id, COALESCE(SUM(gpu_allocated),0) as gpu, COALESCE(SUM(cpu_allocated),0) as cpu, COALESCE(SUM(mem_alloc_gb),0) as mem").
 			Where("node_id IN ? AND status = ?", ids, model.InstRunning).
 			Group("node_id").Scan(&rows).Error; err != nil {
-			return nil, err
+			return nil, fmt.Errorf("查询节点占用聚合失败: %w", err)
 		}
 		for _, r := range rows {
 			usage[r.NodeID] = r
@@ -200,7 +200,7 @@ func (s *GpuService) StartInstance(nodeID, specID uint, name, creator string, us
 		}
 		gpuUsed, cpuUsed, memUsed, err := nodeUsage(tx, nodeID)
 		if err != nil {
-			return err
+			return fmt.Errorf("查询节点占用失败: %w", err)
 		}
 		if !canAllocate(node.GpuTotal, gpuUsed, spec.GpuCount) ||
 			!canAllocate(node.CpuTotal, cpuUsed, spec.CpuCores) ||
@@ -221,7 +221,7 @@ func (s *GpuService) StartInstance(nodeID, specID uint, name, creator string, us
 		return tx.Create(inst).Error
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("开通实例失败: %w", err)
 	}
 	return inst, nil
 }
