@@ -66,10 +66,10 @@
             <el-table-column prop="ID" label="ID" width="55" />
             <el-table-column prop="summary" label="摘要" min-width="280" show-overflow-tooltip />
             <el-table-column label="触发时间" width="160">
-              <template #default="{ row }">{{ (row.firedAt || '').replace('T', ' ').slice(0, 19) }}</template>
+              <template #default="{ row }">{{ fmtTime(row.firedAt) }}</template>
             </el-table-column>
             <el-table-column label="恢复时间" width="160">
-              <template #default="{ row }">{{ (row.resolvedAt || '未恢复').toString().replace('T', ' ').slice(0, 19) }}</template>
+              <template #default="{ row }">{{ fmtTime(row.resolvedAt, '未恢复') }}</template>
             </el-table-column>
             <el-table-column label="通知" width="70">
               <template #default="{ row }">
@@ -146,6 +146,7 @@
 <script setup>
   import { ref, reactive, onMounted } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { fmtTime } from '@/utils/format'
   import {
     createAlertRule, updateAlertRule, deleteAlertRule, getAlertRules, getAlertEvents
   } from '@/plugin/monitor/api/alert'

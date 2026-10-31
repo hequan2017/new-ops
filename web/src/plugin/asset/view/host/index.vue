@@ -97,7 +97,7 @@
         </el-table-column>
         <el-table-column label="最近采集" width="150">
           <template #default="{ row }">
-            {{ row.lastCollectAt ? row.lastCollectAt.replace('T', ' ').slice(0, 19) : '未采集' }}
+            {{ fmtTime(row.lastCollectAt, '未采集') }}
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90">
@@ -270,7 +270,7 @@
         <el-descriptions-item label="上报主机名">{{ agentCurrent.hostname || '-' }}</el-descriptions-item>
         <el-descriptions-item label="运行时长">{{ agentUptimeText }}</el-descriptions-item>
         <el-descriptions-item label="最近心跳" :span="2">
-          {{ agentCurrent.lastHeartbeat ? agentCurrent.lastHeartbeat.replace('T', ' ').slice(0, 19) : '—' }}
+          {{ fmtTime(agentCurrent.lastHeartbeat) }}
         </el-descriptions-item>
       </el-descriptions>
       <el-alert
@@ -482,6 +482,7 @@
   } from '@/plugin/asset/api/assetHost'
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import XtermShell from '@/plugin/term/components/XtermShell.vue'
+  import { fmtTime } from '@/utils/format'
   import LogTail from '@/plugin/term/components/LogTail.vue'
   import PerfChart from '@/plugin/monitor/components/PerfChart.vue'
   import { ElMessage, ElMessageBox } from 'element-plus'

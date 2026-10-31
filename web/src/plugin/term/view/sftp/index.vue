@@ -109,6 +109,7 @@
   import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { fmtTime } from '@/utils/format'
   import { computed, onMounted, ref } from 'vue'
 
   defineOptions({ name: 'TermSftp' })
@@ -136,7 +137,6 @@
     if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB'
     return (n / 1024 / 1024 / 1024).toFixed(1) + ' GB'
   }
-  const fmtTime = (t) => (t ? t.replace('T', ' ').slice(0, 19) : '-')
 
   const { hostOptions: hostList, fetchHostOptions: loadHosts } = useHostOptions()
   const loadCreds = async () => {

@@ -19,6 +19,15 @@ export const formatDate = (time) => {
   }
 }
 
+// fmtTime 时间列统一格式化：ISO 字符串/时间戳/Date → 'yyyy-MM-dd hh:mm:ss'；
+// 空值返回 fallback（默认 '—'，可传领域文案如 '未采集'/'未恢复'）；非时间字符串原样回显
+export const fmtTime = (time, fallback = '—') => {
+  if (time === null || time === undefined || time === '') return fallback
+  const d = new Date(time)
+  if (isNaN(d.getTime())) return String(time)
+  return formatTimeToStr(d, 'yyyy-MM-dd hh:mm:ss')
+}
+
 export const filterDict = (value, options) => {
   // 递归查找函数
   const findInOptions = (opts, targetValue) => {

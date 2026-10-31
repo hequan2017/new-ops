@@ -217,10 +217,10 @@
           <template #default="{ row }">{{ row.triggerIp || '—' }}</template>
         </el-table-column>
         <el-table-column label="开始时间" width="150">
-          <template #default="{ row }">{{ (row.startedAt || '—').replace('T', ' ').slice(0, 19) }}</template>
+          <template #default="{ row }">{{ fmtTime(row.startedAt) }}</template>
         </el-table-column>
         <el-table-column label="结束时间" width="150">
-          <template #default="{ row }">{{ (row.finishedAt || '—').replace('T', ' ').slice(0, 19) }}</template>
+          <template #default="{ row }">{{ fmtTime(row.finishedAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
@@ -249,6 +249,7 @@
   import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { useUserStore } from '@/pinia/modules/user'
+  import { fmtTime } from '@/utils/format'
   import {
     createPipeline, updatePipeline, deletePipeline, getPipelineList,
     startBuild, cancelBuild, approveBuild, getBuildList, getBuildLogs, restartBuild

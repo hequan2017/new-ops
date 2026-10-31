@@ -43,7 +43,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="startedAt" label="开始时间" min-width="160">
-          <template #default="{ row }">{{ (row.startedAt || '').replace('T', ' ').slice(0, 19) }}</template>
+          <template #default="{ row }">{{ fmtTime(row.startedAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="110" fixed="right">
           <template #default="{ row }">
@@ -83,6 +83,7 @@
   import { getTermSessionList, getTermSessionStreams, getTermSessionCommands } from '@/plugin/term/api/termSession'
   import { Terminal } from '@xterm/xterm'
   import '@xterm/xterm/css/xterm.css'
+  import { fmtTime } from '@/utils/format'
   import { nextTick, onMounted, ref , onBeforeUnmount } from 'vue'
 
   defineOptions({ name: 'TermAudit' })
