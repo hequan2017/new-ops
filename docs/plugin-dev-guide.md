@@ -91,6 +91,24 @@ func Router(engine *gin.Engine) {
 - 删除功能时：种子与测试库旧菜单都要清理（SQL 直删 `sys_base_menus` + `sys_authority_menus` + `sys_base_menu_btns` 关联行）。
 - 教训（2026-09-30）：GVA 示例模块移除时残留 `initialize/gorm.go`、`ensure_tables.go` 注册行导致编译失败——**删模块必须全仓 grep 结构体名/路由名**。
 
+### 3.1 新增一个接口的速查表（漏一步即 403/不可见）
+
+以「给已有插件加一个 `POST /xxx/yyy/zzz` 接口」为例，六处必改：
+
+| # | 位置 | 作用 | 漏掉的后果 |
+|---|---|---|---|
+| 1 | `api/v1/` handler + swagger 注释 | 接口实现与文档 | `make doc` 缺接口 |
+| 2 | `router/enter.go` 注册 | 路由可达 | 404 |
+| 3 | `initialize/api.go` API 种子 | 超管界面可见/管理 | 界面无法授权 |
+| 4 | `initialize/casbin.go` 策略种子 | **casbin 放行** | **所有角色（含 888）403** |
+| 5 | 前端 `api/xxx.js` 封装 | 调用面 | 前端无法调用 |
+| 6 | 前端按钮/页面接线 | 交互入口 | 功能不可达 |
+
+要点：
+- casbin 策略按角色收敛口径注册（888 全量；普通角色按只读/写分类，参考 workflow `Casbin()` 的 roles 分支）。
+- 种子一律幂等（先查后插），重复启动不重复插入。
+- 排查顺序：404 先查 #2；403 先查 #4（casbin 缓存重启后生效）。
+
 ## 4. 编码红线（会话协议第 5 条展开）
 
 | 项 | 规则 |
