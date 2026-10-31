@@ -193,6 +193,14 @@
             {{ fmtTime(row.startedAt) }}
           </template>
         </el-table-column>
+        <el-table-column label="耗时" width="90">
+          <template #default="{ row }">
+            <span v-if="row.finishedAt && row.startedAt" :class="row.failed > 0 ? 'ops-text-danger' : ''">
+              {{ batchDuration(row) }}
+            </span>
+            <span v-else style="color: var(--el-text-color-placeholder)">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
@@ -281,6 +289,15 @@
 
   // 批次列表列宽拖拽记忆
   const { colW, onHeaderDragend } = useColWidthMemory('colWidth:jobBatch')
+
+  // 批次耗时（结束-开始，秒级显示；<60s 显示 Ns，≥60s N 分 N 秒）
+  const batchDuration = (row) => {
+    const ms = new Date(row.finishedAt).getTime() - new Date(row.startedAt).getTime()
+    if (!(ms > 0)) return '—'
+    const s = Math.round(ms / 1000)
+    if (s < 60) return `${s}s`
+    return `${Math.floor(s / 60)} 分 ${s % 60} 秒`
+  }
   import { useHostOptions } from '@/plugin/asset/composables/useHostOptions'
   import { getCredentialList } from '@/plugin/asset/api/credential'
   import { getAgentInstanceList, pushAgentFile } from '@/plugin/agent/api/agentInstance'
