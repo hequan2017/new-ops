@@ -32,11 +32,17 @@
         <el-table-column prop="nodeCount" label="节点数" width="90">
           <template #default="{ row }">{{ row.nodeCount || '-' }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="90">
+        <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="row.status === '在线' ? 'success' : row.status === '离线' ? 'danger' : 'info'">
-              {{ row.status || '-' }}
-            </el-tag>
+            <el-tooltip
+              :disabled="!row.status"
+              :content="row.status === '离线' ? '最近连接测试未通过或状态未知，可点击「连接测试」刷新' : '集群可正常连接'"
+              placement="top"
+            >
+              <el-tag :type="row.status === '在线' ? 'success' : 'info'" :effect="row.status === '离线' ? 'plain' : 'light'">
+                {{ row.status || '-' }}
+              </el-tag>
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="140">
