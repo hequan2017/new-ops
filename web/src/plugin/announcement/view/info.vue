@@ -99,6 +99,14 @@
       >
         <el-table-column type="selection" width="55" />
 
+        <template #empty>
+          <div class="py-8 flex flex-col items-center gap-2">
+            <p class="text-sm text-gray-500">还没有公告</p>
+            <p class="text-xs text-gray-400">发布第一条公告通知团队</p>
+            <el-button type="primary" size="small" @click="openDialog">新增公告</el-button>
+          </div>
+        </template>
+
         <el-table-column align="left" label="日期" prop="CreatedAt" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.CreatedAt) }}
@@ -372,8 +380,8 @@
 
   // 删除行
   const deleteRow = (row) => {
-    ElMessageBox.confirm('确定要删除吗?', '提示', {
-      confirmButtonText: '确定',
+    ElMessageBox.confirm(`确定删除公告「${row.title}」吗？`, '危险操作', {
+      confirmButtonText: '删除',
       cancelButtonText: '取消',
       type: 'warning'
     }).then(() => {
@@ -478,10 +486,7 @@
           break
       }
       if (res.code === 0) {
-        ElMessage({
-          type: 'success',
-          message: '创建/更改成功'
-        })
+        ElMessage.success(type.value === 'create' ? '创建成功' : '更新成功')
         closeDialog()
         getTableData()
       }
