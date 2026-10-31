@@ -385,6 +385,12 @@ func (s *ComposeService) ComposeAction(projectID uint, action string) (string, e
 	} else if err == nil {
 		_, _ = s.ComposePS(p.ID)
 	}
+	// 生命周期操作留痕（up/down/restart 均为真实外部副作用，成败均记 endpoint+项目+动作）
+	if err != nil {
+		global.GVA_LOG.Warn(fmt.Sprintf("compose %s 失败: endpoint=%s project=%s err=%v", action, ep.Name, p.Name, err))
+	} else {
+		global.GVA_LOG.Info(fmt.Sprintf("compose %s 成功: endpoint=%s project=%s", action, ep.Name, p.Name))
+	}
 	return out, err
 }
 
