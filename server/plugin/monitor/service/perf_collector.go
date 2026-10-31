@@ -231,6 +231,15 @@ func (s *MonitorService) CollectPerf(host *assetModel.AssetHost) (*PerfSample, e
 	}
 }
 
+const (
+	// agentOnlineTTL agent 在线判定 TTL：与 agent 心跳周期(30s)配套，直查表避免 monitor→agent import 环
+	agentOnlineTTL = 90 * time.Second
+	// collectConcurrency SSH 采样并发上限（每轮全量主机）
+	collectConcurrency = 5
+	// collectCooldownSec 手动采集冷却窗口秒数（见 CollectAll）
+	collectCooldownSec = 10
+)
+
 // collectMu 防重入锁：上一轮未结束（存在挂死主机）时跳过本轮，避免 goroutine/连接叠加
 var collectMu sync.Mutex
 
@@ -239,7 +248,7 @@ var collectLastDone atomic.Int64
 
 // collectCoolingDown 冷却窗口判定：上轮 10s 内完成过则本轮跳过（last<=0 表示从未采集过不冷却）
 func collectCoolingDown(last, now int64) bool {
-	return last > 0 && now-last < 10
+	return last > 0 && now-last < collectCooldownSec
 }
 
 // CollectAll 全量采集：对所有绑定 SSH 凭据且非报废的主机并发采样（上限 5）并落库
@@ -258,7 +267,7 @@ func (s *MonitorService) CollectAll() {
 	// 直查表名避免 monitor→agent import 环（agent 已依赖 monitor 指标模型）；90s 为 agent 在线 TTL
 	var agentAssetIDs []uint
 	global.GVA_DB.Table("agent_instances").
-		Where("last_heartbeat > ?", time.Now().Add(-90*time.Second)).
+		Where("last_heartbeat > ?", time.Now().Add(-agentOnlineTTL)).
 		Pluck("asset_id", &agentAssetIDs)
 	db := global.GVA_DB.Where("credential_id IS NOT NULL AND status != ?", assetModel.AssetStatusRetired)
 	if len(agentAssetIDs) > 0 {
@@ -266,7 +275,7 @@ func (s *MonitorService) CollectAll() {
 	}
 	var hosts []*assetModel.AssetHost
 	db.Find(&hosts)
-	sem := make(chan struct{}, 5)
+	sem := make(chan struct{}, collectConcurrency)
 	var wg sync.WaitGroup
 	for _, h := range hosts {
 		wg.Add(1)
