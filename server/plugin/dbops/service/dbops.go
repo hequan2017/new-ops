@@ -223,7 +223,10 @@ func (s *DbopsService) CreateOrder(instID uint, title, sqlText, creator string, 
 		Title: title, AuditPayload: sqlText,
 		Status: model.OrderPending, Creator: creator, UserID: userID,
 	}
-	return order, global.GVA_DB.Create(order).Error
+	if err := global.GVA_DB.Create(order).Error; err != nil {
+		return nil, fmt.Errorf("创建工单失败: %w", err)
+	}
+	return order, nil
 }
 
 // AuditOrder 已迁移至 inception.go（goInception 接入，M6 收官）
@@ -242,7 +245,7 @@ func (s *DbopsService) CancelOrder(orderID uint, operator string) error {
 		Where("id = ? AND status = ?", orderID, model.OrderPending).
 		Updates(map[string]any{"status": model.OrderCanceled, "finished_at": &now})
 	if res.Error != nil {
-		return res.Error
+		return fmt.Errorf("取消工单失败: %w", res.Error)
 	}
 	if res.RowsAffected == 0 {
 		return newDbErr(ErrCodeOrderInvalid, "工单状态已变化，请刷新后重试")
@@ -263,7 +266,7 @@ func (s *DbopsService) GetOrderList(page, pageSize int, creator, status string, 
 		db = db.Where("status = ?", status)
 	}
 	if err = db.Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("查询工单列表失败: %w", err)
 	}
 	if page <= 0 {
 		page = 1
