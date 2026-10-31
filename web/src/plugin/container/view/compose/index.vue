@@ -24,7 +24,7 @@
         </el-table-column>
         <el-table-column label="最近操作" width="160">
           <template #default="{ row }">
-            {{ (row.lastOpAt || row.updatedAt || '—').replace('T', ' ').slice(0, 19) }}
+            {{ fmtTime(row.lastOpAt || row.updatedAt) }}
           </template>
         </el-table-column>
         <el-table-column prop="createdBy" label="创建人" width="100" />
@@ -108,6 +108,7 @@
     deleteComposeProject, composePs, composeAction
   } from '@/plugin/container/api/compose'
   import { getEndpointList } from '@/plugin/container/api/dockerEndpoint'
+  import { fmtTime } from '@/utils/format'
 
   const keyword = ref('')
   const loading = ref(false)
