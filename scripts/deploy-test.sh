@@ -8,6 +8,8 @@
 #
 # 管理员密码（仅全新安装时生效）：通过环境变量 NEW_OPS_ADMIN_PASSWORD 传入；
 # 不传则随机生成并写入远端 ADMIN_PASSWORD 文件（chmod 600）。密码不落仓库。
+# SKIP_BUILD=1：跳过本地编译（复用 server/new-ops-server 与 web/dist，需先 make build-server / npm run build），
+# 适合"只改了脚本/配置想快速重传"或构建产物已就绪的场合；缺产物会明确报错退出。
 #
 # 可覆盖参数（环境变量）：
 #   NEW_OPS_TEST_HOST      目标机器        默认 root@192.168.112.138
@@ -31,11 +33,20 @@ trap 'rm -rf "$STAGE"' EXIT
 
 echo "==> 白泽一键部署 → $HOST ($DIR, web:$WEB_PORT api:$API_PORT)"
 
-echo "[1/7] 编译后端 (linux/amd64)"
-(cd "$REPO/server" && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o "$STAGE/new-ops-server" .)
+echo "[1/7] 编译后端 (linux/amd64)${SKIP_BUILD:+（SKIP_BUILD=1 跳过，复用既有产物）}"
+if [ "${SKIP_BUILD:-0}" = "1" ]; then
+  [ -f "$REPO/server/new-ops-server" ] || { echo "SKIP_BUILD=1 但缺少 $REPO/server/new-ops-server（先 make build-server）"; exit 1; }
+  cp "$REPO/server/new-ops-server" "$STAGE/new-ops-server"
+else
+  (cd "$REPO/server" && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o "$STAGE/new-ops-server" .)
+fi
 
-echo "[2/7] 构建前端"
-(cd "$REPO/web" && npm run build --silent >/dev/null)
+echo "[2/7] 构建前端${SKIP_BUILD:+（SKIP_BUILD=1 跳过，复用 web/dist）}"
+if [ "${SKIP_BUILD:-0}" = "1" ]; then
+  [ -d "$REPO/web/dist" ] || { echo "SKIP_BUILD=1 但缺少 $REPO/web/dist（先 cd web && npm run build）"; exit 1; }
+else
+  (cd "$REPO/web" && npm run build --silent >/dev/null)
+fi
 tar -czf "$STAGE/dist.tar.gz" -C "$REPO/web" dist
 
 echo "[3/7] 上传"
