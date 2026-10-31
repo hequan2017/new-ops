@@ -64,11 +64,11 @@ func (s *TermAuditService) GetSessionList(info request.PageInfo, username, statu
 	return list, total, err
 }
 
-// GetSessionStreams 会话流镜像（回放：seq 升序游标分页）。
-// 原一次性 Limit(20000) 静默截断：刷屏几分钟即超限，超出部分丢失且一次性
-// Find+序列化内存峰值可达百 MB 级；afterSeq 游标翻页（默认取首批 2000，hasMore 提示续拉）
-const sessionStreamPageSize = 2000
+const sessionStreamPageSize = 2000 // 流镜像单批上限
 
+// GetSessionStreams 会话流镜像（回放：seq 升序游标分页，afterSeq 为续拉游标，hasMore 提示是否还有后续批）。
+// 原一次性 Limit(20000) 静默截断：刷屏几分钟即超限，超出部分丢失且一次性
+// Find+序列化内存峰值可达百 MB 级；改为按 sessionStreamPageSize 游标翻页。
 func (s *TermAuditService) GetSessionStreams(sessionID uint, afterSeq int64) (list []*model.TermSessionStream, hasMore bool, err error) {
 	db := global.GVA_DB.Where("session_id = ?", sessionID)
 	if afterSeq > 0 {
