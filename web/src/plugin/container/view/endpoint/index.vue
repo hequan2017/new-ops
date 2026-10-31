@@ -96,7 +96,11 @@
         </el-form-item>
       </el-form>
       <el-table :data="ctList" v-loading="ctLoading" stripe size="small">
-        <el-table-column prop="id" label="ID" width="100" />
+        <el-table-column prop="id" label="ID" width="100">
+          <template #default="{ row }">
+            <span @click="copyContainerId(row.id)" style="cursor: pointer" title="点击复制完整容器 ID">{{ row.id }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="名称" min-width="140">
           <template #default="{ row }">{{ prettyName(row.names) }}</template>
         </el-table-column>
@@ -495,6 +499,12 @@
   const ctAll = ref(true)
 
   const prettyName = (names) => (names && names.length ? names[0].replace(/^\//, '') : '—')
+
+  // 复制容器 ID（列表为 12 位短 ID，docker 命令可直接使用）
+  const copyContainerId = (id) => {
+    navigator.clipboard?.writeText(id)
+    ElMessage.success('容器 ID 已复制')
+  }
 
   const openContainers = (row) => {
     ctEndpoint.value = row
