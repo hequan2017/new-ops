@@ -13,7 +13,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="Pod">
-          <el-select v-model="diagForm.pod" filterable style="width: 240px">
+          <el-select v-model="diagForm.pod" filterable style="width: 240px" @keyup.enter="doDiagnose">
             <el-option v-for="p in pods" :key="p.name" :label="`${p.name}（${p.status}）`" :value="p.name" />
           </el-select>
         </el-form-item>
