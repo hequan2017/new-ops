@@ -66,6 +66,9 @@
     </div>
 
     <el-drawer v-model="detailVisible" :title="`诊断详情 #${detail?.ID || ''}`" size="60%">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
+        <el-button size="small" type="primary" plain :disabled="!detail" @click="exportReportMd">导出 Markdown</el-button>
+      </div>
       <h4 style="margin: 0 0 10px">结论</h4>
       <pre class="ops-pre">{{ detail?.analysis }}</pre>
       <h4 style="margin: 12px 0 10px">采集快照</h4>
@@ -80,6 +83,7 @@
   import { diagnosePod, getDiagnosisList, getDiagnosis } from '@/plugin/aiops/api/aiops'
   import { getK8sClusterList } from '@/plugin/k8s/api/k8sCluster'
   import { getK8sClusterPodList, getNsVisibility } from '@/plugin/k8s/api/k8sResource'
+  import { fmtTime } from '@/utils/format'
 
   defineOptions({ name: 'aiopsDiagnose' })
 
@@ -153,6 +157,39 @@
 
   const detailVisible = ref(false)
   const detail = ref(null)
+
+  // 诊断报告导出 Markdown（纯前端组装：元信息 + 结论 + 采集快照）
+  const exportReportMd = () => {
+    const d = detail.value
+    if (!d) return
+    const md = [
+      `# Pod AI 诊断报告 #${d.ID}`,
+      '',
+      `- 集群：${d.cluster || '—'}`,
+      `- 命名空间/Pod：${d.namespace || '—'}/${d.pod || '—'}`,
+      `- 供应商/模型：${d.provider || '—'} / ${d.model || '—'}`,
+      `- 时间：${fmtTime(d.createdAt)}`,
+      '',
+      '## 结论',
+      '',
+      d.analysis || '（无）',
+      '',
+      '## 采集快照',
+      '',
+      '```',
+      d.snapshot || '（无）',
+      '```',
+      ''
+    ].join('\n')
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `pod-diagnosis-${d.ID}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const openHistory = async (row) => {
     const res = await getDiagnosis({ id: row.ID })
     if (res.code === 0) {
