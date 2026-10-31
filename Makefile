@@ -29,6 +29,14 @@ test: ## 后端验证：build + vet + 全量单测（场85-87 后不依赖 -shor
 test-agent: ## agent 模块验证：build + vet + 单测
 	cd $(REPO_DIR)/agent && go build ./... && go vet ./... && go test ./...
 
+.PHONY: vet-agent
+vet-agent: ## 仅 agent vet（快查，不跑 build/test）
+	cd $(REPO_DIR)/agent && go vet ./...
+
+.PHONY: fmt
+fmt: ## gofmt 全量格式化（注意：仓库存在 1.19 前旧 doc-comment 格式的历史文件，首次全量 -w 会产生大批纯格式 diff，建议单独成提交）
+	cd $(SERVER_DIR) && gofmt -l -w . && cd ../agent && gofmt -l -w .
+
 .PHONY: build-agent
 build-agent: ## 交叉编译 linux/amd64 agent 二进制
 	cd $(REPO_DIR)/agent && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o baize-agent .
