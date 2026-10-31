@@ -29,7 +29,7 @@
         </el-table-column>
         <el-table-column prop="creator" label="发起人" width="90" />
         <el-table-column label="发起时间" width="160">
-          <template #default="{ row }">{{ (row.createdAt || '').replace('T', ' ').slice(0, 19) }}</template>
+          <template #default="{ row }">{{ fmtTime(row.CreatedAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
@@ -153,6 +153,7 @@
   import { ref, reactive, onMounted } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { orderStatusType, orderStatusEffect } from '@/plugin/dbops/status'
+  import { fmtTime } from '@/utils/format'
   import {
     createOrder, auditOrder, executeOrder, cancelOrder, getOrderList, getInstanceList,
     getInceptionConfig, saveInceptionConfig, testInception

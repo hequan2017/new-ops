@@ -791,7 +791,8 @@
         if (histChart) histChart.clear()
         return
       }
-      const times = list.map((x) => x.createdAt?.replace('T', ' ').slice(5, 16) || '')
+      // DockerStatsSample 嵌 GVA_MODEL 直出键为大写 CreatedAt（小写消费恒 undefined 曾致 X 轴空标签）
+      const times = list.map((x) => fmtTime(x.CreatedAt).slice(5, 16))
       const cpu = list.map((x) => x.cpuPercent)
       const mem = list.map((x) => x.memUsedMb)
       await nextTick()
