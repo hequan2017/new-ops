@@ -27,7 +27,10 @@
     </div>
 
     <div v-if="result" class="ops-card" style="margin-top: 12px">
-      <h4 style="margin: 0 0 10px">诊断结论 · {{ result.pod }}（{{ result.provider }} / {{ result.model }}）</h4>
+      <h4 style="margin: 0 0 10px">
+        诊断结论 · {{ result.pod }}（{{ result.provider }} / {{ result.model }}）
+        <span class="ops-text-muted" style="font-size: 12px">{{ fmtTime(result.CreatedAt) }} · {{ relTime(result.CreatedAt) }}</span>
+      </h4>
       <pre class="ops-pre">{{ result.analysis }}</pre>
       <el-collapse style="margin-top: 10px">
         <el-collapse-item title="采集快照（送审 LLM 的原文）">
@@ -55,7 +58,7 @@
           </template>
         </el-table-column>
         <el-table-column label="时间" width="160">
-          <template #default="{ row }">{{ (row.createdAt || '').replace('T', ' ').slice(0, 19) }}</template>
+          <template #default="{ row }">{{ fmtTime(row.CreatedAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="90" fixed="right">
           <template #default="{ row }">
@@ -83,7 +86,7 @@
   import { diagnosePod, getDiagnosisList, getDiagnosis } from '@/plugin/aiops/api/aiops'
   import { getK8sClusterList } from '@/plugin/k8s/api/k8sCluster'
   import { getK8sClusterPodList, getNsVisibility } from '@/plugin/k8s/api/k8sResource'
-  import { fmtTime } from '@/utils/format'
+  import { fmtTime, relTime } from '@/utils/format'
 
   defineOptions({ name: 'aiopsDiagnose' })
 
@@ -168,7 +171,7 @@
       `- 集群：${d.cluster || '—'}`,
       `- 命名空间/Pod：${d.namespace || '—'}/${d.pod || '—'}`,
       `- 供应商/模型：${d.provider || '—'} / ${d.model || '—'}`,
-      `- 时间：${fmtTime(d.createdAt)}`,
+      `- 时间：${fmtTime(d.CreatedAt)}`,
       '',
       '## 结论',
       '',
