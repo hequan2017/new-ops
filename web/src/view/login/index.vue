@@ -92,6 +92,9 @@
               </el-form-item>
             </el-form>
           </div>
+          <p class="mt-6 text-center text-xs text-gray-400 dark:text-gray-500 select-none">
+            白泽 BaiZe · 统一运维开发平台 v{{ pkg.version }} · 构建于 {{ buildTime }}
+          </p>
       </div>
     </div>
   </div>
@@ -106,6 +109,10 @@
   import { useUserStore } from '@/pinia/modules/user'
   import Logo from '@/components/logo/index.vue'
   import { isDev } from '@/utils/env.js'
+  import pkg from '../../../package.json'
+
+  // 构建期注入（vite define），非 vite 环境兜底为空串
+  const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : ''
 
   defineOptions({
     name: 'Login'

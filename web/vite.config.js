@@ -32,6 +32,10 @@ export default ({ mode }) => {
     resolve: {
       alias
     },
+    define: {
+      // 构建期注入：登录页版本脚注展示（timestamp 原仅用于 dist banner）
+      __BUILD_TIME__: JSON.stringify(new Date(timestamp).toISOString().slice(0, 19).replace('T', ' '))
+    },
     css: {
       preprocessorOptions: {
         scss: {
