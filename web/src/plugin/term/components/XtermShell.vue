@@ -99,11 +99,20 @@
     }
     ws.onclose = (ev) => {
       if (closed) return
-      term.writeln(
-        ev.code === 4000
-          ? `\x1b[31m[SSH 连接已断开] ${ev.reason || ''}\x1b[0m`
-          : `\x1b[31m[连接已断开 code=${ev.code}]\x1b[0m`
-      )
+      // 关闭码分级（与 server webssh.go 口径一致）：1000=SSH 正常结束(exit)；
+      // 4000=SSH 读异常；1006=WS 层异常断（网络中断/server 退出）
+      if (ev.code === 1000) {
+        term.writeln('\x1b[32m[SSH 会话已结束]\x1b[0m')
+        ElMessage.info('SSH 会话已结束')
+        return
+      }
+      if (ev.code === 4000) {
+        term.writeln(`\x1b[31m[SSH 连接已断开] ${ev.reason || '远端连接中断'}\x1b[0m`)
+        ElMessage.warning('SSH 连接异常断开，请检查主机网络后在会话列表重新连接')
+        return
+      }
+      term.writeln(`\x1b[31m[连接已断开 code=${ev.code}]\x1b[0m`)
+      ElMessage.warning(`终端连接已断开（code=${ev.code}），可在会话列表重新发起连接`)
     }
     ws.onerror = () => {
       term.writeln('\x1b[31m[连接错误]\x1b[0m')
