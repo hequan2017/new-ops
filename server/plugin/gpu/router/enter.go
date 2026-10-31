@@ -31,5 +31,6 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		inst.POST("", v1.GpuApi.StartInstance)
 		inst.POST("release", v1.GpuApi.ReleaseInstance)
 		inst.GET("list", v1.GpuApi.ListInstance)
+		inst.GET("export", v1.GpuApi.ExportInstance)
 	}
 }

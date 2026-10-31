@@ -62,6 +62,7 @@
           <div class="ops-btn-list">
             <el-button type="primary" @click="openStartDialog()">开通实例</el-button>
             <el-button @click="loadInstances">刷 新</el-button>
+            <el-button type="primary" plain @click="exportInstancesCsv">导出 CSV</el-button>
           </div>
           <el-table :data="instances" v-loading="instLoading" stripe>
             <el-table-column prop="ID" label="ID" width="60" />
@@ -178,6 +179,7 @@
     createGpuSpec, deleteGpuSpec, getGpuSpecList,
     startGpuInstance, releaseGpuInstance, getGpuInstanceList
   } from '@/plugin/gpu/api/gpu'
+  import { useUserStore } from '@/pinia/modules/user'
 
   defineOptions({ name: 'gpuInstance' })
 
@@ -285,6 +287,25 @@
     } finally {
       instLoading.value = false
     }
+  }
+
+  // 实例台账 CSV 导出（fetch 直取绕过 JSON 拦截器，手动带 token）
+  const exportInstancesCsv = async () => {
+    const userStore = useUserStore()
+    const res = await fetch(import.meta.env.VITE_BASE_API + '/gpu/instance/export', {
+      headers: { 'x-token': userStore.token }
+    })
+    if (!res.ok) {
+      ElMessage.error('导出失败')
+      return
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `GPU实例台账_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const startVisible = ref(false)

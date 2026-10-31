@@ -2,7 +2,12 @@
 package api
 
 import (
+	"bytes"
+	"encoding/csv"
+	"fmt"
+	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -230,4 +235,43 @@ func (a *gpuApi) ListInstance(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c) // 不带 page 兼容旧前端全量口径
+}
+
+// ExportInstance 实例台账 CSV 导出
+// @Tags GpuInstance
+// @Summary 实例台账导出 CSV（同 list 过滤口径，全量上限 500 行）
+// @Security ApiKeyAuth
+// @Produce text/csv
+// @Param status query string false "状态过滤"
+// @Param nodeId query int false "节点ID"
+// @Param userId query int false "开通人ID"
+// @Success 200 {string} string "text/csv"
+// @Router /gpu/instance/export [get]
+func (a *gpuApi) ExportInstance(c *gin.Context) {
+	nodeID, _ := strconv.ParseUint(c.Query("nodeId"), 10, 64)
+	userID, _ := strconv.ParseUint(c.Query("userId"), 10, 64)
+	list, _, err := gpuSvc.GetInstanceList(c.Query("status"), uint(nodeID), uint(userID), 0, 0)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	buf := &bytes.Buffer{}
+	buf.WriteString("\uFEFF") // BOM：Excel 直开中文不乱码
+	w := csv.NewWriter(buf)
+	_ = w.Write([]string{"ID", "实例名", "节点", "规格", "GPU数", "CPU核", "内存GB", "状态", "开通人", "开通时间", "销毁时间"})
+	for _, i := range list {
+		released := ""
+		if i.ReleasedAt != nil {
+			released = i.ReleasedAt.Format("2006-01-02 15:04:05")
+		}
+		_ = w.Write([]string{
+			strconv.FormatUint(uint64(i.ID), 10), i.Name, i.NodeName, i.SpecName,
+			strconv.Itoa(i.GpuAllocated), strconv.Itoa(i.CpuAllocated), strconv.Itoa(i.MemAllocGb),
+			i.Status, i.Creator, i.CreatedAt.Format("2006-01-02 15:04:05"), released,
+		})
+	}
+	w.Flush()
+	c.Header("Content-Disposition",
+		fmt.Sprintf(`attachment; filename="gpu-instances-%s.csv"`, time.Now().Format("20060102-150405")))
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", buf.Bytes())
 }
