@@ -268,6 +268,7 @@
         <div v-for="(line, i) in yamlDiffLines" :key="i" class="yaml-diff-line" :class="diffLineClass(line)">{{ line }}</div>
       </div>
       <template #footer>
+        <el-button icon="copy-document" :disabled="!yamlDiffLines.length" @click="copyYamlDiff">复制 diff</el-button>
         <el-button @click="yamlDiffVisible = false">取 消</el-button>
         <el-button type="danger" :loading="yamlApplying" @click="confirmApplyYaml">确认下发</el-button>
       </template>
@@ -997,6 +998,12 @@
     if (line.startsWith('+')) return 'diff-add'
     if (line.startsWith('-')) return 'diff-del'
     return 'diff-same'
+  }
+
+  // 复制 diff 全文（审批/工单留痕用）
+  const copyYamlDiff = () => {
+    navigator.clipboard?.writeText(yamlDiffLines.value.join('\n'))
+    ElMessage.success('diff 已复制')
   }
 
   const startEditYaml = () => {
