@@ -46,6 +46,14 @@
         </el-table-column>
         <el-table-column prop="provider" label="供应商" width="120" />
         <el-table-column prop="model" label="模型" width="140" show-overflow-tooltip />
+        <el-table-column label="结论摘要" min-width="240">
+          <template #default="{ row }">
+            <span
+              style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+              :title="(row.analysis || '').slice(0, 500)"
+            >{{ analysisBrief(row) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="时间" width="160">
           <template #default="{ row }">{{ (row.createdAt || '').replace('T', ' ').slice(0, 19) }}</template>
         </el-table-column>
@@ -129,6 +137,10 @@
 
   const history = ref([])
   const histLoading = ref(false)
+
+  // 结论摘要：取 Analysis 首个非空行（多行 markdown 结论的单行概要），悬浮 title 显示前 500 字全文
+  const analysisBrief = (row) =>
+    (row.analysis || '').split('\n').map((l) => l.trim()).find((l) => l) || '—'
   const loadHistory = async () => {
     histLoading.value = true
     try {
