@@ -37,7 +37,7 @@ func (s *AssetGroupService) CreateAssetGroup(g *model.AssetGroup, hostIDs, userI
 	}
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(g).Error; err != nil {
-			return err
+			return fmt.Errorf("创建资产组失败: %w", err)
 		}
 		return s.replaceGroupRelations(tx, g.ID, hostIDs, userIDs)
 	})
@@ -47,12 +47,15 @@ func (s *AssetGroupService) CreateAssetGroup(g *model.AssetGroup, hostIDs, userI
 func (s *AssetGroupService) DeleteAssetGroup(id uint) error {
 	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("group_id = ?", id).Delete(&model.AssetGroupHost{}).Error; err != nil {
-			return err
+			return fmt.Errorf("清理资产组主机关联失败: %w", err)
 		}
 		if err := tx.Where("group_id = ?", id).Delete(&model.AssetGroupUser{}).Error; err != nil {
-			return err
+			return fmt.Errorf("清理资产组用户关联失败: %w", err)
 		}
-		return tx.Delete(&model.AssetGroup{}, id).Error
+		if err := tx.Delete(&model.AssetGroup{}, id).Error; err != nil {
+			return fmt.Errorf("删除资产组失败: %w", err)
+		}
+		return nil
 	})
 }
 
@@ -71,7 +74,7 @@ func (s *AssetGroupService) UpdateAssetGroup(g *model.AssetGroup, hostIDs, userI
 			"name":  g.Name,
 			"notes": g.Notes,
 		}).Error; err != nil {
-			return err
+			return fmt.Errorf("更新资产组失败: %w", err)
 		}
 		return s.replaceGroupRelations(tx, g.ID, hostIDs, userIDs)
 	})
