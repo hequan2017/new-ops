@@ -66,6 +66,9 @@ export default ({ mode }) => {
       target: 'es2015',
       rolldownOptions: {
         output: {
+          // 生产构建移除 console.*（rolldown oxc minifier 的 output.minify.compress.dropConsole；
+          // 顶层 oxc 选项是 transform 阶段传不到 minify——首版即踩此坑，dist grep 验证才暴露）
+          minify: mode === 'production' ? { compress: { dropConsole: true } } : false,
           entryFileNames: 'assets/baize-[name].[hash].js',
           chunkFileNames: 'assets/baize-[name].[hash].js',
           assetFileNames: 'assets/baize-[name].[hash].[ext]',
