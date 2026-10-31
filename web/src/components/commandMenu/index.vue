@@ -9,7 +9,10 @@
       <input
         v-model="searchInput"
         class="quick-input"
-        placeholder="请输入你需要快捷到达的功能"
+        placeholder="请输入你需要快捷到达的功能（↑↓ 选择，回车跳转）"
+        @keydown.down.prevent="moveActive(1)"
+        @keydown.up.prevent="moveActive(-1)"
+        @keydown.enter.prevent="activeItem && activeItem.func()"
       />
     </template>
 
@@ -21,7 +24,9 @@
         v-for="(item, key) in option.children"
         :key="index + '-' + key"
         class="quick-item"
+        :class="{ 'quick-item--active': item === activeItem }"
         @click="item.func"
+        @mouseenter="setActive(item)"
       >
         {{ item.label }}
       </div>
@@ -36,7 +41,7 @@
 </template>
 
 <script setup>
-  import { reactive, ref, watch } from 'vue'
+  import { computed, nextTick, reactive, ref, watch } from 'vue'
   import { useRouter } from 'vue-router'
   import { useRouterStore } from '@/pinia/modules/router'
   import { useAppStore, useUserStore } from '@/pinia'
@@ -52,6 +57,28 @@
   const dialogVisible = ref(false)
   const searchInput = ref('')
   const options = reactive([])
+
+  // 键盘导航：扁平化候选项，↑↓ 环形移动、回车执行、hover 同步高亮
+  const flatItems = computed(() => options.flatMap((g) => g.children))
+  const activeIndex = ref(0)
+  const activeItem = computed(() => flatItems.value[activeIndex.value] || null)
+  const setActive = (item) => {
+    const i = flatItems.value.indexOf(item)
+    if (i > -1) activeIndex.value = i
+  }
+  const moveActive = (delta) => {
+    const n = flatItems.value.length
+    if (!n) return
+    activeIndex.value = (activeIndex.value + delta + n) % n
+    scrollActiveIntoView()
+  }
+  const scrollActiveIntoView = () => {
+    nextTick(() => {
+      document
+        .querySelector('.overlay .quick-item--active')
+        ?.scrollIntoView({ block: 'nearest' })
+    })
+  }
   const deepMenus = (menus) => {
     const arr = []
     menus?.forEach((menu) => {
@@ -149,6 +176,7 @@
     options.length = 0
     addQuickMenu()
     addQuickOption()
+    activeIndex.value = 0
   })
 </script>
 
@@ -190,6 +218,10 @@
         cursor: pointer;
         border-radius: 4px;
       }
+    }
+    .quick-item--active {
+      @apply bg-gray-200 dark:bg-slate-500;
+      border-radius: 4px;
     }
   }
 </style>
