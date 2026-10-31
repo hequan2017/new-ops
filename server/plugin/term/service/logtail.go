@@ -15,6 +15,12 @@ import (
 	assetSvc "github.com/hequan2017/new-ops/server/plugin/asset/service"
 )
 
+// tail 行数口径：默认/上限（与前端 LogTail 行数选择一致，上限防滥用）
+const (
+	defaultTailLines = 200
+	maxTailLines     = 2000
+)
+
 // logTailPathRe 路径白名单：%q 只转义引号/反斜杠/控制字符，不转义 $ 与反引号，
 // `/log/$(reboot)` 这类路径会在远端登录 shell 的双引号内做命令替换，必须字符级白名单拒绝
 var logTailPathRe = regexp.MustCompile(`^[A-Za-z0-9_./+~@=-]+$`)
@@ -57,19 +63,19 @@ func (t *termService) StartLogTail(ws *websocket.Conn, p LogTailParams) error {
 	}
 	lines := p.Lines
 	if lines <= 0 {
-		lines = 200
+		lines = defaultTailLines
 	}
-	if lines > 2000 {
-		lines = 2000
+	if lines > maxTailLines {
+		lines = maxTailLines
 	}
 
 	chain, err := buildJumpChain(host, assetHostSvc.GetAssetHost)
 	if err != nil {
-		return err
+		return fmt.Errorf("构建跳板链失败: %w", err)
 	}
 	clients, _, err := t.dialChain(chain, p.CredentialID, p.Operator)
 	if err != nil {
-		return err
+		return fmt.Errorf("级联拨号失败: %w", err)
 	}
 	client := clients[len(clients)-1]
 	closeAll := func() {
@@ -87,7 +93,7 @@ func (t *termService) StartLogTail(ws *websocket.Conn, p LogTailParams) error {
 	defer session.Close()
 	stdout, err := session.StdoutPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("获取标准输出失败: %w", err)
 	}
 	// -- 终止选项解析，防路径以 - 开头注入；文件不存在时 tail 持续等待与 -f 语义一致
 	cmd := fmt.Sprintf("tail -n %d -F -- %q", lines, p.Path)
