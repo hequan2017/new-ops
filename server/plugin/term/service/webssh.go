@@ -19,6 +19,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// WS 写超时口径：业务帧 10s / 控制帧(close) 5s（与容器 exec/PodShell 同类口径）
+const (
+	wsWriteTimeout   = 10 * time.Second
+	wsControlTimeout = 5 * time.Second
+)
+
 // TermService 终端服务
 var TermService = new(termService)
 
