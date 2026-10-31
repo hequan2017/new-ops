@@ -26,7 +26,7 @@
             </el-table-column>
             <el-table-column prop="creator" label="发起人" width="90" />
             <el-table-column label="发起时间" width="160">
-              <template #default="{ row }">{{ (row.createdAt || '').replace('T', ' ').slice(0, 19) }}</template>
+              <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
             </el-table-column>
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="{ row }">
@@ -114,7 +114,7 @@
 
     <el-drawer v-model="logsVisible" :title="`流转记录 · ${logsTitle}`" size="45%">
       <el-timeline style="padding-left: 8px">
-        <el-timeline-item v-for="l in logsList" :key="l.ID" :timestamp="(l.createdAt || '').replace('T', ' ').slice(0, 19)">
+        <el-timeline-item v-for="l in logsList" :key="l.ID" :timestamp="fmtTime(l.createdAt) + ' · ' + relTime(l.createdAt)">
           <b>{{ l.action }}</b> {{ l.fromState || '∅' }} → {{ l.toState }}
           <span class="ops-text-muted">（{{ l.operator }}）</span>
           <div v-if="l.comment" class="ops-text-muted">{{ l.comment }}</div>
@@ -127,6 +127,7 @@
 <script setup>
   import { ref, reactive, onMounted } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { fmtTime, relTime } from '@/utils/format'
   import {
     createDefinition, updateDefinition, deleteDefinition, getDefinitions,
     startInstance, submitAction, getInstances, getInstanceLogs
