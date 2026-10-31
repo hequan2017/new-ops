@@ -795,7 +795,24 @@
         ],
         series: [
           { name: 'CPU %', type: 'line', data: cpu, showSymbol: false, smooth: true, itemStyle: { color: '#409eff' } },
-          { name: '内存 MB', type: 'line', yAxisIndex: 1, data: mem, showSymbol: false, smooth: true, areaStyle: { opacity: 0.15 }, itemStyle: { color: '#67c23a' } }
+          {
+            name: '内存 MB',
+            type: 'line',
+            yAxisIndex: 1,
+            data: mem,
+            showSymbol: false,
+            smooth: true,
+            areaStyle: { opacity: 0.15 },
+            itemStyle: { color: '#67c23a' },
+            // 内存限额参考线（one-shot 数据带 memLimitMb；无限额/未知为 0 时不画）
+            markLine: statsData.value?.memLimitMb > 0 ? {
+              silent: true,
+              symbol: 'none',
+              lineStyle: { color: '#f56c6c', type: 'dashed' },
+              label: { formatter: `限额 ${statsData.value.memLimitMb} MB`, position: 'insideEndTop', fontSize: 10 },
+              data: [{ yAxis: statsData.value.memLimitMb }]
+            } : undefined
+          }
         ]
       }, true)
       histChart.resize()
