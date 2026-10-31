@@ -41,11 +41,14 @@ func (s *CredCredentialService) CreateCredential(c *model.CredCredential, secret
 	}
 	cipherText, err := crypto.Encrypt(secret)
 	if err != nil {
-		return err
+		return fmt.Errorf("凭据加密失败: %w", err)
 	}
 	c.Cipher = cipherText
 	c.SecretLast4 = crypto.Last4(secret)
-	return global.GVA_DB.Create(c).Error
+	if err := global.GVA_DB.Create(c).Error; err != nil {
+		return fmt.Errorf("创建凭据失败: %w", err)
+	}
+	return nil
 }
 
 // UpdateCredential 更新凭据（secret 为空则保留原密文，仅改名称/备注/用户名）
@@ -64,19 +67,22 @@ func (s *CredCredentialService) UpdateCredential(c *model.CredCredential, secret
 	if secret != "" {
 		cipherText, err := crypto.Encrypt(secret)
 		if err != nil {
-			return err
+			return fmt.Errorf("凭据加密失败: %w", err)
 		}
 		updates["cipher"] = cipherText
 		updates["secret_last4"] = crypto.Last4(secret)
 	}
-	return global.GVA_DB.Model(&model.CredCredential{}).Where("id = ?", c.ID).Updates(updates).Error
+	if err := global.GVA_DB.Model(&model.CredCredential{}).Where("id = ?", c.ID).Updates(updates).Error; err != nil {
+		return fmt.Errorf("更新凭据失败: %w", err)
+	}
+	return nil
 }
 
 // DeleteCredential 删除凭据（被引用时拒绝）
 func (s *CredCredentialService) DeleteCredential(id uint) error {
 	var cred model.CredCredential
 	if err := global.GVA_DB.First(&cred, id).Error; err != nil {
-		return err
+		return fmt.Errorf("查询凭据失败: %w", err)
 	}
 	if cred.RefCount > 0 {
 		return newServiceErr(ErrCodeCredInUse, fmt.Sprintf("凭据「%s」被引用 %d 次，请先解除引用", cred.Name, cred.RefCount))
