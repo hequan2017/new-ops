@@ -435,7 +435,7 @@
         <h4>容器</h4>
         <el-table :data="podDetail.containers" size="small" border>
           <el-table-column prop="name" label="名称" min-width="130" />
-          <el-table-column prop="image" label="镜像" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="image" label="镜像" min-width="200" sortable show-overflow-tooltip />
           <el-table-column label="就绪" width="70">
             <template #default="{ row }">
               <el-tag :type="row.ready ? 'success' : 'danger'" size="small">{{ row.ready ? '是' : '否' }}</el-tag>
