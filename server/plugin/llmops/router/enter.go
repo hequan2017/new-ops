@@ -97,6 +97,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		tr.GET("list", v1.Api.GetTrainJobs)
 		tr.POST("", v1.Api.SaveTrainJob)
 		tr.POST("transition", v1.Api.TransitionTrainJob)
+		tr.POST("dryRun", v1.Api.DryRunTrain)
 		tr.DELETE("", v1.Api.DeleteTrainJob)
 	}
 }

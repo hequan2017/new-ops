@@ -1336,3 +1336,25 @@ func (a *LlmopsApi) DeleteTrainJob(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// DryRunTrain 任务 dry-run
+// @Tags Llmops
+// @Summary 训练任务 dry-run（渲染命令落日志，不执行）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "任务ID"
+// @Success 200 {object} response.Response{data=model.LlmopsTrainJob} "渲染完成"
+// @Router /llmops/train/dryRun [post]
+func (a *LlmopsApi) DryRunTrain(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	job, err := service.LlmopsService.RunTrainDryRun(req.ID)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(job, "渲染完成", c)
+}
