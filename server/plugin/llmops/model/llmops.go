@@ -145,3 +145,17 @@ type LlmopsKnowledgeDoc struct {
 }
 
 func (LlmopsKnowledgeDoc) TableName() string { return "llmops_knowledge_doc" }
+
+// LlmopsVectorChunk 向量库分块（vectorJSON 存 float 数组 JSON；余弦检索内存计算，万级块内可接受）
+type LlmopsVectorChunk struct {
+	global.GVA_MODEL
+	KbId       uint   `json:"kbId" gorm:"index;comment:知识库ID"`
+	DocId      uint   `json:"docId" gorm:"index;comment:文档ID"`
+	ChunkIndex int    `json:"chunkIndex" gorm:"comment:块序号"`
+	Content    string `json:"content" gorm:"type:text;comment:块文本"`
+	VectorJSON string `json:"-" gorm:"type:mediumtext;comment:向量JSON"`
+	Dim        int    `json:"dim" gorm:"comment:维度"`
+	Source     string `json:"source" gorm:"type:varchar(32);comment:来源 embed:<模型ID>/hash-fallback"`
+}
+
+func (LlmopsVectorChunk) TableName() string { return "llmops_vector_chunk" }

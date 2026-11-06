@@ -50,6 +50,19 @@ type IngestIn struct {
 	Text    string `json:"text"`
 }
 
+// VectorIndexIn 向量索引请求
+type VectorIndexIn struct {
+	KbId  uint `json:"kbId" binding:"required"`
+	DocId uint `json:"docId" binding:"required"`
+}
+
+// VectorSearchIn 向量检索请求
+type VectorSearchIn struct {
+	KbId  uint   `json:"kbId" binding:"required"`
+	Query string `json:"query" binding:"required"`
+	TopK  int    `json:"topK"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

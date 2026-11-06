@@ -69,6 +69,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		kb.POST("", v1.Api.SaveKnowledge)
 		kb.POST("ingest", v1.Api.IngestKnowledgeDoc)
 		kb.GET("docs", v1.Api.GetKnowledgeDocs)
+		kb.POST("vector/index", v1.Api.IndexVectorDoc)
+		kb.POST("vector/search", v1.Api.SearchVector)
 		kb.DELETE("doc", v1.Api.DeleteKnowledgeDoc)
 		kb.DELETE("", v1.Api.DeleteKnowledge)
 	}

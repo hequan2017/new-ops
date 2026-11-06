@@ -887,3 +887,47 @@ func (a *LlmopsApi) DeleteKnowledgeDoc(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// IndexVectorDoc 向量索引
+// @Tags Llmops
+// @Summary 文档向量索引（切块→embed 模型/哈希 fallback→落库）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.VectorIndexIn true "索引请求"
+// @Success 200 {object} response.Response{data=service.IndexResult} "索引完成"
+// @Router /llmops/kb/vector/index [post]
+func (a *LlmopsApi) IndexVectorDoc(c *gin.Context) {
+	var in service.VectorIndexIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	result, err := service.LlmopsService.IndexDocToVector(in.KbId, in.DocId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(result, "索引完成", c)
+}
+
+// SearchVector 向量检索
+// @Tags Llmops
+// @Summary 向量语义检索（同 Source 余弦 top-k）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.VectorSearchIn true "检索请求"
+// @Success 200 {object} response.Response{data=map[string]any} "检索完成"
+// @Router /llmops/kb/vector/search [post]
+func (a *LlmopsApi) SearchVector(c *gin.Context) {
+	var in service.VectorSearchIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	hits, source, err := service.LlmopsService.SearchVector(in.KbId, in.Query, in.TopK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"hits": hits, "source": source}, "检索完成", c)
+}
