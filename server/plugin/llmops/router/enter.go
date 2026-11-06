@@ -23,6 +23,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		asset.GET("", v1.Api.GetAsset)
 		asset.POST("importDoc", v1.Api.ImportDoc)
 		asset.POST("importWeb", v1.Api.ImportWeb)
+		asset.POST("importQa", v1.Api.ImportQa)
 		asset.DELETE("", v1.Api.DeleteAsset)
 	}
 }

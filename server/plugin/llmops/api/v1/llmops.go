@@ -2,6 +2,7 @@
 package v1
 
 import (
+	"io"
 	"strconv"
 	"time"
 
@@ -10,6 +11,9 @@ import (
 	"github.com/hequan2017/new-ops/server/model/common/response"
 	"github.com/hequan2017/new-ops/server/plugin/llmops/service"
 )
+
+// ImportQaMaxBytes 问答对文件上传上限（10MB）
+const ImportQaMaxBytes int64 = 10 << 20
 
 var Api = new(LlmopsApi)
 
@@ -149,4 +153,44 @@ func (a *LlmopsApi) ImportWeb(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(asset, "采集成功", c)
+}
+
+// ImportQa 问答对采集
+// @Tags Llmops
+// @Summary 问答对采集（JSON/CSV 自动探测，同题去重）
+// @Security ApiKeyAuth
+// @Accept multipart/form-data
+// @Produce application/json
+// @Param file formData file true "问答对文件(.json 数组或 .csv 表头 question/answer)"
+// @Param name formData string false "资产名"
+// @Param tags formData string false "标签(逗号分隔)"
+// @Success 200 {object} response.Response{data=map[string]any} "采集成功"
+// @Router /llmops/asset/importQa [post]
+func (a *LlmopsApi) ImportQa(c *gin.Context) {
+	fh, err := c.FormFile("file")
+	if err != nil {
+		response.FailWithMessage("缺少 file 文件字段", c)
+		return
+	}
+	if fh.Size > ImportQaMaxBytes {
+		response.FailWithMessage("文件超过 10MB 上限", c)
+		return
+	}
+	f, err := fh.Open()
+	if err != nil {
+		response.FailWithMessage("读取上传文件失败", c)
+		return
+	}
+	defer f.Close()
+	content, err := io.ReadAll(io.LimitReader(f, ImportQaMaxBytes+1))
+	if err != nil {
+		response.FailWithMessage("读取上传文件失败", c)
+		return
+	}
+	asset, imported, skipped, dup, err := service.LlmopsService.ImportQaPairs(c.PostForm("name"), content, c.PostForm("tags"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"asset": asset, "imported": imported, "skipped": skipped, "dup": dup}, "采集成功", c)
 }

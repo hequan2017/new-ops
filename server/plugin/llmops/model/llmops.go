@@ -22,3 +22,13 @@ type LlmopsDataAsset struct {
 }
 
 func (LlmopsDataAsset) TableName() string { return "llmops_data_asset" }
+
+// LlmopsQaPair 问答对明细（要求(1) 问答对数据类型；C05 问答对库检索复用）
+type LlmopsQaPair struct {
+	global.GVA_MODEL
+	AssetId  uint   `json:"assetId" gorm:"index;comment:来源资产ID"`
+	Question string `json:"question" gorm:"type:varchar(512);index;comment:问题"`
+	Answer   string `json:"answer" gorm:"type:text;comment:答案"`
+}
+
+func (LlmopsQaPair) TableName() string { return "llmops_qa_pair" }

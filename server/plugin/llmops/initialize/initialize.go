@@ -22,6 +22,7 @@ import (
 func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.LlmopsDataAsset),
+		new(model.LlmopsQaPair),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -44,6 +45,7 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/asset", Description: "数据资产详情", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/asset/importDoc", Description: "文档采集上传", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/asset/importWeb", Description: "网页采集", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/asset/importQa", Description: "问答对采集", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/asset", Description: "删除数据资产", ApiGroup: "大模型平台", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
@@ -76,6 +78,7 @@ func Casbin(ctx context.Context) {
 		{"/llmops/asset", "GET"},
 		{"/llmops/asset/importDoc", "POST"},
 		{"/llmops/asset/importWeb", "POST"},
+		{"/llmops/asset/importQa", "POST"},
 		{"/llmops/asset", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
