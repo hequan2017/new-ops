@@ -43,6 +43,7 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/asset/list", Description: "数据资产列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/asset", Description: "数据资产详情", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/asset/importDoc", Description: "文档采集上传", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/asset/importWeb", Description: "网页采集", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/asset", Description: "删除数据资产", ApiGroup: "大模型平台", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
@@ -74,6 +75,7 @@ func Casbin(ctx context.Context) {
 		{"/llmops/asset/list", "GET"},
 		{"/llmops/asset", "GET"},
 		{"/llmops/asset/importDoc", "POST"},
+		{"/llmops/asset/importWeb", "POST"},
 		{"/llmops/asset", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)

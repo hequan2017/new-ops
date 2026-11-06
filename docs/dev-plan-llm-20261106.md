@@ -39,7 +39,7 @@
 - [x] A01 | llmops: 插件骨架 M0——`server/plugin/llmops/{plugin.go, initialize/initialize.go(Gorm+Api+Menu+Casbin+Router), router/enter.go, api/v1/ping}`，plugin/register.go 空导入接线；菜单种子含父级"大模型平台"；README 错误码分段行补 llmops=2200-2299/oplib=2300-2399/exam=2400-2499；server build+test 全绿
 - [x] A02 | llmops: 数据资产 model `LlmopsDataAsset`（name/dataType[doc,image,audio,video,webpage,qa,structured,semistructured]/source/status/rawText/metaJSON/tags/categoryId/size）AutoMigrate + 列表（分页+类型/关键字过滤）/详情/软删除 API + api/casbin 种子 + service 单测
 - [x] A03 | llmops: 文档采集——上传接入（复用底座上传工具，落 rawText：txt/md/csv/json 直接读取；pdf 等二进制仅编目元数据并注明解析口径）+ 状态机 draft→parsed + 单测
-- [ ] A04 | llmops: 网页采集——URL 拉取（net/http 超时+大小上限）+ HTML 正文抽取（去 script/style/标签，纯标准库）入库 webpage 资产 + httptest 单测
+- [x] A04 | llmops: 网页采集——URL 拉取（net/http 超时+大小上限）+ HTML 正文抽取（去 script/style/标签，纯标准库）入库 webpage 资产 + httptest 单测
 - [ ] A05 | llmops: 问答对采集——qa 类型 JSON/CSV 解析为 `LlmopsQaPair`（assetId/question/answer）+ 同题去重 + 单测
 - [ ] A06 | llmops: 结构化数据源接入——`LlmopsDataSource`（type mysql/postgres/dsn 凭据 AES-GCM 密文）+ 连接测试 + 库表清单/采样预览 API（database/sql，driver 已有）
 - [ ] A07 | llmops: 半结构化解析——JSON/YAML/XML 顶层字段/类型/样本值抽取生成 metaJSON 编目 + 单测（yaml 用 go.mod 已有解析器，先核实）

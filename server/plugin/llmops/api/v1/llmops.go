@@ -15,6 +15,13 @@ var Api = new(LlmopsApi)
 
 type LlmopsApi struct{}
 
+// webImportReq 网页采集请求
+type webImportReq struct {
+	URL  string `json:"url" binding:"required"`
+	Name string `json:"name"`
+	Tags string `json:"tags"`
+}
+
 // Ping 插件连通性探测
 // @Tags Llmops
 // @Summary llmops 连通性探测
@@ -114,6 +121,29 @@ func (a *LlmopsApi) ImportDoc(c *gin.Context) {
 		return
 	}
 	asset, err := service.LlmopsService.ImportDoc(fh, c.PostForm("name"), c.PostForm("tags"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(asset, "采集成功", c)
+}
+
+// ImportWeb 网页采集
+// @Tags Llmops
+// @Summary 网页采集（URL 拉取→HTML 正文抽取→落库 parsed）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body webImportReq true "采集请求"
+// @Success 200 {object} response.Response{data=model.LlmopsDataAsset} "采集成功"
+// @Router /llmops/asset/importWeb [post]
+func (a *LlmopsApi) ImportWeb(c *gin.Context) {
+	var req webImportReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	asset, err := service.LlmopsService.ImportWebPage(req.URL, req.Name, req.Tags)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
