@@ -116,4 +116,13 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		art.POST("registerModel", v1.Api.RegisterArtifactModel)
 		art.DELETE("", v1.Api.DeleteArtifact)
 	}
+	ag := Router.Group("llmops/agent")
+	{
+		ag.GET("list", v1.Api.GetAgents)
+		ag.POST("", v1.Api.SaveAgent)
+		ag.POST("stage", v1.Api.SetAgentStage)
+		ag.POST("publish", v1.Api.PublishAgent)
+		ag.GET("versions", v1.Api.GetAgentVersions)
+		ag.DELETE("", v1.Api.DeleteAgent)
+	}
 }

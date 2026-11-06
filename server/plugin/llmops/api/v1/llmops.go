@@ -1586,3 +1586,125 @@ func (a *LlmopsApi) RegisterArtifactModel(c *gin.Context) {
 	}
 	response.OkWithDetailed(m, "注册成功", c)
 }
+
+// GetAgents 智能体列表
+// @Tags Llmops
+// @Summary 智能体列表（五种构建模式）
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.LlmopsAgent} "获取成功"
+// @Router /llmops/agent/list [get]
+func (a *LlmopsApi) GetAgents(c *gin.Context) {
+	list, err := service.LlmopsService.GetAgents()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveAgent 保存智能体
+// @Tags Llmops
+// @Summary 新建/更新智能体（模式白名单/配置 JSON 对象即检）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.AgentIn true "智能体"
+// @Success 200 {object} response.Response{data=model.LlmopsAgent} "保存成功"
+// @Router /llmops/agent [post]
+func (a *LlmopsApi) SaveAgent(c *gin.Context) {
+	var in service.AgentIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	ag, err := service.LlmopsService.SaveAgent(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(ag, "保存成功", c)
+}
+
+// SetAgentStage 生命周期阶段流转
+// @Tags Llmops
+// @Summary 智能体阶段流转（六阶段白名单）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.AgentStageIn true "阶段请求"
+// @Success 200 {object} response.Response{data=model.LlmopsAgent} "流转成功"
+// @Router /llmops/agent/stage [post]
+func (a *LlmopsApi) SetAgentStage(c *gin.Context) {
+	var in service.AgentStageIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	ag, err := service.LlmopsService.SetAgentStage(in.ID, in.Stage)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(ag, "流转成功", c)
+}
+
+// PublishAgent 发布智能体
+// @Tags Llmops
+// @Summary 发布智能体（配置快照落版本表，版本号自增）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.AgentPublishIn true "发布请求"
+// @Success 200 {object} response.Response{data=model.LlmopsAgentVersion} "发布成功"
+// @Router /llmops/agent/publish [post]
+func (a *LlmopsApi) PublishAgent(c *gin.Context) {
+	var in service.AgentPublishIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	ver, err := service.LlmopsService.PublishAgent(in.ID, in.Remark)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(ver, "发布成功", c)
+}
+
+// GetAgentVersions 版本列表
+// @Tags Llmops
+// @Summary 智能体版本快照列表（倒序）
+// @Security ApiKeyAuth
+// @Param agentId query int true "智能体ID"
+// @Success 200 {object} response.Response{data=[]model.LlmopsAgentVersion} "获取成功"
+// @Router /llmops/agent/versions [get]
+func (a *LlmopsApi) GetAgentVersions(c *gin.Context) {
+	agentId, err := strconv.ParseUint(c.Query("agentId"), 10, 64)
+	if err != nil || agentId == 0 {
+		response.FailWithMessage("agentId 不能为空", c)
+		return
+	}
+	list, err := service.LlmopsService.GetAgentVersions(uint(agentId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// DeleteAgent 删除智能体
+// @Tags Llmops
+// @Summary 删除智能体（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "智能体ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/agent [delete]
+func (a *LlmopsApi) DeleteAgent(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteAgent(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}

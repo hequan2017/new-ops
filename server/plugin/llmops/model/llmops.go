@@ -282,3 +282,30 @@ type LlmopsArtifact struct {
 }
 
 func (LlmopsArtifact) TableName() string { return "llmops_artifact" }
+
+// LlmopsAgent 智能体（要求(5) 全生命周期六阶段：创建/调测/评测/发布/运营/监控）
+type LlmopsAgent struct {
+	global.GVA_MODEL
+	Name         string `json:"name" gorm:"comment:智能体名;unique"`
+	Mode         string `json:"mode" gorm:"type:varchar(16);index;comment:qa/interactive/workflow/multi/agentic"`
+	Desc         string `json:"desc" gorm:"type:varchar(500);comment:描述"`
+	SysPrompt    string `json:"sysPrompt" gorm:"type:text;comment:系统提示词"`
+	ModelId      uint   `json:"modelId" gorm:"comment:主模型ID"`
+	KnowledgeIds string `json:"knowledgeIds" gorm:"type:varchar(255);comment:挂接知识库ID(逗号分隔)"`
+	MaxTurns     int    `json:"maxTurns" gorm:"default:5;comment:工具/反思轮次上限"`
+	ConfigJSON   string `json:"configJSON" gorm:"type:text;comment:模式专属配置JSON(工作流节点/子智能体等)"`
+	Status       string `json:"status" gorm:"type:varchar(16);default:draft;index;comment:draft/debug/eval/published/operating/monitor"`
+}
+
+func (LlmopsAgent) TableName() string { return "llmops_agent" }
+
+// LlmopsAgentVersion 智能体发布版本快照（发布/回滚依据）
+type LlmopsAgentVersion struct {
+	global.GVA_MODEL
+	AgentId  uint   `json:"agentId" gorm:"index;comment:智能体ID"`
+	Version  int    `json:"version" gorm:"comment:版本号"`
+	Snapshot string `json:"snapshot" gorm:"type:text;comment:发布时配置快照JSON"`
+	Remark   string `json:"remark" gorm:"type:varchar(255);comment:发布说明"`
+}
+
+func (LlmopsAgentVersion) TableName() string { return "llmops_agent_version" }

@@ -99,6 +99,18 @@ type TrainStopIn struct {
 	Reason string `json:"reason"`
 }
 
+// AgentStageIn 智能体阶段流转请求
+type AgentStageIn struct {
+	ID    uint   `json:"id" binding:"required"`
+	Stage string `json:"stage" binding:"required"`
+}
+
+// AgentPublishIn 智能体发布请求
+type AgentPublishIn struct {
+	ID     uint   `json:"id" binding:"required"`
+	Remark string `json:"remark"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge
