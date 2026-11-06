@@ -79,6 +79,13 @@ type GraphQueryIn struct {
 	Relation    string `json:"relation"`
 }
 
+// SummaryGenIn 摘要生成请求
+type SummaryGenIn struct {
+	KbId    uint `json:"kbId" binding:"required"`
+	DocId   uint `json:"docId" binding:"required"`
+	ModelId uint `json:"modelId" binding:"required"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

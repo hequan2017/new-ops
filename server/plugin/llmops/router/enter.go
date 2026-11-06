@@ -81,6 +81,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		kb.POST("graph/query", v1.Api.GraphMultiHopQuery)
 		kb.DELETE("graph/node", v1.Api.DeleteGraphNode)
 		kb.DELETE("graph/edge", v1.Api.DeleteGraphEdge)
+		kb.POST("summary/generate", v1.Api.GenerateDocSummary)
+		kb.GET("summary", v1.Api.GetDocSummary)
+		kb.POST("summary/search", v1.Api.SearchSummaries)
 		kb.DELETE("doc", v1.Api.DeleteKnowledgeDoc)
 		kb.DELETE("", v1.Api.DeleteKnowledge)
 	}

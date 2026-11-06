@@ -193,3 +193,16 @@ type LlmopsGraphEdge struct {
 }
 
 func (LlmopsGraphEdge) TableName() string { return "llmops_graph_edge" }
+
+// LlmopsDocSummary 文档摘要（异步生成，要求(2) 摘要检索多路召回）
+type LlmopsDocSummary struct {
+	global.GVA_MODEL
+	KbId    uint   `json:"kbId" gorm:"index;comment:知识库ID"`
+	DocId   uint   `json:"docId" gorm:"index;comment:文档ID"`
+	Summary string `json:"summary" gorm:"type:text;comment:摘要内容"`
+	Status  string `json:"status" gorm:"type:varchar(16);default:pending;index;comment:pending/running/done/failed"`
+	ModelId uint   `json:"modelId" gorm:"comment:生成用 chat 模型ID"`
+	ErrMsg  string `json:"errMsg" gorm:"type:varchar(500);comment:错误"`
+}
+
+func (LlmopsDocSummary) TableName() string { return "llmops_doc_summary" }

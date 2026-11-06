@@ -1143,3 +1143,70 @@ func (a *LlmopsApi) GraphMultiHopQuery(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"paths": paths}, "推理完成", c)
 }
+
+// GenerateDocSummary 生成文档摘要
+// @Tags Llmops
+// @Summary 创建摘要生成任务（异步，chat 模型；同文档覆盖旧任务）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.SummaryGenIn true "生成请求"
+// @Success 200 {object} response.Response{data=model.LlmopsDocSummary} "任务已创建"
+// @Router /llmops/kb/summary/generate [post]
+func (a *LlmopsApi) GenerateDocSummary(c *gin.Context) {
+	var in service.SummaryGenIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	task, err := service.LlmopsService.CreateSummaryTask(in.KbId, in.DocId, in.ModelId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(task, "任务已创建", c)
+}
+
+// GetDocSummary 查询文档摘要
+// @Tags Llmops
+// @Summary 查询摘要任务状态与结果
+// @Security ApiKeyAuth
+// @Param kbId query int true "知识库ID"
+// @Param docId query int true "文档ID"
+// @Success 200 {object} response.Response{data=model.LlmopsDocSummary} "获取成功"
+// @Router /llmops/kb/summary [get]
+func (a *LlmopsApi) GetDocSummary(c *gin.Context) {
+	kbId, err1 := strconv.ParseUint(c.Query("kbId"), 10, 64)
+	docId, err2 := strconv.ParseUint(c.Query("docId"), 10, 64)
+	if err1 != nil || err2 != nil || kbId == 0 || docId == 0 {
+		response.FailWithMessage("kbId/docId 不能为空", c)
+		return
+	}
+	task, err := service.LlmopsService.GetDocSummary(uint(kbId), uint(docId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(task, "获取成功", c)
+}
+
+// SearchSummaries 摘要检索
+// @Tags Llmops
+// @Summary 摘要检索（bigram+BM25，仅已完成摘要）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.VectorSearchIn true "检索请求"
+// @Success 200 {object} response.Response{data=map[string]any} "检索完成"
+// @Router /llmops/kb/summary/search [post]
+func (a *LlmopsApi) SearchSummaries(c *gin.Context) {
+	var in service.VectorSearchIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	hits, err := service.LlmopsService.SearchSummaries(in.KbId, in.Query, in.TopK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"hits": hits}, "检索完成", c)
+}
