@@ -26,6 +26,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsDataSource),
 		new(model.LlmopsCategory),
 		new(model.LlmopsAssetEvent),
+		new(model.LlmopsModel),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -57,6 +58,9 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/category", Description: "保存编目分类", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/category/tree", Description: "编目分类树", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/category", Description: "删除编目分类", ApiGroup: "大模型平台", Method: "DELETE"},
+		{Path: "/llmops/model/list", Description: "模型注册列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/model", Description: "保存模型注册", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/model", Description: "删除模型注册", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/datasource/list", Description: "数据源列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/datasource", Description: "保存数据源", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/datasource/test", Description: "数据源连接测试", ApiGroup: "大模型平台", Method: "POST"},
@@ -112,6 +116,9 @@ func Casbin(ctx context.Context) {
 		{"/llmops/category", "POST"},
 		{"/llmops/category/tree", "GET"},
 		{"/llmops/category", "DELETE"},
+		{"/llmops/model/list", "GET"},
+		{"/llmops/model", "POST"},
+		{"/llmops/model", "DELETE"},
 		{"/llmops/datasource/list", "GET"},
 		{"/llmops/datasource", "POST"},
 		{"/llmops/datasource/test", "POST"},

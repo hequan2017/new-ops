@@ -533,3 +533,61 @@ func (a *LlmopsApi) GetAssetEvents(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// GetModels 模型注册列表
+// @Tags Llmops
+// @Summary 模型注册列表（密钥不回显）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]model.LlmopsModel} "获取成功"
+// @Router /llmops/model/list [get]
+func (a *LlmopsApi) GetModels(c *gin.Context) {
+	list, err := service.LlmopsService.GetModels()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveModel 保存模型注册
+// @Tags Llmops
+// @Summary 新建/更新模型注册（API Key 留空不改；DefaultFor 同能力互斥）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.ModelIn true "模型"
+// @Success 200 {object} response.Response{data=model.LlmopsModel} "保存成功"
+// @Router /llmops/model [post]
+func (a *LlmopsApi) SaveModel(c *gin.Context) {
+	var in service.ModelIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	m, err := service.LlmopsService.SaveModel(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(m, "保存成功", c)
+}
+
+// DeleteModel 删除模型注册
+// @Tags Llmops
+// @Summary 删除模型注册（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "模型ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/model [delete]
+func (a *LlmopsApi) DeleteModel(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteModel(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}

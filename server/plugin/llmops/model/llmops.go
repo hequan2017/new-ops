@@ -69,3 +69,21 @@ type LlmopsAssetEvent struct {
 }
 
 func (LlmopsAssetEvent) TableName() string { return "llmops_asset_event" }
+
+// LlmopsModel 模型注册表（要求(3) 模型接入与管理：统一接入/纳管/能力标签调度）
+// capability 逗号分隔白名单：chat,embed,rerank；DefaultFor 该模型担任默认调度的能力
+type LlmopsModel struct {
+	global.GVA_MODEL
+	Name       string `json:"name" gorm:"comment:模型注册名;unique"`
+	Provider   string `json:"provider" gorm:"comment:供应商"`
+	BaseUrl    string `json:"baseUrl" gorm:"comment:API基础地址(含/v1)"`
+	ApiKeyEnc  string `json:"-" gorm:"type:text;comment:APIKey密文(AES-GCM)"`
+	Protocol   string `json:"protocol" gorm:"type:varchar(16);default:openai;comment:协议 openai"`
+	Capability string `json:"capability" gorm:"type:varchar(64);comment:能力标签(逗号分隔)"`
+	CtxLen     int    `json:"ctxLen" gorm:"default:8192;comment:上下文长度"`
+	Status     string `json:"status" gorm:"type:varchar(16);default:enabled;index;comment:enabled/disabled"`
+	DefaultFor string `json:"defaultFor" gorm:"type:varchar(16);comment:担任默认调度的能力"`
+	Notes      string `json:"notes" gorm:"type:text;comment:备注"`
+}
+
+func (LlmopsModel) TableName() string { return "llmops_model" }

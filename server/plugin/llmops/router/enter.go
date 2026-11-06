@@ -46,4 +46,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ds.GET("preview", v1.Api.PreviewDataSourceTable)
 		ds.DELETE("", v1.Api.DeleteDataSource)
 	}
+	ml := Router.Group("llmops/model")
+	{
+		ml.GET("list", v1.Api.GetModels)
+		ml.POST("", v1.Api.SaveModel)
+		ml.DELETE("", v1.Api.DeleteModel)
+	}
 }

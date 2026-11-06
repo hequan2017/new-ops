@@ -49,7 +49,7 @@
 
 ## 阶段 B · 模型接入与管理（要求(3)，前置于检索；11-07）
 
-- [ ] B01 | llmops: 模型注册表 `LlmopsModel`（name/provider/baseUrl/apiKeyEnc/capability[chat,embed,rerank]/ctxLen/status/isDefault）+ CRUD（密钥不回显，对齐 aiops 供应商口径）+ 单测
+- [x] B01 | llmops: 模型注册表 `LlmopsModel`（name/provider/baseUrl/apiKeyEnc/capability[chat,embed,rerank]/ctxLen/status/isDefault）+ CRUD（密钥不回显，对齐 aiops 供应商口径）+ 单测
 - [ ] B02 | llmops: 模型网关调用器——OpenAI 兼容 chat/completions 与 embeddings 调用（net/http，参考 aiops gateway）+ 超时/错误码包装 + httptest 单测
 - [ ] B03 | llmops: 在线测试台 API——chat/embeddings/rerank 三协议测试（rerank 约定 POST /rerank 返回 scores）+ 调用日志 `LlmopsModelCallLog`（model/latency/tokens/ok）
 - [ ] B04 | llmops: 模型一键部署——部署任务 `LlmopsModelDeploy`（image/端口/参数 JSON）→ 对接 container 插件最小对接点创建容器 + 健康检查 + 预置模型服务种子（3 个内置定义，未部署态）
