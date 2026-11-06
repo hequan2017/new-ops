@@ -42,7 +42,7 @@
 - [x] A04 | llmops: 网页采集——URL 拉取（net/http 超时+大小上限）+ HTML 正文抽取（去 script/style/标签，纯标准库）入库 webpage 资产 + httptest 单测
 - [x] A05 | llmops: 问答对采集——qa 类型 JSON/CSV 解析为 `LlmopsQaPair`（assetId/question/answer）+ 同题去重 + 单测
 - [x] A06 | llmops: 结构化数据源接入——`LlmopsDataSource`（type mysql/postgres/dsn 凭据 AES-GCM 密文）+ 连接测试 + 库表清单/采样预览 API（database/sql，driver 已有）
-- [ ] A07 | llmops: 半结构化解析——JSON/YAML/XML 顶层字段/类型/样本值抽取生成 metaJSON 编目 + 单测（yaml 用 go.mod 已有解析器，先核实）
+- [x] A07 | llmops: 半结构化解析——JSON/YAML/XML 顶层字段/类型/样本值抽取生成 metaJSON 编目 + 单测（yaml 用 go.mod 已有解析器，先核实）
 - [ ] A08 | llmops: 编目治理——分类目录树 `LlmopsCategory` + 资产挂分类/打标签 + 生命周期事件流水 `LlmopsAssetEvent` 自动记录 + 树形 API
 - [ ] A09 | llmops: 音视频资产——元数据编目（大小/MIME）+ ASR 转写适配器接口（默认 NotConfigured）+ 资产多路检索 API（类型/标签/分类/关键字/时间组合）+ 单测
 - [ ] A10 | llmops: web 数据管理页——`web/src/plugin/llmops/view/data/index.vue`（列表/类型筛选/上传/URL 采集/详情抽屉）+ api/data.js + 菜单种子；web build 绿

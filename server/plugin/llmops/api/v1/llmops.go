@@ -324,3 +324,43 @@ func (a *LlmopsApi) PreviewDataSourceTable(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"columns": columns, "rows": rows}, "获取成功", c)
 }
+
+// ImportSemi 半结构化数据编目
+// @Tags Llmops
+// @Summary 半结构化编目（JSON/YAML/XML 自动探测，顶层字段抽取入 metaJSON）
+// @Security ApiKeyAuth
+// @Accept multipart/form-data
+// @Produce application/json
+// @Param file formData file true "半结构化文件(.json/.yaml/.xml)"
+// @Param name formData string false "资产名"
+// @Param tags formData string false "标签(逗号分隔)"
+// @Success 200 {object} response.Response{data=model.LlmopsDataAsset} "编目成功"
+// @Router /llmops/asset/importSemi [post]
+func (a *LlmopsApi) ImportSemi(c *gin.Context) {
+	fh, err := c.FormFile("file")
+	if err != nil {
+		response.FailWithMessage("缺少 file 文件字段", c)
+		return
+	}
+	if fh.Size > 10<<20 {
+		response.FailWithMessage("文件超过 10MB 上限", c)
+		return
+	}
+	f, err := fh.Open()
+	if err != nil {
+		response.FailWithMessage("读取上传文件失败", c)
+		return
+	}
+	defer f.Close()
+	content, err := io.ReadAll(io.LimitReader(f, 10<<20+1))
+	if err != nil {
+		response.FailWithMessage("读取上传文件失败", c)
+		return
+	}
+	asset, err := service.LlmopsService.ImportSemiStruct(c.PostForm("name"), content, c.PostForm("tags"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(asset, "编目成功", c)
+}

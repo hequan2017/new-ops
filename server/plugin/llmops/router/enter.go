@@ -24,6 +24,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		asset.POST("importDoc", v1.Api.ImportDoc)
 		asset.POST("importWeb", v1.Api.ImportWeb)
 		asset.POST("importQa", v1.Api.ImportQa)
+		asset.POST("importSemi", v1.Api.ImportSemi)
 		asset.DELETE("", v1.Api.DeleteAsset)
 	}
 	ds := Router.Group("llmops/datasource")
