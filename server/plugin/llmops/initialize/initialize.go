@@ -79,6 +79,14 @@ func Menu(ctx context.Context) {
 			Sort:      5,
 			Meta:      sysModel.Meta{Title: "大模型平台", Icon: "data-line"},
 		},
+		{
+			Path:      "llmopsData",
+			Name:      "llmopsData",
+			Hidden:    false,
+			Component: "plugin/llmops/view/data/index.vue",
+			Sort:      1,
+			Meta:      sysModel.Meta{Title: "数据管理", Icon: "files"},
+		},
 	}
 	pluginUtils.RegisterMenus(entities...)
 }
