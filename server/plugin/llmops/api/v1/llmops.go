@@ -1564,3 +1564,25 @@ func (a *LlmopsApi) DeleteArtifact(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// RegisterArtifactModel 产物注册为模型服务
+// @Tags Llmops
+// @Summary 训练/压缩产物一键注册为模型服务（走模型注册表全量校验）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.ArtifactModelIn true "注册请求"
+// @Success 200 {object} response.Response{data=model.LlmopsModel} "注册成功"
+// @Router /llmops/artifact/registerModel [post]
+func (a *LlmopsApi) RegisterArtifactModel(c *gin.Context) {
+	var in service.ArtifactModelIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	m, err := service.LlmopsService.RegisterArtifactAsModel(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(m, "注册成功", c)
+}

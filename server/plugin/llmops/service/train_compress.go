@@ -119,3 +119,11 @@ func (s *LlmopsServiceStruct) DeleteArtifact(id uint) error {
 	}
 	return nil
 }
+
+// GetArtifactById 按 ID 取产物（供注册链路复用）
+func (s *LlmopsServiceStruct) GetArtifactById(id uint, out *model.LlmopsArtifact) error {
+	if err := global.GVA_DB.First(out, id).Error; err != nil {
+		return fmt.Errorf("[%d]产物不存在", ErrCodeCompress)
+	}
+	return nil
+}

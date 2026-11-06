@@ -113,6 +113,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	{
 		art.GET("list", v1.Api.GetArtifacts)
 		art.POST("", v1.Api.RegisterArtifact)
+		art.POST("registerModel", v1.Api.RegisterArtifactModel)
 		art.DELETE("", v1.Api.DeleteArtifact)
 	}
 }
