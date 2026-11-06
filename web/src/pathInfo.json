@@ -100,6 +100,7 @@
   "/src/plugin/k8s/components/ScaleDialog.vue": "ScaleDialog",
   "/src/plugin/k8s/view/cluster/index.vue": "K8sCluster",
   "/src/plugin/llmops/view/data/index.vue": "Index",
+  "/src/plugin/llmops/view/kb/index.vue": "Index",
   "/src/plugin/llmops/view/model/index.vue": "Index",
   "/src/plugin/monitor/components/PerfChart.vue": "PerfChart",
   "/src/plugin/monitor/view/alert/index.vue": "monitorAlert",

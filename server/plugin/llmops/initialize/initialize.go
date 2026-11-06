@@ -140,6 +140,14 @@ func Menu(ctx context.Context) {
 			Sort:      2,
 			Meta:      sysModel.Meta{Title: "模型管理", Icon: "cpu"},
 		},
+		{
+			Path:      "llmopsKb",
+			Name:      "llmopsKb",
+			Hidden:    false,
+			Component: "plugin/llmops/view/kb/index.vue",
+			Sort:      3,
+			Meta:      sysModel.Meta{Title: "知识库", Icon: "collection"},
+		},
 	}
 	pluginUtils.RegisterMenus(entities...)
 }
