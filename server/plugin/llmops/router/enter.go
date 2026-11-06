@@ -50,6 +50,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	{
 		ml.GET("list", v1.Api.GetModels)
 		ml.POST("", v1.Api.SaveModel)
+		ml.POST("test", v1.Api.TestModel)
+		ml.GET("callLogs", v1.Api.GetModelCallLogs)
 		ml.DELETE("", v1.Api.DeleteModel)
 	}
 }

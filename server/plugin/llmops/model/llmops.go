@@ -87,3 +87,19 @@ type LlmopsModel struct {
 }
 
 func (LlmopsModel) TableName() string { return "llmops_model" }
+
+// LlmopsModelCallLog 模型调用日志（要求(3) 在线测试留痕与调度统计基础）
+type LlmopsModelCallLog struct {
+	global.GVA_MODEL
+	ModelId          uint   `json:"modelId" gorm:"index;comment:模型ID"`
+	ModelName        string `json:"modelName" gorm:"comment:模型名"`
+	Protocol         string `json:"protocol" gorm:"type:varchar(16);index;comment:协议 chat/embed/rerank"`
+	LatencyMs        int64  `json:"latencyMs" gorm:"comment:耗时(毫秒)"`
+	PromptTokens     int    `json:"promptTokens" gorm:"default:0;comment:输入token"`
+	CompletionTokens int    `json:"completionTokens" gorm:"default:0;comment:输出token"`
+	TotalTokens      int    `json:"totalTokens" gorm:"default:0;comment:总token"`
+	Ok               bool   `json:"ok" gorm:"index;comment:是否成功"`
+	Error            string `json:"error" gorm:"type:varchar(500);comment:错误摘要"`
+}
+
+func (LlmopsModelCallLog) TableName() string { return "llmops_model_call_log" }

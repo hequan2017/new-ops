@@ -591,3 +591,48 @@ func (a *LlmopsApi) DeleteModel(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// TestModel 在线测试
+// @Tags Llmops
+// @Summary 模型在线测试（chat/embed/rerank 三协议，成败均记调用日志）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.TestProtocolIn true "测试请求"
+// @Success 200 {object} response.Response{data=map[string]any} "测试完成"
+// @Router /llmops/model/test [post]
+func (a *LlmopsApi) TestModel(c *gin.Context) {
+	var in service.TestProtocolIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	result, err := service.LlmopsService.TestModelProtocol(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(result, "测试完成", c)
+}
+
+// GetModelCallLogs 调用日志
+// @Tags Llmops
+// @Summary 模型调用日志（模型/成败过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param modelId query int false "模型ID"
+// @Param ok query string false "true/false"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/model/callLogs [get]
+func (a *LlmopsApi) GetModelCallLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	modelId, _ := strconv.ParseUint(c.Query("modelId"), 10, 64)
+	list, total, err := service.LlmopsService.GetModelCallLogs(page, pageSize, uint(modelId), c.Query("ok"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
