@@ -101,6 +101,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		tr.POST("start", v1.Api.StartTrainJob)
 		tr.POST("stop", v1.Api.StopTrainJob)
 		tr.GET("log", v1.Api.GetTrainJobLog)
-		tr.DELETE("", v1.Api.DeleteTrainJob)
+	}
+	ev := Router.Group("llmops/eval")
+	{
+		ev.GET("list", v1.Api.GetEvalRuns)
+		ev.POST("", v1.Api.SaveEvalRun)
+		ev.POST("run", v1.Api.RunEval)
+		ev.GET("results", v1.Api.GetEvalResults)
 	}
 }

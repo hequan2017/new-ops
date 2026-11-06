@@ -239,3 +239,33 @@ type LlmopsTrainJob struct {
 }
 
 func (LlmopsTrainJob) TableName() string { return "llmops_train_job" }
+
+// LlmopsEvalRun 模型评估任务（要求(4) 模型评估；样本来源 SamplesJSON，K 阶段接数据集）
+type LlmopsEvalRun struct {
+	global.GVA_MODEL
+	Name        string `json:"name" gorm:"comment:评估名;unique"`
+	ModelId     uint   `json:"modelId" gorm:"comment:被测 chat 模型ID"`
+	DatasetId   uint   `json:"datasetId" gorm:"default:0;comment:评测集数据集ID(K 阶段联动)"`
+	SamplesJSON string `json:"samplesJSON" gorm:"type:mediumtext;comment:样本JSON[{question,expected}]"`
+	MetricJSON  string `json:"metricJSON" gorm:"type:text;comment:指标定义JSON"`
+	Status      string `json:"status" gorm:"type:varchar(16);default:pending;index;comment:pending/running/done/failed"`
+	SampleCount int    `json:"sampleCount" gorm:"default:0;comment:样本数"`
+	PassCount   int    `json:"passCount" gorm:"default:0;comment:通过数"`
+	ErrMsg      string `json:"errMsg" gorm:"type:varchar(500);comment:错误"`
+}
+
+func (LlmopsEvalRun) TableName() string { return "llmops_eval_run" }
+
+// LlmopsEvalResult 评估明细
+type LlmopsEvalResult struct {
+	global.GVA_MODEL
+	RunId    uint    `json:"runId" gorm:"index;comment:评估任务ID"`
+	Idx      int     `json:"idx" gorm:"comment:样本序号"`
+	Question string  `json:"question" gorm:"type:varchar(1024);comment:问题"`
+	Expected string  `json:"expected" gorm:"type:text;comment:期望答案"`
+	Actual   string  `json:"actual" gorm:"type:text;comment:实际输出"`
+	Score    float64 `json:"score" gorm:"comment:得分0-1"`
+	Pass     bool    `json:"pass" gorm:"comment:是否通过"`
+}
+
+func (LlmopsEvalResult) TableName() string { return "llmops_eval_result" }

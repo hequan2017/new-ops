@@ -38,6 +38,8 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsDocSummary),
 		new(model.LlmopsSearchLog),
 		new(model.LlmopsTrainJob),
+		new(model.LlmopsEvalRun),
+		new(model.LlmopsEvalResult),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -108,6 +110,10 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/train/start", Description: "启动训练任务", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/train/stop", Description: "停止训练任务", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/train/log", Description: "训练任务日志", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/eval/list", Description: "评估任务列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/eval", Description: "保存评估任务", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/eval/run", Description: "执行模型评估", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/eval/results", Description: "评估明细", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/train", Description: "删除训练任务", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/kb/doc", Description: "删除库内文档", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/kb", Description: "删除知识库", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -251,6 +257,10 @@ func Casbin(ctx context.Context) {
 		{"/llmops/train/start", "POST"},
 		{"/llmops/train/stop", "POST"},
 		{"/llmops/train/log", "GET"},
+		{"/llmops/eval/list", "GET"},
+		{"/llmops/eval", "POST"},
+		{"/llmops/eval/run", "POST"},
+		{"/llmops/eval/results", "GET"},
 		{"/llmops/train", "DELETE"},
 		{"/llmops/kb/doc", "DELETE"},
 		{"/llmops/kb", "DELETE"},

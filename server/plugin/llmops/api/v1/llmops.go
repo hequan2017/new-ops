@@ -1423,3 +1423,87 @@ func (a *LlmopsApi) GetTrainJobLog(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"log": logText, "status": status}, "获取成功", c)
 }
+
+// GetEvalRuns 评估任务列表
+// @Tags Llmops
+// @Summary 模型评估任务列表（分页）
+// @Security ApiKeyAuth
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/eval/list [get]
+func (a *LlmopsApi) GetEvalRuns(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	list, total, err := service.LlmopsService.GetEvalRuns(page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// SaveEvalRun 保存评估任务
+// @Tags Llmops
+// @Summary 新建/更新评估任务（指标/样本即检）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsEvalRun true "评估任务"
+// @Success 200 {object} response.Response{data=model.LlmopsEvalRun} "保存成功"
+// @Router /llmops/eval [post]
+func (a *LlmopsApi) SaveEvalRun(c *gin.Context) {
+	var in model.LlmopsEvalRun
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	run, err := service.LlmopsService.SaveEvalRun(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(run, "保存成功", c)
+}
+
+// RunEval 执行评估
+// @Tags Llmops
+// @Summary 执行模型评估（同步小批量 ≤50 样本，明细留档）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "评估任务ID"
+// @Success 200 {object} response.Response{data=model.LlmopsEvalRun} "评估完成"
+// @Router /llmops/eval/run [post]
+func (a *LlmopsApi) RunEval(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	run, err := service.LlmopsService.RunEval(req.ID)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(run, "评估完成", c)
+}
+
+// GetEvalResults 评估明细
+// @Tags Llmops
+// @Summary 评估明细（按样本序号）
+// @Security ApiKeyAuth
+// @Param runId query int true "评估任务ID"
+// @Success 200 {object} response.Response{data=[]model.LlmopsEvalResult} "获取成功"
+// @Router /llmops/eval/results [get]
+func (a *LlmopsApi) GetEvalResults(c *gin.Context) {
+	runId, err := strconv.ParseUint(c.Query("runId"), 10, 64)
+	if err != nil || runId == 0 {
+		response.FailWithMessage("runId 不能为空", c)
+		return
+	}
+	list, err := service.LlmopsService.GetEvalResults(uint(runId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
