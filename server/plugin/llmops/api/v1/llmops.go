@@ -931,3 +931,47 @@ func (a *LlmopsApi) SearchVector(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"hits": hits, "source": source}, "检索完成", c)
 }
+
+// IndexFulltextDoc 全文索引
+// @Tags Llmops
+// @Summary 文档全文索引（切块→bigram 词元落库）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.VectorIndexIn true "索引请求"
+// @Success 200 {object} response.Response{data=service.IndexResult} "索引完成"
+// @Router /llmops/kb/fulltext/index [post]
+func (a *LlmopsApi) IndexFulltextDoc(c *gin.Context) {
+	var in service.VectorIndexIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	result, err := service.LlmopsService.IndexDocToFulltext(in.KbId, in.DocId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(result, "索引完成", c)
+}
+
+// SearchFulltext 全文检索
+// @Tags Llmops
+// @Summary 全文检索（bigram + 简化 BM25 top-k）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.VectorSearchIn true "检索请求"
+// @Success 200 {object} response.Response{data=map[string]any} "检索完成"
+// @Router /llmops/kb/fulltext/search [post]
+func (a *LlmopsApi) SearchFulltext(c *gin.Context) {
+	var in service.VectorSearchIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	hits, err := service.LlmopsService.SearchFulltext(in.KbId, in.Query, in.TopK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"hits": hits}, "检索完成", c)
+}

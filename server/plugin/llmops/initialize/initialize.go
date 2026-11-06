@@ -32,6 +32,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsKnowledge),
 		new(model.LlmopsKnowledgeDoc),
 		new(model.LlmopsVectorChunk),
+		new(model.LlmopsFulltextChunk),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -80,6 +81,8 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/kb/docs", Description: "库内文档列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/kb/vector/index", Description: "文档向量索引", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/kb/vector/search", Description: "向量语义检索", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/kb/fulltext/index", Description: "文档全文索引", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/kb/fulltext/search", Description: "全文检索", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/kb/doc", Description: "删除库内文档", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/kb", Description: "删除知识库", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/datasource/list", Description: "数据源列表", ApiGroup: "大模型平台", Method: "GET"},
@@ -192,6 +195,8 @@ func Casbin(ctx context.Context) {
 		{"/llmops/kb/docs", "GET"},
 		{"/llmops/kb/vector/index", "POST"},
 		{"/llmops/kb/vector/search", "POST"},
+		{"/llmops/kb/fulltext/index", "POST"},
+		{"/llmops/kb/fulltext/search", "POST"},
 		{"/llmops/kb/doc", "DELETE"},
 		{"/llmops/kb", "DELETE"},
 		{"/llmops/datasource/list", "GET"},
