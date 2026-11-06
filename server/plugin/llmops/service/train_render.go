@@ -96,15 +96,25 @@ func ParseHyper(raw string) (*TrainHyperParams, error) {
 	return p, nil
 }
 
-// RenderTrainCommand 渲染训练命令（sft 全参/LoRA 两套模板；其余类型由后续条目扩展）
+// RenderTrainCommand 渲染训练命令（sft 全参/LoRA 兼容入口，无奖励模型路径）
 func RenderTrainCommand(jobType string, p *TrainHyperParams, datasetPath, baseModel string) (string, error) {
-	if jobType != "sft_full" && jobType != "sft_lora" {
+	return RenderTrainCommandEx(jobType, p, datasetPath, baseModel, "")
+}
+
+// RenderTrainCommandEx 渲染训练命令（四类已接入：sft_full/sft_lora/reward/rl；rl 附奖励模型路径）
+func RenderTrainCommandEx(jobType string, p *TrainHyperParams, datasetPath, baseModel, rewardModelPath string) (string, error) {
+	switch jobType {
+	case "sft_full", "sft_lora", "reward", "rl":
+	default:
 		return "", fmt.Errorf("[%d]任务类型 %s 的渲染器尚未接入", ErrCodeTrainRender, jobType)
 	}
 	if err := sanitizeTrainArg(datasetPath); err != nil {
 		return "", err
 	}
 	if err := sanitizeTrainArg(baseModel); err != nil {
+		return "", err
+	}
+	if err := sanitizeTrainArg(rewardModelPath); err != nil {
 		return "", err
 	}
 	var sb strings.Builder
@@ -115,8 +125,16 @@ func RenderTrainCommand(jobType string, p *TrainHyperParams, datasetPath, baseMo
 		p.LearningRate, p.Epochs, p.BatchSize, p.GradientAccumSteps)
 	fmt.Fprintf(&sb, " --max_seq_len %d --warmup_ratio %g --precision %s --output_dir %s",
 		p.MaxSeqLen, p.WarmupRatio, p.MixedPrecision, p.OutputDir)
-	if jobType == "sft_lora" {
+	switch jobType {
+	case "sft_lora":
 		fmt.Fprintf(&sb, " --lora_r %d --lora_alpha %d --lora_dropout %g", p.LoraR, p.LoraAlpha, p.LoraDropout)
+	case "reward":
+		fmt.Fprintf(&sb, " --loss sequence_pairwise") // 奖励模型配对损失口径
+	case "rl":
+		if rewardModelPath == "" {
+			return "", fmt.Errorf("[%d]RL 阶段必须提供奖励模型路径", ErrCodeTrainRender)
+		}
+		fmt.Fprintf(&sb, " --reward_model_path %s", rewardModelPath)
 	}
 	return sb.String(), nil
 }
@@ -127,20 +145,27 @@ func (s *LlmopsServiceStruct) RunTrainDryRun(jobId uint) (*model.LlmopsTrainJob,
 	if err := global.GVA_DB.First(&job, jobId).Error; err != nil {
 		return nil, fmt.Errorf("[%d]任务不存在", ErrCodeTrainNotFound)
 	}
-	if job.Type != "sft_full" && job.Type != "sft_lora" {
-		return nil, fmt.Errorf("[%d]任务类型 %s 的渲染器尚未接入", ErrCodeTrainRender, job.Type)
-	}
 	p, err := ParseHyper(job.HyperJSON)
-	if err != nil {
-		return nil, err
-	}
-	datasetPath := fmt.Sprintf("/data/datasets/%d", job.DatasetId)
-	cmd, err := RenderTrainCommand(job.Type, p, datasetPath, job.BaseModel)
 	if err != nil {
 		return nil, err
 	}
 	if job.BaseModel == "" {
 		return nil, fmt.Errorf("[%d]基座模型不能为空", ErrCodeTrainRender)
+	}
+	// RLHF 两阶段链路校验与奖励模型路径解析
+	rewardPath := ""
+	if job.Type == "rl" {
+		preJob, err := s.ResolveRlhfPreJob(jobId, job.PreJobId)
+		if err != nil {
+			return nil, err
+		}
+		preHyper, _ := ParseHyper(preJob.HyperJSON)
+		rewardPath = preHyper.OutputDir // 奖励模型产物 = 前置 reward 任务输出目录
+	}
+	datasetPath := fmt.Sprintf("/data/datasets/%d", job.DatasetId)
+	cmd, err := RenderTrainCommandEx(job.Type, p, datasetPath, job.BaseModel, rewardPath)
+	if err != nil {
+		return nil, err
 	}
 	logText := "# dry-run 渲染（本地模式不执行）\n" + cmd
 	if err := global.GVA_DB.Model(&job).Update("log_text", logText).Error; err != nil {

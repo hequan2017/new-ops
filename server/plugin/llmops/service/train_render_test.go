@@ -56,9 +56,21 @@ func TestRenderTrainCommand(t *testing.T) {
 	if strings.Contains(cmd, "--lora_r") {
 		t.Fatal("全参不应带 LoRA 参数")
 	}
+	// reward：配对损失口径；rl：奖励模型路径锚点 + 缺路径拒绝
+	reward, err := RenderTrainCommandEx("reward", p, "/d", "/m", "")
+	if err != nil || !strings.Contains(reward, "train_reward.py --model_name_or_path /m") || !strings.Contains(reward, "--loss sequence_pairwise") {
+		t.Fatalf("reward 渲染异常: %v\n%s", err, reward)
+	}
+	rl, err := RenderTrainCommandEx("rl", p, "/d", "/m", "/data/outputs/reward-1")
+	if err != nil || !strings.Contains(rl, "--reward_model_path /data/outputs/reward-1") {
+		t.Fatalf("rl 渲染异常: %v\n%s", err, rl)
+	}
+	if _, err := RenderTrainCommandEx("rl", p, "/d", "/m", ""); err == nil || !strings.Contains(err.Error(), "奖励模型路径") {
+		t.Fatalf("rl 缺奖励模型路径应拒绝: %v", err)
+	}
 	// 未接入类型
 	if _, err := RenderTrainCommand("eval", p, "/d", "/m"); err == nil {
-		t.Fatal("eval 渲染应由调用方拦截")
+		t.Fatal("eval 渲染应被拦截")
 	}
 }
 
