@@ -25,7 +25,15 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		asset.POST("importWeb", v1.Api.ImportWeb)
 		asset.POST("importQa", v1.Api.ImportQa)
 		asset.POST("importSemi", v1.Api.ImportSemi)
+		asset.POST("categorize", v1.Api.CategorizeAsset)
+		asset.GET("events", v1.Api.GetAssetEvents)
 		asset.DELETE("", v1.Api.DeleteAsset)
+	}
+	cat := Router.Group("llmops/category")
+	{
+		cat.POST("", v1.Api.SaveCategory)
+		cat.GET("tree", v1.Api.GetCategoryTree)
+		cat.DELETE("", v1.Api.DeleteCategory)
 	}
 	ds := Router.Group("llmops/datasource")
 	{

@@ -156,5 +156,7 @@ func (s *LlmopsServiceStruct) ImportWebPage(rawURL, providedName, tags string) (
 	if err := global.GVA_DB.Create(asset).Error; err != nil {
 		return nil, fmt.Errorf("[%d]采集入库失败: %w", ErrCodeImportFailed, err)
 	}
+	recordAssetEvent(global.GVA_DB, asset.ID, "collect", "url:"+rawURL)
+	recordAssetEvent(global.GVA_DB, asset.ID, "parse", "html-text 正文抽取")
 	return asset, nil
 }

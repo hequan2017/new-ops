@@ -191,7 +191,12 @@ func (s *LlmopsServiceStruct) ImportQaPairs(providedName string, content []byte,
 		for i := range pairs {
 			pairs[i].AssetId = asset.ID
 		}
-		return tx.CreateInBatches(pairs, 500).Error
+		if err := tx.CreateInBatches(pairs, 500).Error; err != nil {
+			return err
+		}
+		recordAssetEvent(tx, asset.ID, "collect", "qa 批量导入")
+		recordAssetEvent(tx, asset.ID, "parse", "问答对解析")
+		return nil
 	})
 	if txErr != nil {
 		return nil, 0, 0, 0, fmt.Errorf("[%d]问答对入库失败: %w", ErrCodeImportFailed, txErr)

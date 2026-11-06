@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
+	"github.com/hequan2017/new-ops/server/plugin/llmops/model"
 	"github.com/hequan2017/new-ops/server/plugin/llmops/service"
 )
 
@@ -24,6 +25,13 @@ type webImportReq struct {
 	URL  string `json:"url" binding:"required"`
 	Name string `json:"name"`
 	Tags string `json:"tags"`
+}
+
+// categorizeReq 资产挂分类/打标签请求
+type categorizeReq struct {
+	AssetId    uint   `json:"assetId" binding:"required"`
+	CategoryId uint   `json:"categoryId"`
+	Tags       string `json:"tags"`
 }
 
 // Ping 插件连通性探测
@@ -363,4 +371,107 @@ func (a *LlmopsApi) ImportSemi(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(asset, "编目成功", c)
+}
+
+// SaveCategory 保存编目分类
+// @Tags Llmops
+// @Summary 新建/更新编目分类（父分类存在性+环检测）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsCategory true "分类"
+// @Success 200 {object} response.Response{msg=string} "保存成功"
+// @Router /llmops/category [post]
+func (a *LlmopsApi) SaveCategory(c *gin.Context) {
+	var cat model.LlmopsCategory
+	if err := c.ShouldBindJSON(&cat); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if err := service.LlmopsService.SaveCategory(&cat); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(cat, "保存成功", c)
+}
+
+// GetCategoryTree 分类树
+// @Tags Llmops
+// @Summary 编目分类树（孤儿/环引用降级挂根）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]service.CategoryNode} "获取成功"
+// @Router /llmops/category/tree [get]
+func (a *LlmopsApi) GetCategoryTree(c *gin.Context) {
+	tree, err := service.LlmopsService.GetCategoryTree()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(tree, "获取成功", c)
+}
+
+// DeleteCategory 删除分类
+// @Tags Llmops
+// @Summary 删除编目分类（有子分类/有资产引用拒绝）
+// @Security ApiKeyAuth
+// @Param id query int true "分类ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/category [delete]
+func (a *LlmopsApi) DeleteCategory(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteCategory(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// CategorizeAsset 资产挂分类/打标签
+// @Tags Llmops
+// @Summary 资产挂分类/打标签（记事件流水）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body categorizeReq true "挂载请求"
+// @Success 200 {object} response.Response{msg=string} "操作成功"
+// @Router /llmops/asset/categorize [post]
+func (a *LlmopsApi) CategorizeAsset(c *gin.Context) {
+	var req categorizeReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if err := service.LlmopsService.AssignAssetCategory(req.AssetId, req.CategoryId, req.Tags); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("操作成功", c)
+}
+
+// GetAssetEvents 资产事件流水
+// @Tags Llmops
+// @Summary 资产生命周期事件流水（倒序分页）
+// @Security ApiKeyAuth
+// @Param assetId query int true "资产ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/asset/events [get]
+func (a *LlmopsApi) GetAssetEvents(c *gin.Context) {
+	assetId, err := strconv.ParseUint(c.Query("assetId"), 10, 64)
+	if err != nil || assetId == 0 {
+		response.FailWithMessage("assetId 不能为空", c)
+		return
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.LlmopsService.GetAssetEvents(uint(assetId), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }

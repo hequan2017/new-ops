@@ -24,6 +24,8 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsDataAsset),
 		new(model.LlmopsQaPair),
 		new(model.LlmopsDataSource),
+		new(model.LlmopsCategory),
+		new(model.LlmopsAssetEvent),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -48,6 +50,11 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/asset/importWeb", Description: "网页采集", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/asset/importQa", Description: "问答对采集", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/asset/importSemi", Description: "半结构化编目", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/asset/categorize", Description: "资产挂分类/打标签", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/asset/events", Description: "资产事件流水", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/category", Description: "保存编目分类", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/category/tree", Description: "编目分类树", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/category", Description: "删除编目分类", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/datasource/list", Description: "数据源列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/datasource", Description: "保存数据源", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/datasource/test", Description: "数据源连接测试", ApiGroup: "大模型平台", Method: "POST"},
@@ -88,6 +95,11 @@ func Casbin(ctx context.Context) {
 		{"/llmops/asset/importWeb", "POST"},
 		{"/llmops/asset/importQa", "POST"},
 		{"/llmops/asset/importSemi", "POST"},
+		{"/llmops/asset/categorize", "POST"},
+		{"/llmops/asset/events", "GET"},
+		{"/llmops/category", "POST"},
+		{"/llmops/category/tree", "GET"},
+		{"/llmops/category", "DELETE"},
 		{"/llmops/datasource/list", "GET"},
 		{"/llmops/datasource", "POST"},
 		{"/llmops/datasource/test", "POST"},

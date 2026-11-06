@@ -129,6 +129,10 @@ func (s *LlmopsServiceStruct) ImportDoc(fh *multipart.FileHeader, providedName, 
 	if err := global.GVA_DB.Create(asset).Error; err != nil {
 		return nil, fmt.Errorf("[%d]采集入库失败: %w", ErrCodeImportFailed, err)
 	}
+	recordAssetEvent(global.GVA_DB, asset.ID, "collect", "upload:"+fh.Filename)
+	if status == "parsed" {
+		recordAssetEvent(global.GVA_DB, asset.ID, "parse", "text 正文直读")
+	}
 	return asset, nil
 }
 

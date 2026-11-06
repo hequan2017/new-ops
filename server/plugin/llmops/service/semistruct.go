@@ -215,5 +215,7 @@ func (s *LlmopsServiceStruct) ImportSemiStruct(providedName string, content []by
 	if err := global.GVA_DB.Create(asset).Error; err != nil {
 		return nil, fmt.Errorf("[%d]编目入库失败: %w", ErrCodeImportFailed, err)
 	}
+	recordAssetEvent(global.GVA_DB, asset.ID, "collect", "semi-"+format+" 导入")
+	recordAssetEvent(global.GVA_DB, asset.ID, "parse", fmt.Sprintf("顶层字段 %d 个", len(fields)))
 	return asset, nil
 }

@@ -48,3 +48,24 @@ type LlmopsDataSource struct {
 }
 
 func (LlmopsDataSource) TableName() string { return "llmops_data_source" }
+
+// LlmopsCategory 编目分类目录树（parentId 父引用，0 为根）
+type LlmopsCategory struct {
+	global.GVA_MODEL
+	Name     string `json:"name" gorm:"comment:分类名"`
+	ParentId uint   `json:"parentId" gorm:"index;default:0;comment:父分类ID(0=根)"`
+	Sort     int    `json:"sort" gorm:"default:0;comment:排序"`
+	Remark   string `json:"remark" gorm:"comment:备注"`
+}
+
+func (LlmopsCategory) TableName() string { return "llmops_category" }
+
+// LlmopsAssetEvent 资产生命周期事件流水（采集/解析/编目/删除自动留痕，要求(1) 全生命周期管理）
+type LlmopsAssetEvent struct {
+	global.GVA_MODEL
+	AssetId uint   `json:"assetId" gorm:"index;comment:资产ID"`
+	Action  string `json:"action" gorm:"type:varchar(32);comment:动作"`
+	Detail  string `json:"detail" gorm:"type:text;comment:详情"`
+}
+
+func (LlmopsAssetEvent) TableName() string { return "llmops_asset_event" }

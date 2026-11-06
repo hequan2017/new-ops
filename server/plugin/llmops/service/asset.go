@@ -102,14 +102,15 @@ func (s *LlmopsServiceStruct) GetAsset(id uint) (*model.LlmopsDataAsset, error) 
 	return &asset, nil
 }
 
-// DeleteAsset 数据资产软删除（删除类接口软删除红线）
+// DeleteAsset 数据资产软删除（删除类接口软删除红线；删除记事件流水）
 func (s *LlmopsServiceStruct) DeleteAsset(id uint) error {
-	res := global.GVA_DB.Delete(&model.LlmopsDataAsset{}, id)
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
+	var asset model.LlmopsDataAsset
+	if err := global.GVA_DB.First(&asset, id).Error; err != nil {
 		return fmt.Errorf("[%d]数据资产不存在", ErrCodeAssetNotFound)
 	}
+	if err := global.GVA_DB.Delete(&asset).Error; err != nil {
+		return err
+	}
+	recordAssetEvent(global.GVA_DB, id, "delete", "软删除:"+asset.Name)
 	return nil
 }
