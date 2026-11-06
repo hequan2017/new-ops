@@ -17,4 +17,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	{
 		base.GET("ping", v1.Api.Ping)
 	}
+	asset := Router.Group("llmops/asset")
+	{
+		asset.GET("list", v1.Api.GetAssets)
+		asset.GET("", v1.Api.GetAsset)
+		asset.DELETE("", v1.Api.DeleteAsset)
+	}
 }

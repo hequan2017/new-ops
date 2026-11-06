@@ -14,12 +14,15 @@ import (
 	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 	srvUtils "github.com/hequan2017/new-ops/server/utils"
 
+	"github.com/hequan2017/new-ops/server/plugin/llmops/model"
 	"github.com/hequan2017/new-ops/server/plugin/llmops/router"
 )
 
 // Gorm 注册 llmops 数据表（幂等）；表随排期条目逐域新增，新增在此追加
 func Gorm(ctx context.Context) {
-	err := global.GVA_DB.WithContext(ctx).AutoMigrate()
+	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
+		new(model.LlmopsDataAsset),
+	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
 		global.GVA_LOG.Error(fmt.Sprintf("%+v", err))
@@ -37,6 +40,9 @@ func Router(engine *gin.Engine) {
 func Api(ctx context.Context) {
 	entities := []sysModel.SysApi{
 		{Path: "/llmops/ping", Description: "llmops 连通性探测", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/asset/list", Description: "数据资产列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/asset", Description: "数据资产详情", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/asset", Description: "删除数据资产", ApiGroup: "大模型平台", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -64,6 +70,9 @@ func Casbin(ctx context.Context) {
 	}
 	for _, p := range []struct{ Path, Method string }{
 		{"/llmops/ping", "GET"},
+		{"/llmops/asset/list", "GET"},
+		{"/llmops/asset", "GET"},
+		{"/llmops/asset", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
