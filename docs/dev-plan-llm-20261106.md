@@ -64,7 +64,7 @@
 - [x] C05 | llmops: 问答对库——qa 检索（精确匹配→编辑相似度阈值排序）+ 单测
 - [x] C06 | llmops: 知识图谱库——节点/边表 + BFS 多跳推理 API（startNode→hop N→路径与终点返回）+ 单测
 - [x] C07 | llmops: 摘要检索——文档摘要生成（chat 模型异步任务表）+ 摘要检索 API
-- [ ] C08 | llmops: 混合检索编排——多路召回（向量/全文/问答/图谱/摘要）并发 WaitGroup → RRF 融合 → Rerank 精排（未配置模型跳过）+ mock 单测
+- [x] C08 | llmops: 混合检索编排——多路召回（向量/全文/问答/图谱/摘要）并发 WaitGroup → RRF 融合 → Rerank 精排（未配置模型跳过）+ mock 单测
 - [ ] C09 | llmops: 统一检索入口 API `/llmops/knowledge/search`（kbIds/mode/topK）+ 调用留痕
 - [ ] C10 | llmops: web 知识库页——库管理/文档导入/检索测试台 + 菜单种子；web build 绿
 
