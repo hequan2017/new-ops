@@ -28,6 +28,8 @@ type TrainHyperParams struct {
 	LoraDropout          float64 `json:"loraDropout"`
 	MixedPrecision       string  `json:"mixedPrecision"` // bf16/fp16/off
 	GPUNum               int     `json:"gpuNum"`
+	ZeroStage            int     `json:"zeroStage"`              // DeepSpeed ZeRO 0-3（0 不启用）
+	GradientCheckpointing bool   `json:"gradientCheckpointing"` // 梯度检查点换显存
 	OutputDir            string  `json:"outputDir"`
 }
 
@@ -93,6 +95,9 @@ func ParseHyper(raw string) (*TrainHyperParams, error) {
 	if p.LoraDropout <= 0 || p.LoraDropout >= 1 { // 0 视为未设置（显式 0 与缺省不可区分）
 		p.LoraDropout = 0.05
 	}
+	if p.ZeroStage < 0 || p.ZeroStage > 3 {
+		return nil, fmt.Errorf("[%d]zeroStage 仅支持 0-3", ErrCodeTrainRender)
+	}
 	return p, nil
 }
 
@@ -125,6 +130,12 @@ func RenderTrainCommandEx(jobType string, p *TrainHyperParams, datasetPath, base
 		p.LearningRate, p.Epochs, p.BatchSize, p.GradientAccumSteps)
 	fmt.Fprintf(&sb, " --max_seq_len %d --warmup_ratio %g --precision %s --output_dir %s",
 		p.MaxSeqLen, p.WarmupRatio, p.MixedPrecision, p.OutputDir)
+	if p.ZeroStage > 0 { // 训练加速：DeepSpeed ZeRO 分片
+		fmt.Fprintf(&sb, " --deepspeed --zero_stage %d", p.ZeroStage)
+	}
+	if p.GradientCheckpointing { // 训练加速：梯度检查点
+		sb.WriteString(" --gradient_checkpointing")
+	}
 	switch jobType {
 	case "sft_lora":
 		fmt.Fprintf(&sb, " --lora_r %d --lora_alpha %d --lora_dropout %g", p.LoraR, p.LoraAlpha, p.LoraDropout)

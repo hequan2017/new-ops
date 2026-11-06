@@ -73,7 +73,7 @@
 - [x] D01 | llmops: 训练任务 model `LlmopsTrainJob`（type[sft_full,sft_lora,reward,rl,eval,compress]/datasetId/baseModel/hyperJSON/status 状态机）+ CRUD + 状态流转 API + 单测
 - [x] D02 | llmops: 训练脚本渲染器——超参→命令行渲染（全参/LoRA 两套模板，参数白名单防注入）+ dry-run 执行器（本地模式仅渲染落库）+ 表驱动单测
 - [x] D03 | llmops: RLHF 两阶段——奖励模型训练与强化学习训练任务编排（复用渲染器，阶段依赖 preJobId 校验）+ 单测
-- [ ] D04 | llmops: 训练加速——混合精度/梯度累积/多卡参数渲染白名单扩展 + 任务启动/停止/日志查询（dry-run 落日志）
+- [x] D04 | llmops: 训练加速——混合精度/梯度累积/多卡参数渲染白名单扩展 + 任务启动/停止/日志查询（dry-run 落日志）
 - [ ] D05 | llmops: 模型评估——`LlmopsEvalRun`（evalSet/指标定义/样本调用生成+判分解析）+ 结果表 + 假模型单测
 - [ ] D06 | llmops: 模型压缩——量化/剪枝/蒸馏任务类型接入渲染器（占位执行器）+ 压缩产物登记
 - [ ] D07 | llmops: 产物→预测服务——`LlmopsArtifact` + 训练产物一键注册为模型服务（对接 B04）+ 单测

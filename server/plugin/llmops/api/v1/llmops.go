@@ -1358,3 +1358,68 @@ func (a *LlmopsApi) DryRunTrain(c *gin.Context) {
 	}
 	response.OkWithDetailed(job, "渲染完成", c)
 }
+
+// StartTrainJob 启动任务
+// @Tags Llmops
+// @Summary 启动训练任务（dry-run 执行器：渲染+置 running，真实后端待接入）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "任务ID"
+// @Success 200 {object} response.Response{data=model.LlmopsTrainJob} "已启动"
+// @Router /llmops/train/start [post]
+func (a *LlmopsApi) StartTrainJob(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	job, err := service.LlmopsService.StartTrainJob(req.ID)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(job, "已启动", c)
+}
+
+// StopTrainJob 停止任务
+// @Tags Llmops
+// @Summary 停止训练任务（running→stopped）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.TrainStopIn true "停止请求"
+// @Success 200 {object} response.Response{data=model.LlmopsTrainJob} "已停止"
+// @Router /llmops/train/stop [post]
+func (a *LlmopsApi) StopTrainJob(c *gin.Context) {
+	var in service.TrainStopIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	job, err := service.LlmopsService.StopTrainJob(in.ID, in.Reason)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(job, "已停止", c)
+}
+
+// GetTrainJobLog 任务日志
+// @Tags Llmops
+// @Summary 训练任务执行日志
+// @Security ApiKeyAuth
+// @Param id query int true "任务ID"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/train/log [get]
+func (a *LlmopsApi) GetTrainJobLog(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	logText, status, err := service.LlmopsService.GetTrainJobLog(uint(id))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"log": logText, "status": status}, "获取成功", c)
+}

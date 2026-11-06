@@ -93,6 +93,12 @@ type TrainTransitionIn struct {
 	Reason string `json:"reason"`
 }
 
+// TrainStopIn 训练任务停止请求
+type TrainStopIn struct {
+	ID     uint   `json:"id" binding:"required"`
+	Reason string `json:"reason"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge
