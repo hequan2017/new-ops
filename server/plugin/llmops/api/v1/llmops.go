@@ -975,3 +975,25 @@ func (a *LlmopsApi) SearchFulltext(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"hits": hits}, "检索完成", c)
 }
+
+// SearchQa 问答检索
+// @Tags Llmops
+// @Summary 问答对检索（精确归一命中优先→编辑相似度阈值）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.QaSearchIn true "检索请求"
+// @Success 200 {object} response.Response{data=map[string]any} "检索完成"
+// @Router /llmops/kb/qa/search [post]
+func (a *LlmopsApi) SearchQa(c *gin.Context) {
+	var in service.QaSearchIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	hits, err := service.LlmopsService.SearchQa(in.KbId, in.Query, in.TopK, in.MinScore)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"hits": hits}, "检索完成", c)
+}

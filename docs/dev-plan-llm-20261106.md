@@ -61,7 +61,7 @@
 - [x] C02 | llmops: 切块服务 Chunker——固定长度+重叠+段落边界感知（纯 Go）+ 表驱动单测
 - [x] C03 | llmops: 向量库——chunk 表（kbId/docId/content/vectorJSON/dim）+ 向量化（embed 模型调用；未配置模型时确定性哈希向量 fallback 并标注口径）+ 余弦 top-k 检索 + 单测
 - [x] C04 | llmops: 全文库——bigram 切分 + 倒排简化打分（简化 BM25）+ 检索 + 单测
-- [ ] C05 | llmops: 问答对库——qa 检索（精确匹配→编辑相似度阈值排序）+ 单测
+- [x] C05 | llmops: 问答对库——qa 检索（精确匹配→编辑相似度阈值排序）+ 单测
 - [ ] C06 | llmops: 知识图谱库——节点/边表 + BFS 多跳推理 API（startNode→hop N→路径与终点返回）+ 单测
 - [ ] C07 | llmops: 摘要检索——文档摘要生成（chat 模型异步任务表）+ 摘要检索 API
 - [ ] C08 | llmops: 混合检索编排——多路召回（向量/全文/问答/图谱/摘要）并发 WaitGroup → RRF 融合 → Rerank 精排（未配置模型跳过）+ mock 单测

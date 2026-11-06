@@ -63,6 +63,14 @@ type VectorSearchIn struct {
 	TopK  int    `json:"topK"`
 }
 
+// QaSearchIn 问答检索请求
+type QaSearchIn struct {
+	KbId     uint    `json:"kbId" binding:"required"`
+	Query    string  `json:"query" binding:"required"`
+	TopK     int     `json:"topK"`
+	MinScore float64 `json:"minScore"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge
