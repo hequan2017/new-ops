@@ -103,3 +103,20 @@ type LlmopsModelCallLog struct {
 }
 
 func (LlmopsModelCallLog) TableName() string { return "llmops_model_call_log" }
+
+// LlmopsModelDeploy 模型服务一键部署（要求(3) 模型服务一键部署；容器经 container 插件创建）
+type LlmopsModelDeploy struct {
+	global.GVA_MODEL
+	Name        string `json:"name" gorm:"comment:部署名;unique"`
+	EndpointId  uint   `json:"endpointId" gorm:"comment:容器接入点ID"`
+	Image       string `json:"image" gorm:"comment:镜像"`
+	ContainerId string `json:"containerId" gorm:"comment:容器ID"`
+	Ports       string `json:"ports" gorm:"type:varchar(255);comment:端口映射(逗号分隔 host:ct)"`
+	Envs        string `json:"envs" gorm:"type:text;comment:环境变量(逗号分隔 K=V)"`
+	BaseUrl     string `json:"baseUrl" gorm:"comment:部署后服务地址(健康探测)"`
+	Status      string `json:"status" gorm:"type:varchar(16);default:pending;index;comment:pending/deploying/running/stopped/failed"`
+	ErrMsg      string `json:"errMsg" gorm:"type:varchar(500);comment:最近错误"`
+	Notes       string `json:"notes" gorm:"type:text;comment:备注"`
+}
+
+func (LlmopsModelDeploy) TableName() string { return "llmops_model_deploy" }

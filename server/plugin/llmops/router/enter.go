@@ -54,4 +54,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ml.GET("callLogs", v1.Api.GetModelCallLogs)
 		ml.DELETE("", v1.Api.DeleteModel)
 	}
+	dep := Router.Group("llmops/deploy")
+	{
+		dep.GET("list", v1.Api.GetDeploys)
+		dep.POST("", v1.Api.SaveDeployPlan)
+		dep.POST("execute", v1.Api.ExecuteDeploy)
+		dep.POST("destroy", v1.Api.DestroyDeploy)
+		dep.DELETE("", v1.Api.DeleteDeploy)
+	}
 }

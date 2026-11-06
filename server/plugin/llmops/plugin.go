@@ -27,6 +27,7 @@ func (p *plugin) Register(group *gin.Engine) {
 	initialize.Gorm(ctx)
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
+	initialize.PresetModels(ctx)
 	initialize.Casbin(ctx)
 	initialize.Router(group)
 }

@@ -39,6 +39,11 @@ type transcribeReq struct {
 	AssetId uint `json:"assetId" binding:"required"`
 }
 
+// idReq 通用 ID 请求体
+type idReq struct {
+	ID uint `json:"id" binding:"required"`
+}
+
 // Ping 插件连通性探测
 // @Tags Llmops
 // @Summary llmops 连通性探测
@@ -635,4 +640,106 @@ func (a *LlmopsApi) GetModelCallLogs(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// GetDeploys 部署列表
+// @Tags Llmops
+// @Summary 模型服务部署列表
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]model.LlmopsModelDeploy} "获取成功"
+// @Router /llmops/deploy/list [get]
+func (a *LlmopsApi) GetDeploys(c *gin.Context) {
+	list, err := service.LlmopsService.GetDeploys()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveDeployPlan 保存部署计划
+// @Tags Llmops
+// @Summary 新建/更新部署计划（镜像必填，端口/环境即检）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.DeployIn true "部署计划"
+// @Success 200 {object} response.Response{data=model.LlmopsModelDeploy} "保存成功"
+// @Router /llmops/deploy [post]
+func (a *LlmopsApi) SaveDeployPlan(c *gin.Context) {
+	var in service.DeployIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	d, err := service.LlmopsService.SaveDeployPlan(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(d, "保存成功", c)
+}
+
+// ExecuteDeploy 执行部署
+// @Tags Llmops
+// @Summary 一键部署（建容器+健康探测）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "部署ID"
+// @Success 200 {object} response.Response{data=model.LlmopsModelDeploy} "部署完成"
+// @Router /llmops/deploy/execute [post]
+func (a *LlmopsApi) ExecuteDeploy(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	d, err := service.LlmopsService.ExecuteDeploy(req.ID)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(d, "部署完成", c)
+}
+
+// DestroyDeploy 销毁部署
+// @Tags Llmops
+// @Summary 销毁部署（强删容器回置 stopped）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "部署ID"
+// @Success 200 {object} response.Response{data=model.LlmopsModelDeploy} "销毁完成"
+// @Router /llmops/deploy/destroy [post]
+func (a *LlmopsApi) DestroyDeploy(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	d, err := service.LlmopsService.DestroyDeploy(req.ID)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(d, "销毁完成", c)
+}
+
+// DeleteDeploy 删除部署计划
+// @Tags Llmops
+// @Summary 删除部署计划（运行中拒绝）
+// @Security ApiKeyAuth
+// @Param id query int true "部署ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/deploy [delete]
+func (a *LlmopsApi) DeleteDeploy(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteDeploy(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
 }

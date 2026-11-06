@@ -28,6 +28,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsAssetEvent),
 		new(model.LlmopsModel),
 		new(model.LlmopsModelCallLog),
+		new(model.LlmopsModelDeploy),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -64,6 +65,11 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/model/test", Description: "模型在线测试", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/model/callLogs", Description: "模型调用日志", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/model", Description: "删除模型注册", ApiGroup: "大模型平台", Method: "DELETE"},
+		{Path: "/llmops/deploy/list", Description: "模型部署列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/deploy", Description: "保存部署计划", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/deploy/execute", Description: "执行模型部署", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/deploy/destroy", Description: "销毁模型部署", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/deploy", Description: "删除部署计划", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/datasource/list", Description: "数据源列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/datasource", Description: "保存数据源", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/datasource/test", Description: "数据源连接测试", ApiGroup: "大模型平台", Method: "POST"},
@@ -98,6 +104,36 @@ func Menu(ctx context.Context) {
 	pluginUtils.RegisterMenus(entities...)
 }
 
+// PresetModels 预置模型服务种子（幂等 FirstOrCreate；3 个内置定义，待选接入点后一键部署）
+func PresetModels(ctx context.Context) {
+	presets := []model.LlmopsModelDeploy{
+		{
+			Name: "preset-vllm-openai", Image: "vllm/vllm-openai:latest", Ports: "8000:8000",
+			BaseUrl: "http://127.0.0.1:8000/v1", Status: "pending",
+			Notes: "预置·vLLM OpenAI 兼容服务（选择接入点后一键部署）",
+		},
+		{
+			Name: "preset-ollama", Image: "ollama/ollama:latest", Ports: "11434:11434",
+			BaseUrl: "http://127.0.0.1:11434", Status: "pending",
+			Notes: "预置·Ollama 推理服务（选择接入点后一键部署）",
+		},
+		{
+			Name: "preset-xinference", Image: "xprobe/xinference:latest", Ports: "9997:9997",
+			BaseUrl: "http://127.0.0.1:9997/v1", Status: "pending",
+			Notes: "预置·Xinference 推理平台（选择接入点后一键部署）",
+		},
+	}
+	for i := range presets {
+		var exist model.LlmopsModelDeploy
+		err := global.GVA_DB.WithContext(ctx).Where("name = ?", presets[i].Name).First(&exist).Error
+		if err != nil {
+			if err := global.GVA_DB.WithContext(ctx).Create(&presets[i]).Error; err != nil {
+				global.GVA_LOG.Error(fmt.Sprintf("llmops 预置模型种子失败: %v", err))
+			}
+		}
+	}
+}
+
 // Casbin 注册 llmops 策略（幂等）：仅 888 全量（平台管理面）
 func Casbin(ctx context.Context) {
 	e := srvUtils.GetCasbin()
@@ -124,6 +160,11 @@ func Casbin(ctx context.Context) {
 		{"/llmops/model/test", "POST"},
 		{"/llmops/model/callLogs", "GET"},
 		{"/llmops/model", "DELETE"},
+		{"/llmops/deploy/list", "GET"},
+		{"/llmops/deploy", "POST"},
+		{"/llmops/deploy/execute", "POST"},
+		{"/llmops/deploy/destroy", "POST"},
+		{"/llmops/deploy", "DELETE"},
 		{"/llmops/datasource/list", "GET"},
 		{"/llmops/datasource", "POST"},
 		{"/llmops/datasource/test", "POST"},
