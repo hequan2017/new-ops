@@ -25,6 +25,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		asset.POST("importWeb", v1.Api.ImportWeb)
 		asset.POST("importQa", v1.Api.ImportQa)
 		asset.POST("importSemi", v1.Api.ImportSemi)
+		asset.POST("importMedia", v1.Api.ImportMedia)
+		asset.POST("transcribe", v1.Api.TranscribeMedia)
 		asset.POST("categorize", v1.Api.CategorizeAsset)
 		asset.GET("events", v1.Api.GetAssetEvents)
 		asset.DELETE("", v1.Api.DeleteAsset)

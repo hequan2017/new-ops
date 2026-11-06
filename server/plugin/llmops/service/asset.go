@@ -55,8 +55,8 @@ func EscapeLike(s string) string {
 	return s
 }
 
-// GetAssetList 数据资产列表（分页 + 类型/状态/关键字过滤，全参数白名单校验）
-func (s *LlmopsServiceStruct) GetAssetList(page, pageSize int, dataType, status, keyword string) ([]model.LlmopsDataAsset, int64, error) {
+// GetAssetList 数据资产列表（多路组合检索：分页 + 类型/状态/关键字/标签/分类/时间范围，全参数白名单校验）
+func (s *LlmopsServiceStruct) GetAssetList(page, pageSize int, dataType, status, keyword, tags string, categoryId uint, begin, end string) ([]model.LlmopsDataAsset, int64, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -79,6 +79,22 @@ func (s *LlmopsServiceStruct) GetAssetList(page, pageSize int, dataType, status,
 	if kw := strings.TrimSpace(keyword); kw != "" {
 		like := "%" + EscapeLike(kw) + "%"
 		db = db.Where("name LIKE ? OR tags LIKE ?", like, like)
+	}
+	if tag := strings.TrimSpace(tags); tag != "" {
+		db = db.Where("tags LIKE ?", "%"+EscapeLike(tag)+"%")
+	}
+	if categoryId > 0 {
+		db = db.Where("category_id = ?", categoryId)
+	}
+	if bt, et, err := ParseTimeRange(begin, end); err != nil {
+		return nil, 0, err
+	} else {
+		if !bt.IsZero() {
+			db = db.Where("created_at >= ?", bt)
+		}
+		if !et.IsZero() {
+			db = db.Where("created_at <= ?", et)
+		}
 	}
 	var total int64
 	if err := db.Count(&total).Error; err != nil {

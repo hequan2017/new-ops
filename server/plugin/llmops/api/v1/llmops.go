@@ -34,6 +34,11 @@ type categorizeReq struct {
 	Tags       string `json:"tags"`
 }
 
+// transcribeReq 媒体转写请求
+type transcribeReq struct {
+	AssetId uint `json:"assetId" binding:"required"`
+}
+
 // Ping 插件连通性探测
 // @Tags Llmops
 // @Summary llmops 连通性探测
@@ -51,7 +56,7 @@ func (a *LlmopsApi) Ping(c *gin.Context) {
 
 // GetAssets 数据资产列表
 // @Tags Llmops
-// @Summary 数据资产列表（类型/状态/关键字过滤，白名单校验）
+// @Summary 数据资产列表（类型/状态/关键字/标签/分类/时间范围多路组合检索）
 // @Security ApiKeyAuth
 // @Produce application/json
 // @Param page query int false "页码"
@@ -59,13 +64,19 @@ func (a *LlmopsApi) Ping(c *gin.Context) {
 // @Param dataType query string false "数据类型(doc/image/audio/video/webpage/qa/structured/semistructured)"
 // @Param status query string false "状态(draft/parsed/cataloged/offline)"
 // @Param keyword query string false "名称/标签关键字"
+// @Param tags query string false "标签过滤"
+// @Param categoryId query int false "分类ID"
+// @Param begin query string false "创建时间起(RFC3339 或 2006-01-02)"
+// @Param end query string false "创建时间止"
 // @Success 200 {object} response.Response{data=map[string]any} "获取成功"
 // @Router /llmops/asset/list [get]
 func (a *LlmopsApi) GetAssets(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	categoryId, _ := strconv.ParseUint(c.Query("categoryId"), 10, 64)
 	list, total, err := service.LlmopsService.GetAssetList(page, pageSize,
-		c.Query("dataType"), c.Query("status"), c.Query("keyword"))
+		c.Query("dataType"), c.Query("status"), c.Query("keyword"), c.Query("tags"),
+		uint(categoryId), c.Query("begin"), c.Query("end"))
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -201,6 +212,53 @@ func (a *LlmopsApi) ImportQa(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(gin.H{"asset": asset, "imported": imported, "skipped": skipped, "dup": dup}, "采集成功", c)
+}
+
+// ImportMedia 媒体编目
+// @Tags Llmops
+// @Summary 音视频/图片元数据编目（转写待 ASR 适配器）
+// @Security ApiKeyAuth
+// @Accept multipart/form-data
+// @Produce application/json
+// @Param file formData file true "媒体文件"
+// @Param name formData string false "资产名"
+// @Param tags formData string false "标签(逗号分隔)"
+// @Success 200 {object} response.Response{data=model.LlmopsDataAsset} "编目成功"
+// @Router /llmops/asset/importMedia [post]
+func (a *LlmopsApi) ImportMedia(c *gin.Context) {
+	fh, err := c.FormFile("file")
+	if err != nil {
+		response.FailWithMessage("缺少 file 文件字段", c)
+		return
+	}
+	asset, err := service.LlmopsService.ImportMedia(fh, c.PostForm("name"), c.PostForm("tags"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(asset, "编目成功", c)
+}
+
+// TranscribeMedia 媒体转写
+// @Tags Llmops
+// @Summary 音频/视频 ASR 转写（适配器未配置则明确报错）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body transcribeReq true "转写请求"
+// @Success 200 {object} response.Response{data=model.LlmopsDataAsset} "转写成功"
+// @Router /llmops/asset/transcribe [post]
+func (a *LlmopsApi) TranscribeMedia(c *gin.Context) {
+	var req transcribeReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	asset, err := service.LlmopsService.TranscribeMedia(req.AssetId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(asset, "转写成功", c)
 }
 
 // GetDataSources 数据源列表
