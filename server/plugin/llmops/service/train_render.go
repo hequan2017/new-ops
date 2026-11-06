@@ -160,6 +160,27 @@ func (s *LlmopsServiceStruct) RunTrainDryRun(jobId uint) (*model.LlmopsTrainJob,
 	if err != nil {
 		return nil, err
 	}
+	// 压缩任务走独立渲染（不需要 dataset/baseModel 语义同训练）
+	if job.Type == "compress" {
+		spec, err := ParseCompressSpec(job.HyperJSON)
+		if err != nil {
+			return nil, err
+		}
+		basePath := job.BaseModel
+		if basePath == "" {
+			basePath = "/data/models/base"
+		}
+		cmd, err := RenderCompressCommand(spec, p, basePath)
+		if err != nil {
+			return nil, err
+		}
+		logText := "# dry-run 渲染（压缩·占位执行器，真实后端待接入）\n" + cmd
+		if err := global.GVA_DB.Model(&job).Update("log_text", logText).Error; err != nil {
+			return nil, err
+		}
+		job.LogText = logText
+		return &job, nil
+	}
 	if job.BaseModel == "" {
 		return nil, fmt.Errorf("[%d]基座模型不能为空", ErrCodeTrainRender)
 	}

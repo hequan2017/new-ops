@@ -109,4 +109,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ev.POST("run", v1.Api.RunEval)
 		ev.GET("results", v1.Api.GetEvalResults)
 	}
+	art := Router.Group("llmops/artifact")
+	{
+		art.GET("list", v1.Api.GetArtifacts)
+		art.POST("", v1.Api.RegisterArtifact)
+		art.DELETE("", v1.Api.DeleteArtifact)
+	}
 }

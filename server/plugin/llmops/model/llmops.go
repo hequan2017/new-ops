@@ -269,3 +269,16 @@ type LlmopsEvalResult struct {
 }
 
 func (LlmopsEvalResult) TableName() string { return "llmops_eval_result" }
+
+// LlmopsArtifact 训练/压缩产物（D07 预测服务注册的对接面）
+type LlmopsArtifact struct {
+	global.GVA_MODEL
+	Name    string `json:"name" gorm:"comment:产物名"`
+	JobId   uint   `json:"jobId" gorm:"index;comment:来源任务ID"`
+	JobType string `json:"jobType" gorm:"type:varchar(16);comment:来源任务类型"`
+	Path    string `json:"path" gorm:"comment:产物路径"`
+	Method  string `json:"method" gorm:"type:varchar(16);comment:压缩方法(quantize/prune/distill)"`
+	Notes   string `json:"notes" gorm:"type:text;comment:备注"`
+}
+
+func (LlmopsArtifact) TableName() string { return "llmops_artifact" }

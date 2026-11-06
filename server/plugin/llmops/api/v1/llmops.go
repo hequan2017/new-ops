@@ -1507,3 +1507,60 @@ func (a *LlmopsApi) GetEvalResults(c *gin.Context) {
 	}
 	response.OkWithDetailed(list, "获取成功", c)
 }
+
+// GetArtifacts 产物列表
+// @Tags Llmops
+// @Summary 训练/压缩产物列表
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.LlmopsArtifact} "获取成功"
+// @Router /llmops/artifact/list [get]
+func (a *LlmopsApi) GetArtifacts(c *gin.Context) {
+	list, err := service.LlmopsService.GetArtifacts()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// RegisterArtifact 产物登记
+// @Tags Llmops
+// @Summary 登记训练/压缩产物（D07 预测服务注册对接面）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsArtifact true "产物"
+// @Success 200 {object} response.Response{data=model.LlmopsArtifact} "登记成功"
+// @Router /llmops/artifact [post]
+func (a *LlmopsApi) RegisterArtifact(c *gin.Context) {
+	var in model.LlmopsArtifact
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	art, err := service.LlmopsService.RegisterArtifact(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(art, "登记成功", c)
+}
+
+// DeleteArtifact 删除产物
+// @Tags Llmops
+// @Summary 删除产物
+// @Security ApiKeyAuth
+// @Param id query int true "产物ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/artifact [delete]
+func (a *LlmopsApi) DeleteArtifact(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteArtifact(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
