@@ -95,3 +95,28 @@ func (a *LlmopsApi) DeleteAsset(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// ImportDoc 文档采集上传
+// @Tags Llmops
+// @Summary 文档采集（文本类直读正文 parsed，二进制仅编目 draft）
+// @Security ApiKeyAuth
+// @Accept multipart/form-data
+// @Produce application/json
+// @Param file formData file true "文档文件"
+// @Param name formData string false "资产名（默认取文件名）"
+// @Param tags formData string false "标签(逗号分隔)"
+// @Success 200 {object} response.Response{data=model.LlmopsDataAsset} "采集成功"
+// @Router /llmops/asset/importDoc [post]
+func (a *LlmopsApi) ImportDoc(c *gin.Context) {
+	fh, err := c.FormFile("file")
+	if err != nil {
+		response.FailWithMessage("缺少 file 文件字段", c)
+		return
+	}
+	asset, err := service.LlmopsService.ImportDoc(fh, c.PostForm("name"), c.PostForm("tags"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(asset, "采集成功", c)
+}
