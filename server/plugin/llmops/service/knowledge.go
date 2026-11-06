@@ -86,6 +86,13 @@ type SummaryGenIn struct {
 	ModelId uint `json:"modelId" binding:"required"`
 }
 
+// TrainTransitionIn 训练任务流转请求
+type TrainTransitionIn struct {
+	ID     uint   `json:"id" binding:"required"`
+	To     string `json:"to" binding:"required"`
+	Reason string `json:"reason"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

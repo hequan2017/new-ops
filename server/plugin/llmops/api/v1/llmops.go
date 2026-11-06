@@ -1251,3 +1251,88 @@ func (a *LlmopsApi) GetSearchLogs(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// GetTrainJobs 训练任务列表
+// @Tags Llmops
+// @Summary 训练/调优任务列表（类型/状态过滤，分页）
+// @Security ApiKeyAuth
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Param type query string false "sft_full/sft_lora/reward/rl/eval/compress"
+// @Param status query string false "状态"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/train/list [get]
+func (a *LlmopsApi) GetTrainJobs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	list, total, err := service.LlmopsService.GetTrainJobs(page, pageSize, c.Query("type"), c.Query("status"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// SaveTrainJob 保存训练任务
+// @Tags Llmops
+// @Summary 新建/更新训练任务（草稿态可编辑，超参 JSON 即检）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.TrainIn true "任务"
+// @Success 200 {object} response.Response{data=model.LlmopsTrainJob} "保存成功"
+// @Router /llmops/train [post]
+func (a *LlmopsApi) SaveTrainJob(c *gin.Context) {
+	var in service.TrainIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	job, err := service.LlmopsService.SaveTrainJob(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(job, "保存成功", c)
+}
+
+// TransitionTrainJob 任务状态流转
+// @Tags Llmops
+// @Summary 训练任务状态流转（状态机校验）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.TrainTransitionIn true "流转请求"
+// @Success 200 {object} response.Response{data=model.LlmopsTrainJob} "流转成功"
+// @Router /llmops/train/transition [post]
+func (a *LlmopsApi) TransitionTrainJob(c *gin.Context) {
+	var in service.TrainTransitionIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	job, err := service.LlmopsService.TransitionTrainJob(in.ID, in.To, in.Reason)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(job, "流转成功", c)
+}
+
+// DeleteTrainJob 删除训练任务
+// @Tags Llmops
+// @Summary 删除训练任务（运行/排队中拒绝）
+// @Security ApiKeyAuth
+// @Param id query int true "任务ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/train [delete]
+func (a *LlmopsApi) DeleteTrainJob(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteTrainJob(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}

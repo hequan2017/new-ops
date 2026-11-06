@@ -223,3 +223,19 @@ type LlmopsSearchLog struct {
 }
 
 func (LlmopsSearchLog) TableName() string { return "llmops_search_log" }
+
+// LlmopsTrainJob 训练/调优任务（要求(4)：SFT 全参/LoRA、RLHF 奖励/强化、评估、压缩）
+type LlmopsTrainJob struct {
+	global.GVA_MODEL
+	Name      string `json:"name" gorm:"comment:任务名;unique"`
+	Type      string `json:"type" gorm:"type:varchar(16);index;comment:sft_full/sft_lora/reward/rl/eval/compress"`
+	DatasetId uint   `json:"datasetId" gorm:"default:0;comment:数据集ID(K 阶段联动校验)"`
+	BaseModel string `json:"baseModel" gorm:"comment:基座模型"`
+	HyperJSON string `json:"hyperJSON" gorm:"type:text;comment:超参JSON"`
+	PreJobId  uint   `json:"preJobId" gorm:"default:0;comment:前置任务ID(RLHF 两阶段依赖)"`
+	Status    string `json:"status" gorm:"type:varchar(16);default:draft;index;comment:draft/queued/running/succeeded/failed/stopped"`
+	LogText   string `json:"logText" gorm:"type:mediumtext;comment:执行日志"`
+	ErrMsg    string `json:"errMsg" gorm:"type:varchar(500);comment:错误"`
+}
+
+func (LlmopsTrainJob) TableName() string { return "llmops_train_job" }
