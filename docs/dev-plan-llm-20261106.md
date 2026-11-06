@@ -57,7 +57,7 @@
 
 ## 阶段 C · 知识库与检索引擎（要求(2)；11-07 下午 → 晚上）
 
-- [ ] C01 | llmops: 知识库 model `LlmopsKnowledge`（name/type[vector,fulltext,graph,qa]/desc/status）+ CRUD + 文档入库 API（资产/原始文本→指定库）
+- [x] C01 | llmops: 知识库 model `LlmopsKnowledge`（name/type[vector,fulltext,graph,qa]/desc/status）+ CRUD + 文档入库 API（资产/原始文本→指定库）
 - [ ] C02 | llmops: 切块服务 Chunker——固定长度+重叠+段落边界感知（纯 Go）+ 表驱动单测
 - [ ] C03 | llmops: 向量库——chunk 表（kbId/docId/content/vectorJSON/dim）+ 向量化（embed 模型调用；未配置模型时确定性哈希向量 fallback 并标注口径）+ 余弦 top-k 检索 + 单测
 - [ ] C04 | llmops: 全文库——bigram 切分 + 倒排简化打分（简化 BM25）+ 检索 + 单测

@@ -120,3 +120,28 @@ type LlmopsModelDeploy struct {
 }
 
 func (LlmopsModelDeploy) TableName() string { return "llmops_model_deploy" }
+
+// LlmopsKnowledge 知识库（要求(2) 四类库：vector 向量语义库/fulltext 全文检索库/graph 知识图谱库/qa 问答对库）
+type LlmopsKnowledge struct {
+	global.GVA_MODEL
+	Name         string `json:"name" gorm:"comment:知识库名;unique"`
+	Type         string `json:"type" gorm:"type:varchar(16);index;comment:类型 vector/fulltext/graph/qa"`
+	Desc         string `json:"desc" gorm:"type:varchar(500);comment:描述"`
+	Status       string `json:"status" gorm:"type:varchar(16);default:active;comment:active/disabled"`
+	EmbedModelId uint   `json:"embedModelId" gorm:"default:0;comment:默认嵌入模型ID(vector 库)"`
+}
+
+func (LlmopsKnowledge) TableName() string { return "llmops_knowledge" }
+
+// LlmopsKnowledgeDoc 知识库文档（原文留档；切块/向量化由检索条目回填 chunkCount）
+type LlmopsKnowledgeDoc struct {
+	global.GVA_MODEL
+	KbId       uint   `json:"kbId" gorm:"index;comment:知识库ID"`
+	AssetId    uint   `json:"assetId" gorm:"default:0;comment:来源资产ID(0=内联文本)"`
+	Title      string `json:"title" gorm:"comment:标题"`
+	Content    string `json:"content" gorm:"type:longtext;comment:原文"`
+	Status     string `json:"status" gorm:"type:varchar(16);default:ready;comment:ready/indexing"`
+	ChunkCount int    `json:"chunkCount" gorm:"default:0;comment:切块数"`
+}
+
+func (LlmopsKnowledgeDoc) TableName() string { return "llmops_knowledge_doc" }

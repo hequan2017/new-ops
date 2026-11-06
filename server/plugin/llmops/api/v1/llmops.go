@@ -44,6 +44,8 @@ type idReq struct {
 	ID uint `json:"id" binding:"required"`
 }
 
+// ingestIn 已移至 service.IngestIn（知识入库请求）
+
 // Ping 插件连通性探测
 // @Tags Llmops
 // @Summary llmops 连通性探测
@@ -759,4 +761,129 @@ func (a *LlmopsApi) SelectModel(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(m, "获取成功", c)
+}
+
+// GetKnowledges 知识库列表
+// @Tags Llmops
+// @Summary 知识库列表（vector/fulltext/graph/qa 四类）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]model.LlmopsKnowledge} "获取成功"
+// @Router /llmops/kb/list [get]
+func (a *LlmopsApi) GetKnowledges(c *gin.Context) {
+	list, err := service.LlmopsService.GetKnowledges()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveKnowledge 保存知识库
+// @Tags Llmops
+// @Summary 新建/更新知识库
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.KnowledgeIn true "知识库"
+// @Success 200 {object} response.Response{data=model.LlmopsKnowledge} "保存成功"
+// @Router /llmops/kb [post]
+func (a *LlmopsApi) SaveKnowledge(c *gin.Context) {
+	var in service.KnowledgeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	kb, err := service.LlmopsService.SaveKnowledge(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(kb, "保存成功", c)
+}
+
+// DeleteKnowledge 删除知识库
+// @Tags Llmops
+// @Summary 删除知识库（级联软删文档）
+// @Security ApiKeyAuth
+// @Param id query int true "知识库ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/kb [delete]
+func (a *LlmopsApi) DeleteKnowledge(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteKnowledge(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// IngestKnowledgeDoc 文档入库
+// @Tags Llmops
+// @Summary 文档入库（资产 rawText 或内联文本，原文留档）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.IngestIn true "入库请求"
+// @Success 200 {object} response.Response{data=model.LlmopsKnowledgeDoc} "入库成功"
+// @Router /llmops/kb/ingest [post]
+func (a *LlmopsApi) IngestKnowledgeDoc(c *gin.Context) {
+	var in service.IngestIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	doc, err := service.LlmopsService.IngestDocument(in.KbId, in.AssetId, in.Title, in.Text)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(doc, "入库成功", c)
+}
+
+// GetKnowledgeDocs 库内文档列表
+// @Tags Llmops
+// @Summary 库内文档列表（不含正文，分页）
+// @Security ApiKeyAuth
+// @Param kbId query int true "知识库ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/kb/docs [get]
+func (a *LlmopsApi) GetKnowledgeDocs(c *gin.Context) {
+	kbId, err := strconv.ParseUint(c.Query("kbId"), 10, 64)
+	if err != nil || kbId == 0 {
+		response.FailWithMessage("kbId 不能为空", c)
+		return
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.LlmopsService.GetKnowledgeDocs(uint(kbId), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// DeleteKnowledgeDoc 删除库内文档
+// @Tags Llmops
+// @Summary 删除库内文档（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "文档ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/kb/doc [delete]
+func (a *LlmopsApi) DeleteKnowledgeDoc(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteKnowledgeDoc(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
 }

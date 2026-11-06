@@ -63,4 +63,13 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		dep.POST("destroy", v1.Api.DestroyDeploy)
 		dep.DELETE("", v1.Api.DeleteDeploy)
 	}
+	kb := Router.Group("llmops/kb")
+	{
+		kb.GET("list", v1.Api.GetKnowledges)
+		kb.POST("", v1.Api.SaveKnowledge)
+		kb.POST("ingest", v1.Api.IngestKnowledgeDoc)
+		kb.GET("docs", v1.Api.GetKnowledgeDocs)
+		kb.DELETE("doc", v1.Api.DeleteKnowledgeDoc)
+		kb.DELETE("", v1.Api.DeleteKnowledge)
+	}
 }
