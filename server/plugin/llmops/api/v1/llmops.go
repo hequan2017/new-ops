@@ -1210,3 +1210,44 @@ func (a *LlmopsApi) SearchSummaries(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"hits": hits}, "检索完成", c)
 }
+
+// UnifiedSearch 统一检索入口
+// @Tags Llmops
+// @Summary 统一检索（多库 hybrid/单路由模式，成败均留痕）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.UnifiedSearchIn true "检索请求"
+// @Success 200 {object} response.Response{data=map[string]any} "检索完成"
+// @Router /llmops/knowledge/search [post]
+func (a *LlmopsApi) UnifiedSearch(c *gin.Context) {
+	var in service.UnifiedSearchIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	hits, report, err := service.LlmopsService.UnifiedSearch(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"hits": hits, "report": report}, "检索完成", c)
+}
+
+// GetSearchLogs 检索日志
+// @Tags Llmops
+// @Summary 统一检索调用日志（倒序分页）
+// @Security ApiKeyAuth
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/knowledge/searchLogs [get]
+func (a *LlmopsApi) GetSearchLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.LlmopsService.GetSearchLogs(page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}

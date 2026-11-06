@@ -36,6 +36,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsGraphNode),
 		new(model.LlmopsGraphEdge),
 		new(model.LlmopsDocSummary),
+		new(model.LlmopsSearchLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -97,6 +98,8 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/kb/summary/generate", Description: "生成文档摘要", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/kb/summary", Description: "查询文档摘要", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/kb/summary/search", Description: "摘要检索", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/knowledge/search", Description: "统一检索入口", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/knowledge/searchLogs", Description: "检索调用日志", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/kb/doc", Description: "删除库内文档", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/kb", Description: "删除知识库", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/datasource/list", Description: "数据源列表", ApiGroup: "大模型平台", Method: "GET"},
@@ -222,6 +225,8 @@ func Casbin(ctx context.Context) {
 		{"/llmops/kb/summary/generate", "POST"},
 		{"/llmops/kb/summary", "GET"},
 		{"/llmops/kb/summary/search", "POST"},
+		{"/llmops/knowledge/search", "POST"},
+		{"/llmops/knowledge/searchLogs", "GET"},
 		{"/llmops/kb/doc", "DELETE"},
 		{"/llmops/kb", "DELETE"},
 		{"/llmops/datasource/list", "GET"},

@@ -84,6 +84,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		kb.POST("summary/generate", v1.Api.GenerateDocSummary)
 		kb.GET("summary", v1.Api.GetDocSummary)
 		kb.POST("summary/search", v1.Api.SearchSummaries)
+	}
+	ks := Router.Group("llmops/knowledge")
+	{
+		ks.POST("search", v1.Api.UnifiedSearch)
+		ks.GET("searchLogs", v1.Api.GetSearchLogs)
 		kb.DELETE("doc", v1.Api.DeleteKnowledgeDoc)
 		kb.DELETE("", v1.Api.DeleteKnowledge)
 	}

@@ -206,3 +206,20 @@ type LlmopsDocSummary struct {
 }
 
 func (LlmopsDocSummary) TableName() string { return "llmops_doc_summary" }
+
+// LlmopsSearchLog 统一检索调用日志（要求(2) 调用留痕）
+type LlmopsSearchLog struct {
+	global.GVA_MODEL
+	KbIds         string `json:"kbIds" gorm:"type:varchar(255);comment:库ID列表"`
+	Query         string `json:"query" gorm:"type:varchar(512);comment:查询"`
+	Mode          string `json:"mode" gorm:"type:varchar(16);comment:hybrid/单路由"`
+	Routes        string `json:"routes" gorm:"type:varchar(128);comment:实际路由"`
+	TopK          int    `json:"topK" gorm:"comment:topK"`
+	HitCount      int    `json:"hitCount" gorm:"comment:命中数"`
+	LatencyMs     int64  `json:"latencyMs" gorm:"comment:耗时毫秒"`
+	RerankModelId uint   `json:"rerankModelId" gorm:"comment:精排模型"`
+	RouteReport   string `json:"routeReport" gorm:"type:varchar(500);comment:各路报告"`
+	ErrMsg        string `json:"errMsg" gorm:"type:varchar(500);comment:错误"`
+}
+
+func (LlmopsSearchLog) TableName() string { return "llmops_search_log" }
