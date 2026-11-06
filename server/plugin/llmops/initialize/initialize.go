@@ -23,6 +23,7 @@ func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.LlmopsDataAsset),
 		new(model.LlmopsQaPair),
+		new(model.LlmopsDataSource),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -46,6 +47,12 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/asset/importDoc", Description: "文档采集上传", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/asset/importWeb", Description: "网页采集", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/asset/importQa", Description: "问答对采集", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/datasource/list", Description: "数据源列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/datasource", Description: "保存数据源", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/datasource/test", Description: "数据源连接测试", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/datasource/tables", Description: "库表清单", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/datasource/preview", Description: "表采样预览", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/datasource", Description: "删除数据源", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/asset", Description: "删除数据资产", ApiGroup: "大模型平台", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
@@ -79,6 +86,12 @@ func Casbin(ctx context.Context) {
 		{"/llmops/asset/importDoc", "POST"},
 		{"/llmops/asset/importWeb", "POST"},
 		{"/llmops/asset/importQa", "POST"},
+		{"/llmops/datasource/list", "GET"},
+		{"/llmops/datasource", "POST"},
+		{"/llmops/datasource/test", "POST"},
+		{"/llmops/datasource/tables", "GET"},
+		{"/llmops/datasource/preview", "GET"},
+		{"/llmops/datasource", "DELETE"},
 		{"/llmops/asset", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)

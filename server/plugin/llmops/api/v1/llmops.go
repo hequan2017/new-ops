@@ -194,3 +194,133 @@ func (a *LlmopsApi) ImportQa(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"asset": asset, "imported": imported, "skipped": skipped, "dup": dup}, "采集成功", c)
 }
+
+// GetDataSources 数据源列表
+// @Tags Llmops
+// @Summary 结构化数据源列表（密码不回显）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]model.LlmopsDataSource} "获取成功"
+// @Router /llmops/datasource/list [get]
+func (a *LlmopsApi) GetDataSources(c *gin.Context) {
+	list, err := service.LlmopsService.GetDataSources()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveDataSource 保存数据源
+// @Tags Llmops
+// @Summary 新建/更新数据源（密码留空不改）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.DataSourceIn true "数据源"
+// @Success 200 {object} response.Response{data=model.LlmopsDataSource} "保存成功"
+// @Router /llmops/datasource [post]
+func (a *LlmopsApi) SaveDataSource(c *gin.Context) {
+	var in service.DataSourceIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	ds, err := service.LlmopsService.SaveDataSource(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(ds, "保存成功", c)
+}
+
+// DeleteDataSource 删除数据源
+// @Tags Llmops
+// @Summary 删除数据源（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "数据源ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/datasource [delete]
+func (a *LlmopsApi) DeleteDataSource(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteDataSource(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// TestDataSource 数据源连接测试
+// @Tags Llmops
+// @Summary 连接测试（传 id 测已保存；传完整表单直连测试）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.DataSourceIn true "数据源（可仅 id 或完整表单）"
+// @Success 200 {object} response.Response{msg=string} "连接成功"
+// @Router /llmops/datasource/test [post]
+func (a *LlmopsApi) TestDataSource(c *gin.Context) {
+	var in service.DataSourceIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	var err error
+	if in.ID > 0 {
+		err = service.LlmopsService.TestDataSource(in.ID)
+	} else {
+		err = service.LlmopsService.TestDataSourceDirect(&in)
+	}
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("连接成功", c)
+}
+
+// ListDataSourceTables 库表清单
+// @Tags Llmops
+// @Summary 库表清单
+// @Security ApiKeyAuth
+// @Param id query int true "数据源ID"
+// @Success 200 {object} response.Response{data=[]string} "获取成功"
+// @Router /llmops/datasource/tables [get]
+func (a *LlmopsApi) ListDataSourceTables(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	tables, err := service.LlmopsService.ListDataSourceTables(uint(id))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(tables, "获取成功", c)
+}
+
+// PreviewDataSourceTable 采样预览
+// @Tags Llmops
+// @Summary 表采样预览（默认 20 行，上限 100）
+// @Security ApiKeyAuth
+// @Param id query int true "数据源ID"
+// @Param table query string true "表名"
+// @Param limit query int false "行数上限"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/datasource/preview [get]
+func (a *LlmopsApi) PreviewDataSourceTable(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	columns, rows, err := service.LlmopsService.PreviewDataSourceTable(uint(id), c.Query("table"), limit)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"columns": columns, "rows": rows}, "获取成功", c)
+}

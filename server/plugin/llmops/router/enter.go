@@ -26,4 +26,13 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		asset.POST("importQa", v1.Api.ImportQa)
 		asset.DELETE("", v1.Api.DeleteAsset)
 	}
+	ds := Router.Group("llmops/datasource")
+	{
+		ds.GET("list", v1.Api.GetDataSources)
+		ds.POST("", v1.Api.SaveDataSource)
+		ds.POST("test", v1.Api.TestDataSource)
+		ds.GET("tables", v1.Api.ListDataSourceTables)
+		ds.GET("preview", v1.Api.PreviewDataSourceTable)
+		ds.DELETE("", v1.Api.DeleteDataSource)
+	}
 }

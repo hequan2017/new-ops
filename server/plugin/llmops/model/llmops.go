@@ -32,3 +32,19 @@ type LlmopsQaPair struct {
 }
 
 func (LlmopsQaPair) TableName() string { return "llmops_qa_pair" }
+
+// LlmopsDataSource 结构化数据源接入（要求(1) 结构化数据源直接接入）
+// 密码 AES-GCM 密文落库（json:"-" 永不序列化回显），对齐 aiops 供应商口径
+type LlmopsDataSource struct {
+	global.GVA_MODEL
+	Name        string `json:"name" gorm:"comment:数据源名称;unique"`
+	Type        string `json:"type" gorm:"type:varchar(16);index;comment:类型 mysql/postgres"`
+	Host        string `json:"host" gorm:"comment:主机"`
+	Port        int    `json:"port" gorm:"comment:端口"`
+	Database    string `json:"database" gorm:"comment:库名"`
+	User        string `json:"user" gorm:"comment:用户名"`
+	PasswordEnc string `json:"-" gorm:"type:text;comment:密码密文(AES-GCM)"`
+	Notes       string `json:"notes" gorm:"type:text;comment:备注"`
+}
+
+func (LlmopsDataSource) TableName() string { return "llmops_data_source" }
