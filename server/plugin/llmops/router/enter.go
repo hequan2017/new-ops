@@ -52,6 +52,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ml.POST("", v1.Api.SaveModel)
 		ml.POST("test", v1.Api.TestModel)
 		ml.GET("callLogs", v1.Api.GetModelCallLogs)
+		ml.GET("select", v1.Api.SelectModel)
 		ml.DELETE("", v1.Api.DeleteModel)
 	}
 	dep := Router.Group("llmops/deploy")

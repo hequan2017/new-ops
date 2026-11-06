@@ -743,3 +743,20 @@ func (a *LlmopsApi) DeleteDeploy(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// SelectModel 能力调度
+// @Tags Llmops
+// @Summary 按能力调度模型（DefaultFor 优先，其余按近 10 次成功调用时延均值）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param capability query string true "能力标签(chat/embed/rerank)"
+// @Success 200 {object} response.Response{data=model.LlmopsModel} "获取成功"
+// @Router /llmops/model/select [get]
+func (a *LlmopsApi) SelectModel(c *gin.Context) {
+	m, err := service.LlmopsService.SelectModel(c.Query("capability"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(m, "获取成功", c)
+}

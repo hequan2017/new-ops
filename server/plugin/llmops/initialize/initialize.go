@@ -64,6 +64,7 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/model", Description: "保存模型注册", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/model/test", Description: "模型在线测试", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/model/callLogs", Description: "模型调用日志", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/model/select", Description: "按能力调度模型", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/model", Description: "删除模型注册", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/deploy/list", Description: "模型部署列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/deploy", Description: "保存部署计划", ApiGroup: "大模型平台", Method: "POST"},
@@ -99,6 +100,14 @@ func Menu(ctx context.Context) {
 			Component: "plugin/llmops/view/data/index.vue",
 			Sort:      1,
 			Meta:      sysModel.Meta{Title: "数据管理", Icon: "files"},
+		},
+		{
+			Path:      "llmopsModel",
+			Name:      "llmopsModel",
+			Hidden:    false,
+			Component: "plugin/llmops/view/model/index.vue",
+			Sort:      2,
+			Meta:      sysModel.Meta{Title: "模型管理", Icon: "cpu"},
 		},
 	}
 	pluginUtils.RegisterMenus(entities...)
@@ -159,6 +168,7 @@ func Casbin(ctx context.Context) {
 		{"/llmops/model", "POST"},
 		{"/llmops/model/test", "POST"},
 		{"/llmops/model/callLogs", "GET"},
+		{"/llmops/model/select", "GET"},
 		{"/llmops/model", "DELETE"},
 		{"/llmops/deploy/list", "GET"},
 		{"/llmops/deploy", "POST"},
