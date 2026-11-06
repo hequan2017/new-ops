@@ -71,6 +71,14 @@ type QaSearchIn struct {
 	MinScore float64 `json:"minScore"`
 }
 
+// GraphQueryIn 图谱多跳推理请求
+type GraphQueryIn struct {
+	KbId        uint   `json:"kbId" binding:"required"`
+	StartNodeId uint   `json:"startNodeId" binding:"required"`
+	MaxHops     int    `json:"maxHops"`
+	Relation    string `json:"relation"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

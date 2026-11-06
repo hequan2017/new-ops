@@ -997,3 +997,149 @@ func (a *LlmopsApi) SearchQa(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"hits": hits}, "检索完成", c)
 }
+
+// SaveGraphNode 保存图谱节点
+// @Tags Llmops
+// @Summary 新建/更新图谱节点（库内同名去重）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsGraphNode true "节点"
+// @Success 200 {object} response.Response{msg=string} "保存成功"
+// @Router /llmops/kb/graph/node [post]
+func (a *LlmopsApi) SaveGraphNode(c *gin.Context) {
+	var n model.LlmopsGraphNode
+	if err := c.ShouldBindJSON(&n); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if err := service.LlmopsService.SaveGraphNode(&n); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(n, "保存成功", c)
+}
+
+// GetGraphNodes 图谱节点列表
+// @Tags Llmops
+// @Summary 库内图谱节点列表
+// @Security ApiKeyAuth
+// @Param kbId query int true "知识库ID"
+// @Success 200 {object} response.Response{data=[]model.LlmopsGraphNode} "获取成功"
+// @Router /llmops/kb/graph/nodes [get]
+func (a *LlmopsApi) GetGraphNodes(c *gin.Context) {
+	kbId, err := strconv.ParseUint(c.Query("kbId"), 10, 64)
+	if err != nil || kbId == 0 {
+		response.FailWithMessage("kbId 不能为空", c)
+		return
+	}
+	list, err := service.LlmopsService.GetGraphNodes(uint(kbId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// DeleteGraphNode 删除图谱节点
+// @Tags Llmops
+// @Summary 删除节点（级联删关联边）
+// @Security ApiKeyAuth
+// @Param id query int true "节点ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/kb/graph/node [delete]
+func (a *LlmopsApi) DeleteGraphNode(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteGraphNode(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// SaveGraphEdge 保存图谱边
+// @Tags Llmops
+// @Summary 新建图谱边（起终点同库校验）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsGraphEdge true "边"
+// @Success 200 {object} response.Response{msg=string} "保存成功"
+// @Router /llmops/kb/graph/edge [post]
+func (a *LlmopsApi) SaveGraphEdge(c *gin.Context) {
+	var e model.LlmopsGraphEdge
+	if err := c.ShouldBindJSON(&e); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if err := service.LlmopsService.SaveGraphEdge(&e); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(e, "保存成功", c)
+}
+
+// GetGraphEdges 图谱边列表
+// @Tags Llmops
+// @Summary 库内图谱边列表
+// @Security ApiKeyAuth
+// @Param kbId query int true "知识库ID"
+// @Success 200 {object} response.Response{data=[]model.LlmopsGraphEdge} "获取成功"
+// @Router /llmops/kb/graph/edges [get]
+func (a *LlmopsApi) GetGraphEdges(c *gin.Context) {
+	kbId, err := strconv.ParseUint(c.Query("kbId"), 10, 64)
+	if err != nil || kbId == 0 {
+		response.FailWithMessage("kbId 不能为空", c)
+		return
+	}
+	list, err := service.LlmopsService.GetGraphEdges(uint(kbId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// DeleteGraphEdge 删除图谱边
+// @Tags Llmops
+// @Summary 删除图谱边
+// @Security ApiKeyAuth
+// @Param id query int true "边ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/kb/graph/edge [delete]
+func (a *LlmopsApi) DeleteGraphEdge(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteGraphEdge(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GraphMultiHopQuery 多跳推理
+// @Tags Llmops
+// @Summary 图谱多跳推理（BFS 路径枚举，hops 1-5，路径上限 100）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.GraphQueryIn true "推理请求"
+// @Success 200 {object} response.Response{data=map[string]any} "推理完成"
+// @Router /llmops/kb/graph/query [post]
+func (a *LlmopsApi) GraphMultiHopQuery(c *gin.Context) {
+	var in service.GraphQueryIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	paths, err := service.LlmopsService.GraphMultiHopQuery(in.KbId, in.StartNodeId, in.MaxHops, in.Relation)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"paths": paths}, "推理完成", c)
+}

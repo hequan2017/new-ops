@@ -170,3 +170,26 @@ type LlmopsFulltextChunk struct {
 }
 
 func (LlmopsFulltextChunk) TableName() string { return "llmops_fulltext_chunk" }
+
+// LlmopsGraphNode 知识图谱节点（要求(2) 知识图谱库多跳推理）
+type LlmopsGraphNode struct {
+	global.GVA_MODEL
+	KbId  uint   `json:"kbId" gorm:"index;comment:知识库ID"`
+	Name  string `json:"name" gorm:"type:varchar(128);comment:节点名"`
+	Type  string `json:"type" gorm:"type:varchar(32);comment:节点类型(实体/概念)"`
+	Props string `json:"props" gorm:"type:text;comment:属性JSON"`
+}
+
+func (LlmopsGraphNode) TableName() string { return "llmops_graph_node" }
+
+// LlmopsGraphEdge 知识图谱边（有向）
+type LlmopsGraphEdge struct {
+	global.GVA_MODEL
+	KbId       uint    `json:"kbId" gorm:"index;comment:知识库ID"`
+	FromNodeId uint    `json:"fromNodeId" gorm:"index;comment:起点节点ID"`
+	ToNodeId   uint    `json:"toNodeId" gorm:"index;comment:终点节点ID"`
+	Relation   string  `json:"relation" gorm:"type:varchar(64);comment:关系名"`
+	Weight     float64 `json:"weight" gorm:"default:1;comment:权重"`
+}
+
+func (LlmopsGraphEdge) TableName() string { return "llmops_graph_edge" }

@@ -74,6 +74,13 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		kb.POST("fulltext/index", v1.Api.IndexFulltextDoc)
 		kb.POST("fulltext/search", v1.Api.SearchFulltext)
 		kb.POST("qa/search", v1.Api.SearchQa)
+		kb.POST("graph/node", v1.Api.SaveGraphNode)
+		kb.GET("graph/nodes", v1.Api.GetGraphNodes)
+		kb.POST("graph/edge", v1.Api.SaveGraphEdge)
+		kb.GET("graph/edges", v1.Api.GetGraphEdges)
+		kb.POST("graph/query", v1.Api.GraphMultiHopQuery)
+		kb.DELETE("graph/node", v1.Api.DeleteGraphNode)
+		kb.DELETE("graph/edge", v1.Api.DeleteGraphEdge)
 		kb.DELETE("doc", v1.Api.DeleteKnowledgeDoc)
 		kb.DELETE("", v1.Api.DeleteKnowledge)
 	}
