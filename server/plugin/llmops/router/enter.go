@@ -159,4 +159,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		mcp.POST("", v1.Api.SaveMcpTool)
 		mcp.DELETE("", v1.Api.DeleteMcpTool)
 	}
+	conn := Router.Group("llmops/connector")
+	{
+		conn.GET("list", v1.Api.GetConnectors)
+		conn.POST("", v1.Api.SaveConnector)
+		conn.POST("test", v1.Api.TestConnector)
+		conn.DELETE("", v1.Api.DeleteConnector)
+	}
 }

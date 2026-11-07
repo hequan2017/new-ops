@@ -412,3 +412,18 @@ type LlmopsMcpTool struct {
 }
 
 func (LlmopsMcpTool) TableName() string { return "llmops_mcp_tool" }
+
+// LlmopsConnector 业务系统连接器（要求(6) ERP/CRM/OA/SCM 双向交互与跨系统编排）
+type LlmopsConnector struct {
+	global.GVA_MODEL
+	Name      string `json:"name" gorm:"comment:连接器名;unique"`
+	Type      string `json:"type" gorm:"type:varchar(16);index;comment:erp/crm/oa/scm"`
+	BaseUrl   string `json:"baseUrl" gorm:"comment:系统地址"`
+	AuthType  string `json:"authType" gorm:"type:varchar(16);default:none;comment:none/bearer/basic/apikey"`
+	AuthValue string `json:"-" gorm:"type:text;comment:鉴权值(AES-GCM 密文，不回显)"`
+	FieldMap  string `json:"fieldMap" gorm:"type:text;comment:字段映射JSON(本地字段↔系统字段)"`
+	Status    string `json:"status" gorm:"type:varchar(16);default:enabled;index;comment:enabled/disabled"`
+	Notes     string `json:"notes" gorm:"type:text;comment:备注"`
+}
+
+func (LlmopsConnector) TableName() string { return "llmops_connector" }

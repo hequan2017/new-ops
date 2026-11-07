@@ -2282,6 +2282,84 @@ func (a *LlmopsApi) DeleteMcpTool(c *gin.Context) {
 	response.OkWithMessage("删除成功", c)
 }
 
+// GetConnectors 连接器列表
+// @Tags Llmops
+// @Summary 业务系统连接器列表（鉴权值不回显）
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.LlmopsConnector} "获取成功"
+// @Router /llmops/connector/list [get]
+func (a *LlmopsApi) GetConnectors(c *gin.Context) {
+	list, err := service.LlmopsService.GetConnectors()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveConnector 保存连接器
+// @Tags Llmops
+// @Summary 新建/更新连接器（authValue 留空不改，密文落库）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.ConnectorIn true "连接器"
+// @Success 200 {object} response.Response{data=model.LlmopsConnector} "保存成功"
+// @Router /llmops/connector [post]
+func (a *LlmopsApi) SaveConnector(c *gin.Context) {
+	var in service.ConnectorIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	conn, err := service.LlmopsService.SaveConnector(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(conn, "保存成功", c)
+}
+
+// TestConnector 连通测试
+// @Tags Llmops
+// @Summary 连接器连通测试（带鉴权头探测）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "连接器ID"
+// @Success 200 {object} response.Response{msg=string} "连通正常"
+// @Router /llmops/connector/test [post]
+func (a *LlmopsApi) TestConnector(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if err := service.LlmopsService.TestConnector(req.ID); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("连通正常", c)
+}
+
+// DeleteConnector 删除连接器
+// @Tags Llmops
+// @Summary 删除连接器（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "连接器ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/connector [delete]
+func (a *LlmopsApi) DeleteConnector(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteConnector(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）

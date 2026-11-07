@@ -99,7 +99,7 @@
 - [x] F02 | llmops: 零代码创建技能——自然语言描述→chat 生成技能定义 JSON→校验→入库 + 假模型单测
 - [x] F03 | llmops: 技能包导入导出——JSON 导出/一键安装（校验+冲突提示）
 - [x] F04 | llmops: MCP 工具封装——业务系统 API 注册（baseUrl/method/参数模板/鉴权头密文）→ 工具描述生成 + 调用代理（对齐 server/mcp 现状口径）+ httptest 单测
-- [ ] F05 | llmops: 连接器——ERP/CRM/OA/SCM 连接器配置（类型模板+字段映射 JSON）+ 连通测试 API
+- [x] F05 | llmops: 连接器——ERP/CRM/OA/SCM 连接器配置（类型模板+字段映射 JSON）+ 连通测试 API
 - [ ] F06 | llmops: 技能执行沙箱——超时/响应大小上限/URL 白名单/参数脱敏 + 单测
 - [ ] F07 | llmops: 技能鉴权限流——调用令牌（生成/校验/吊销）+ 令牌桶限流（内存）+ 调用审计日志表 + 单测
 - [ ] F08 | llmops: web 技能中心页——技能列表/零代码向导/MCP 注册/连接器/调用日志 + 菜单种子；web build 绿
