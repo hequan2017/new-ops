@@ -85,7 +85,7 @@
 - [x] E02 | llmops: 智能体运行时——意图理解+任务自主拆解（chat 结构化 JSON 输出+校验失败重试）+ 会话/消息表 `LlmopsAgentSession/Message`
 - [x] E03 | llmops: 工具调用回路——技能/MCP 工具绑定→选择调用→结果评估与自我反思（轮次上限可配）+ 假工具单测
 - [x] E04 | llmops: 记忆——短期（最近 N 轮窗口截断）+ 长期（`LlmopsAgentMemory` 条目+检索注入）+ 单测
-- [ ] E05 | llmops: 工作流模式——节点 JSON 编排（llm/tool/condition/human）+ 顺序执行引擎 + 单测
+- [x] E05 | llmops: 工作流模式——节点 JSON 编排（llm/tool/condition/human）+ 顺序执行引擎 + 单测
 - [ ] E06 | llmops: 多智能体模式——子智能体引用编排（顺序/汇聚）+ 单测
 - [ ] E07 | llmops: 调测 API——会话调试（含 SSE 流式可选）+ 调试历史
 - [ ] E08 | llmops: 智能体评测——评测集运行+打分（规则+LLM 评分）+ 结果表 + 单测
