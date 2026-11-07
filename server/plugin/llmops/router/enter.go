@@ -171,4 +171,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		conn.POST("test", v1.Api.TestConnector)
 		conn.DELETE("", v1.Api.DeleteConnector)
 	}
+	pt := Router.Group("llmops/prompt")
+	{
+		pt.GET("list", v1.Api.GetPrompts)
+		pt.POST("", v1.Api.SavePrompt)
+		pt.GET("versions", v1.Api.GetPromptVersions)
+		pt.DELETE("", v1.Api.DeletePrompt)
+	}
 }

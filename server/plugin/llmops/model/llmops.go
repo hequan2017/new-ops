@@ -452,3 +452,24 @@ type LlmopsSkillCallLog struct {
 }
 
 func (LlmopsSkillCallLog) TableName() string { return "llmops_skill_call_log" }
+
+// LlmopsPromptTemplate Prompt 模板（要求(7)；{{var}} 占位）
+type LlmopsPromptTemplate struct {
+	global.GVA_MODEL
+	Name    string `json:"name" gorm:"comment:模板名;unique"`
+	Content string `json:"content" gorm:"type:text;comment:模板内容({{var}} 占位)"`
+	Desc    string `json:"desc" gorm:"type:varchar(500);comment:描述"`
+	Version int    `json:"version" gorm:"default:1;comment:版本号"`
+}
+
+func (LlmopsPromptTemplate) TableName() string { return "llmops_prompt_template" }
+
+// LlmopsPromptVersion 模板版本快照（更新自动留档）
+type LlmopsPromptVersion struct {
+	global.GVA_MODEL
+	TemplateId uint   `json:"templateId" gorm:"index;comment:模板ID"`
+	Version    int    `json:"version" gorm:"comment:版本号"`
+	Content    string `json:"content" gorm:"type:text;comment:该版内容"`
+}
+
+func (LlmopsPromptVersion) TableName() string { return "llmops_prompt_version" }

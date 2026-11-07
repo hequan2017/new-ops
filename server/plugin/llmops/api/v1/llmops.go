@@ -2460,6 +2460,84 @@ func (a *LlmopsApi) GetSkillCallLogs(c *gin.Context) {
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
 
+// GetPrompts 模板列表
+// @Tags Llmops
+// @Summary Prompt 模板列表
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.LlmopsPromptTemplate} "获取成功"
+// @Router /llmops/prompt/list [get]
+func (a *LlmopsApi) GetPrompts(c *gin.Context) {
+	list, err := service.LlmopsService.GetPrompts()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SavePrompt 保存模板
+// @Tags Llmops
+// @Summary 新建/更新 Prompt 模板（更新版本自增+旧版快照）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsPromptTemplate true "模板"
+// @Success 200 {object} response.Response{data=model.LlmopsPromptTemplate} "保存成功"
+// @Router /llmops/prompt [post]
+func (a *LlmopsApi) SavePrompt(c *gin.Context) {
+	var in model.LlmopsPromptTemplate
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	tpl, err := service.LlmopsService.SavePrompt(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(tpl, "保存成功", c)
+}
+
+// DeletePrompt 删除模板
+// @Tags Llmops
+// @Summary 删除 Prompt 模板（级联删版本快照）
+// @Security ApiKeyAuth
+// @Param id query int true "模板ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/prompt [delete]
+func (a *LlmopsApi) DeletePrompt(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeletePrompt(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetPromptVersions 模板版本列表
+// @Tags Llmops
+// @Summary Prompt 模板版本快照列表
+// @Security ApiKeyAuth
+// @Param templateId query int true "模板ID"
+// @Success 200 {object} response.Response{data=[]model.LlmopsPromptVersion} "获取成功"
+// @Router /llmops/prompt/versions [get]
+func (a *LlmopsApi) GetPromptVersions(c *gin.Context) {
+	templateId, err := strconv.ParseUint(c.Query("templateId"), 10, 64)
+	if err != nil || templateId == 0 {
+		response.FailWithMessage("templateId 不能为空", c)
+		return
+	}
+	list, err := service.LlmopsService.GetPromptVersions(uint(templateId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）
