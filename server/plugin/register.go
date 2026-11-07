@@ -13,6 +13,7 @@ import (
 	_ "github.com/hequan2017/new-ops/server/plugin/k8s"
 	_ "github.com/hequan2017/new-ops/server/plugin/llmops"
 	_ "github.com/hequan2017/new-ops/server/plugin/monitor"
+	_ "github.com/hequan2017/new-ops/server/plugin/oplib"
 	_ "github.com/hequan2017/new-ops/server/plugin/pipeline"
 	_ "github.com/hequan2017/new-ops/server/plugin/term"
 	_ "github.com/hequan2017/new-ops/server/plugin/workflow"
