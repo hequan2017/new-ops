@@ -126,6 +126,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ag.POST("session", v1.Api.CreateAgentSession)
 		ag.GET("messages", v1.Api.GetAgentMessages)
 		ag.POST("chat", v1.Api.AgentChat)
+		ag.POST("memory", v1.Api.SaveAgentMemory)
+		ag.GET("memory/list", v1.Api.ListAgentMemories)
+		ag.POST("memory/inject", v1.Api.InjectAgentMemories)
+		ag.POST("memory/extract", v1.Api.ExtractAgentMemory)
+		ag.DELETE("memory", v1.Api.DeleteAgentMemory)
 		ag.DELETE("", v1.Api.DeleteAgent)
 	}
 }

@@ -124,6 +124,31 @@ type AgentChatIn struct {
 	Message   string `json:"message" binding:"required"`
 }
 
+// MemoryIn 记忆保存请求
+type MemoryIn struct {
+	AgentId uint   `json:"agentId" binding:"required"`
+	UserKey string `json:"userKey"`
+	Content string `json:"content" binding:"required"`
+	Source  string `json:"source"`
+}
+
+// MemoryInjectIn 记忆注入请求
+type MemoryInjectIn struct {
+	AgentId uint   `json:"agentId" binding:"required"`
+	UserKey string `json:"userKey"`
+	Query   string `json:"query" binding:"required"`
+	TopK    int    `json:"topK"`
+}
+
+// MemoryExtractIn 记忆抽取请求
+type MemoryExtractIn struct {
+	AgentId uint   `json:"agentId" binding:"required"`
+	UserKey string `json:"userKey"`
+	UserMsg string `json:"userMsg" binding:"required"`
+	Reply   string `json:"reply" binding:"required"`
+	ModelId uint   `json:"modelId" binding:"required"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

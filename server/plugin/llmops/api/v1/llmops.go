@@ -1773,3 +1773,111 @@ func (a *LlmopsApi) AgentChat(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"reply": reply, "plan": plan}, "对话完成", c)
 }
+
+// SaveAgentMemory 保存记忆
+// @Tags Llmops
+// @Summary 保存智能体长期记忆
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.MemoryIn true "记忆"
+// @Success 200 {object} response.Response{data=model.LlmopsAgentMemory} "保存成功"
+// @Router /llmops/agent/memory [post]
+func (a *LlmopsApi) SaveAgentMemory(c *gin.Context) {
+	var in service.MemoryIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	m, err := service.LlmopsService.SaveMemory(in.AgentId, in.UserKey, in.Content, in.Source)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(m, "保存成功", c)
+}
+
+// ListAgentMemories 记忆列表
+// @Tags Llmops
+// @Summary 长期记忆列表（用户专属+全局）
+// @Security ApiKeyAuth
+// @Param agentId query int true "智能体ID"
+// @Param userKey query string false "用户标识"
+// @Success 200 {object} response.Response{data=[]model.LlmopsAgentMemory} "获取成功"
+// @Router /llmops/agent/memory/list [get]
+func (a *LlmopsApi) ListAgentMemories(c *gin.Context) {
+	agentId, err := strconv.ParseUint(c.Query("agentId"), 10, 64)
+	if err != nil || agentId == 0 {
+		response.FailWithMessage("agentId 不能为空", c)
+		return
+	}
+	list, err := service.LlmopsService.ListMemories(uint(agentId), c.Query("userKey"), 50)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// DeleteAgentMemory 删除记忆
+// @Tags Llmops
+// @Summary 删除长期记忆
+// @Security ApiKeyAuth
+// @Param id query int true "记忆ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/agent/memory [delete]
+func (a *LlmopsApi) DeleteAgentMemory(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteMemory(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// InjectAgentMemories 记忆检索注入
+// @Tags Llmops
+// @Summary 按查询检索相关记忆（BM25 top-k 上下文块）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.MemoryInjectIn true "注入请求"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/agent/memory/inject [post]
+func (a *LlmopsApi) InjectAgentMemories(c *gin.Context) {
+	var in service.MemoryInjectIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	ctxText, err := service.LlmopsService.InjectMemories(in.AgentId, in.UserKey, in.Query, in.TopK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"context": ctxText}, "获取成功", c)
+}
+
+// ExtractAgentMemory 自动记忆抽取
+// @Tags Llmops
+// @Summary LLM 抽取对话中的可记忆事实（无则不写）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.MemoryExtractIn true "抽取请求"
+// @Success 200 {object} response.Response{data=map[string]any} "抽取完成"
+// @Router /llmops/agent/memory/extract [post]
+func (a *LlmopsApi) ExtractAgentMemory(c *gin.Context) {
+	var in service.MemoryExtractIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	fact, err := service.LlmopsService.ExtractAutoMemory(in.AgentId, in.UserKey, in.UserMsg, in.Reply, in.ModelId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"fact": fact}, "抽取完成", c)
+}

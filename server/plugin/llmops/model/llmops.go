@@ -330,3 +330,15 @@ type LlmopsAgentMessage struct {
 }
 
 func (LlmopsAgentMessage) TableName() string { return "llmops_agent_message" }
+
+// LlmopsAgentMemory 智能体长期记忆条目（要求(5) 长期记忆）
+type LlmopsAgentMemory struct {
+	global.GVA_MODEL
+	AgentId uint    `json:"agentId" gorm:"index;comment:智能体ID"`
+	UserKey string  `json:"userKey" gorm:"type:varchar(64);index;comment:用户标识"`
+	Content string  `json:"content" gorm:"type:varchar(1024);comment:记忆内容"`
+	Source  string  `json:"source" gorm:"type:varchar(16);comment:manual/auto"`
+	Weight  float64 `json:"weight" gorm:"default:1;comment:权重"`
+}
+
+func (LlmopsAgentMemory) TableName() string { return "llmops_agent_memory" }
