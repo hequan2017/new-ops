@@ -22,6 +22,7 @@ import (
 func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.ExamQuestion),
+		new(model.ExamPaper),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "exam 注册表失败!")
@@ -40,6 +41,10 @@ func Router(engine *gin.Engine) {
 func Api(ctx context.Context) {
 	entities := []sysModel.SysApi{
 		{Path: "/exam/question/list", Description: "考题列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/exam/paper/list", Description: "试卷列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/exam/paper", Description: "保存试卷", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/paper/compose", Description: "试卷组卷", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/paper", Description: "删除试卷", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/exam/question", Description: "保存考题", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/question/import", Description: "考题 JSONL 导入", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/question", Description: "删除考题", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -78,6 +83,10 @@ func Casbin(ctx context.Context) {
 	}
 	for _, p := range []struct{ Path, Method string }{
 		{"/exam/question/list", "GET"},
+		{"/exam/paper/list", "GET"},
+		{"/exam/paper", "POST"},
+		{"/exam/paper/compose", "POST"},
+		{"/exam/paper", "DELETE"},
 		{"/exam/question", "POST"},
 		{"/exam/question/import", "POST"},
 		{"/exam/question", "DELETE"},

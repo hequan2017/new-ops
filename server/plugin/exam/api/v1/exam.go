@@ -116,3 +116,87 @@ func (a *ExamApi) ImportQuestions(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"imported": imported, "skipped": skipped}, "导入完成", c)
 }
+
+// GetPapers 试卷列表
+// @Tags Exam
+// @Summary 试卷列表
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.ExamPaper} "获取成功"
+// @Router /exam/paper/list [get]
+func (a *ExamApi) GetPapers(c *gin.Context) {
+	list, err := service.ExamApp.GetPapers()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SavePaper 保存试卷
+// @Tags Exam
+// @Summary 新建/更新试卷（规则即检）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.ExamPaper true "试卷"
+// @Success 200 {object} response.Response{data=model.ExamPaper} "保存成功"
+// @Router /exam/paper [post]
+func (a *ExamApi) SavePaper(c *gin.Context) {
+	var in model.ExamPaper
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	p, err := service.ExamApp.SavePaper(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(p, "保存成功", c)
+}
+
+// ComposePaper 组卷
+// @Tags Exam
+// @Summary 按规则抽题组卷（锁定题目与总分）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body composeIn true "组卷请求"
+// @Success 200 {object} response.Response{data=model.ExamPaper} "组卷完成"
+// @Router /exam/paper/compose [post]
+func (a *ExamApi) ComposePaper(c *gin.Context) {
+	var in composeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	p, err := service.ExamApp.ComposePaper(in.ID)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(p, "组卷完成", c)
+}
+
+// DeletePaper 删除试卷
+// @Tags Exam
+// @Summary 删除试卷（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "试卷ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /exam/paper [delete]
+func (a *ExamApi) DeletePaper(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.ExamApp.DeletePaper(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// composeIn 组卷请求
+type composeIn struct {
+	ID uint `json:"id" binding:"required"`
+}

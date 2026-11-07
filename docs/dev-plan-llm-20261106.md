@@ -123,7 +123,7 @@
 ## 阶段 I · AI 等级考试分布式系统（采购件③；11-08 深夜 → 11-09 凌晨）
 
 - [x] I01 | exam: 插件骨架 + 题库 model `ExamQuestion`（type[单选,多选,判断,简答,实操]/stem/optionsJSON/answer/score/knowledgePoint/difficulty）+ CRUD + JSONL 批量导入 + 单测
-- [ ] I02 | exam: 组卷引擎——`ExamPaper`（抽题规则：知识点×难度×题量 JSON）+ 随机抽题（去重+分值合计校验）+ 单测
+- [x] I02 | exam: 组卷引擎——`ExamPaper`（抽题规则：知识点×难度×题量 JSON）+ 随机抽题（去重+分值合计校验）+ 单测
 - [ ] I03 | exam: 考试 model `ExamExam`（场次/时间窗/试卷/考生范围/状态机[草稿,发布,进行中,已结束]）+ CRUD + 状态流转校验
 - [ ] I04 | exam: 考生管理——`ExamCandidate`（名单导入/券码唯一生成）+ DB 行锁发券防重复 + 单测
 - [ ] I05 | exam: 答题 API——券码+终端令牌登录/拉题/保存答案（幂等+时间窗校验）/交卷（状态机+防重复提交）+ 单测
