@@ -32,6 +32,7 @@ func Gorm(ctx context.Context) {
 		new(model.ExamNode),
 		new(model.ExamShard),
 		new(model.ExamBehavior),
+		new(model.ExamPracticeLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "exam 注册表失败!")
@@ -78,6 +79,7 @@ func Api(ctx context.Context) {
 		{Path: "/exam/terminal/resume", Description: "终端断线续考", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/terminal/save", Description: "终端保存答案", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/terminal/submit", Description: "终端交卷", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/terminal/practice", Description: "实操题执行", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate/import", Description: "考生名单导入", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate/claim", Description: "考生领券", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate", Description: "删除考生", ApiGroup: "大模型平台", Method: "DELETE"},

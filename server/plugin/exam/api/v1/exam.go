@@ -830,3 +830,24 @@ func (a *ExamApi) TerminalSubmit(c *gin.Context) {
 	}
 	response.OkWithDetailed(sheet, "交卷成功", c)
 }
+
+// RunPractice 实操执行
+// @Tags ExamTerminal
+// @Summary 实操题执行（算子/智能体双通道，过程留痕并写回答卷）
+// @Accept application/json
+// @Param data body service.PracticeIn true "实操请求"
+// @Success 200 {object} response.Response{data=model.ExamPracticeLog} "执行完成"
+// @Router /exam/terminal/practice [post]
+func (a *ExamApi) RunPractice(c *gin.Context) {
+	var in service.PracticeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	log, err := service.ExamApp.RunPractice(in.SheetId, in.QuestionId, in.Channel, in.Target, in.Input)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(log, "执行完成", c)
+}

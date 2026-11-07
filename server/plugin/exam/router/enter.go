@@ -84,5 +84,6 @@ func (rg *RouterGroup) InitTerminal(Public *gin.RouterGroup) {
 		t.POST("resume", v1.Api.TerminalResume)
 		t.POST("save", v1.Api.TerminalSaveAnswers)
 		t.POST("submit", v1.Api.TerminalSubmit)
+		t.POST("practice", v1.Api.RunPractice)
 	}
 }
