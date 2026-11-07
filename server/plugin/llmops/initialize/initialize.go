@@ -275,6 +275,14 @@ func Menu(ctx context.Context) {
 			Sort:      7,
 			Meta:      sysModel.Meta{Title: "Prompt 工作台", Icon: "edit-pen"},
 		},
+		{
+			Path:      "llmopsDataset",
+			Name:      "llmopsDataset",
+			Hidden:    false,
+			Component: "plugin/llmops/view/dataset/index.vue",
+			Sort:      8,
+			Meta:      sysModel.Meta{Title: "数据集", Icon: "box"},
+		},
 	}
 	pluginUtils.RegisterMenus(entities...)
 }
