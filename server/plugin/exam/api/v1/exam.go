@@ -200,3 +200,89 @@ func (a *ExamApi) DeletePaper(c *gin.Context) {
 type composeIn struct {
 	ID uint `json:"id" binding:"required"`
 }
+
+// GetExams 考试列表
+// @Tags Exam
+// @Summary 考试场次列表（状态过滤）
+// @Security ApiKeyAuth
+// @Param status query string false "draft/published/ongoing/finished"
+// @Success 200 {object} response.Response{data=[]model.ExamExam} "获取成功"
+// @Router /exam/exam/list [get]
+func (a *ExamApi) GetExams(c *gin.Context) {
+	list, err := service.ExamApp.GetExams(c.Query("status"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveExam 保存考试
+// @Tags Exam
+// @Summary 新建/更新考试场次（试卷须已组卷，仅草稿可编辑）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.ExamIn true "考试"
+// @Success 200 {object} response.Response{data=model.ExamExam} "保存成功"
+// @Router /exam/exam [post]
+func (a *ExamApi) SaveExam(c *gin.Context) {
+	var in service.ExamIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	e, err := service.ExamApp.SaveExam(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(e, "保存成功", c)
+}
+
+// TransitionExam 考试状态流转
+// @Tags Exam
+// @Summary 考试状态流转（四态状态机）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body examTransitionIn true "流转请求"
+// @Success 200 {object} response.Response{data=model.ExamExam} "流转成功"
+// @Router /exam/exam/transition [post]
+func (a *ExamApi) TransitionExam(c *gin.Context) {
+	var in examTransitionIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	e, err := service.ExamApp.TransitionExam(in.ID, in.To)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(e, "流转成功", c)
+}
+
+// DeleteExam 删除考试
+// @Tags Exam
+// @Summary 删除考试（发布/进行中拒绝）
+// @Security ApiKeyAuth
+// @Param id query int true "考试ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /exam/exam [delete]
+func (a *ExamApi) DeleteExam(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.ExamApp.DeleteExam(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// examTransitionIn 考试流转请求
+type examTransitionIn struct {
+	ID uint   `json:"id" binding:"required"`
+	To string `json:"to" binding:"required"`
+}
