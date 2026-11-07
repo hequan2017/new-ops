@@ -2538,6 +2538,28 @@ func (a *LlmopsApi) GetPromptVersions(c *gin.Context) {
 	response.OkWithDetailed(list, "获取成功", c)
 }
 
+// RenderPrompt 模板渲染
+// @Tags Llmops
+// @Summary Prompt 模板渲染（templateId 或内联 content，缺失变量报错列清单）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.RenderPromptIn true "渲染请求"
+// @Success 200 {object} response.Response{data=map[string]any} "渲染完成"
+// @Router /llmops/prompt/render [post]
+func (a *LlmopsApi) RenderPrompt(c *gin.Context) {
+	var in service.RenderPromptIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	rendered, usedVars, err := service.LlmopsService.RenderPrompt(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"rendered": rendered, "vars": usedVars}, "渲染完成", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）
