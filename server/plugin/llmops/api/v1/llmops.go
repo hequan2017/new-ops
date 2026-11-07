@@ -2225,6 +2225,63 @@ func (a *LlmopsApi) ImportSkillPackage(c *gin.Context) {
 	response.OkWithDetailed(gin.H{"imported": imported, "conflicts": conflicts}, "导入完成", c)
 }
 
+// GetMcpTools MCP 工具列表
+// @Tags Llmops
+// @Summary MCP 工具列表（固定头不回显）
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.LlmopsMcpTool} "获取成功"
+// @Router /llmops/mcp/list [get]
+func (a *LlmopsApi) GetMcpTools(c *gin.Context) {
+	list, err := service.LlmopsService.GetMcpTools()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveMcpTool 保存 MCP 工具
+// @Tags Llmops
+// @Summary 新建/更新 MCP 工具（headersJSON 明文入参，逐值加密不回显）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.McpToolIn true "MCP 工具"
+// @Success 200 {object} response.Response{data=model.LlmopsMcpTool} "保存成功"
+// @Router /llmops/mcp [post]
+func (a *LlmopsApi) SaveMcpTool(c *gin.Context) {
+	var in service.McpToolIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	t, err := service.LlmopsService.SaveMcpTool(&in.LlmopsMcpTool, in.HeadersJSON)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(t, "保存成功", c)
+}
+
+// DeleteMcpTool 删除 MCP 工具
+// @Tags Llmops
+// @Summary 删除 MCP 工具（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "工具ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/mcp [delete]
+func (a *LlmopsApi) DeleteMcpTool(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteMcpTool(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）

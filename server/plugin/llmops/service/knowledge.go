@@ -177,6 +177,12 @@ type SkillImportIn struct {
 	Overwrite bool   `json:"overwrite"`
 }
 
+// McpToolIn MCP 工具保存入参（headersJSON 明文独立传输）
+type McpToolIn struct {
+	model.LlmopsMcpTool
+	HeadersJSON string `json:"headersJSON"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

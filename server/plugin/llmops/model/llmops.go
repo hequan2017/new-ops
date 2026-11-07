@@ -398,3 +398,17 @@ type LlmopsSkill struct {
 }
 
 func (LlmopsSkill) TableName() string { return "llmops_skill" }
+
+// LlmopsMcpTool 业务系统 API 封装的 MCP 工具（要求(6) MCP 协议封装为标准工具）
+type LlmopsMcpTool struct {
+	global.GVA_MODEL
+	Name        string `json:"name" gorm:"comment:工具名;unique"`
+	Desc        string `json:"desc" gorm:"type:varchar(500);comment:描述"`
+	Endpoint    string `json:"endpoint" gorm:"comment:目标 API 地址"`
+	Method      string `json:"method" gorm:"type:varchar(8);default:GET;comment:GET/POST"`
+	HeadersJSON string `json:"-" gorm:"type:text;comment:固定头 JSON(值 AES-GCM 密文，不回显)"`
+	ArgsSchema  string `json:"argsSchema" gorm:"type:text;comment:参数模板 JSON(字段→说明)"`
+	Status      string `json:"status" gorm:"type:varchar(16);default:enabled;index;comment:enabled/disabled"`
+}
+
+func (LlmopsMcpTool) TableName() string { return "llmops_mcp_tool" }

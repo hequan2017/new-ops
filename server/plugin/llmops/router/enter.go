@@ -153,4 +153,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		sk.POST("import", v1.Api.ImportSkillPackage)
 		sk.DELETE("", v1.Api.DeleteSkill)
 	}
+	mcp := Router.Group("llmops/mcp")
+	{
+		mcp.GET("list", v1.Api.GetMcpTools)
+		mcp.POST("", v1.Api.SaveMcpTool)
+		mcp.DELETE("", v1.Api.DeleteMcpTool)
+	}
 }

@@ -50,6 +50,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsAgentEvalResult),
 		new(model.LlmopsAgentCallLog),
 		new(model.LlmopsSkill),
+		new(model.LlmopsMcpTool),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -156,6 +157,9 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/skill/generate", Description: "零代码创建技能", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/skill/export", Description: "技能包导出", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/skill/import", Description: "技能包导入", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/mcp/list", Description: "MCP 工具列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/mcp", Description: "保存 MCP 工具", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/mcp", Description: "删除 MCP 工具", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/skill", Description: "删除技能", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent/memory", Description: "删除长期记忆", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent", Description: "删除智能体", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -393,6 +397,9 @@ func Casbin(ctx context.Context) {
 		{"/llmops/skill/generate", "POST"},
 		{"/llmops/skill/export", "POST"},
 		{"/llmops/skill/import", "POST"},
+		{"/llmops/mcp/list", "GET"},
+		{"/llmops/mcp", "POST"},
+		{"/llmops/mcp", "DELETE"},
 		{"/llmops/skill", "DELETE"},
 		{"/llmops/agent/memory", "DELETE"},
 		{"/llmops/agent", "DELETE"},
