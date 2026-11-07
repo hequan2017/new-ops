@@ -561,3 +561,81 @@ func (a *ExamApi) ExportScores(c *gin.Context) {
 	}
 	response.OkWithDetailed(csvText, "导出成功", c)
 }
+
+// RegisterNode 节点注册
+// @Tags Exam
+// @Summary 考试节点注册（upsert 幂等）
+// @Accept application/json
+// @Param data body service.NodeIn true "节点"
+// @Success 200 {object} response.Response{data=model.ExamNode} "注册成功"
+// @Router /exam/node/register [post]
+func (a *ExamApi) RegisterNode(c *gin.Context) {
+	var in service.NodeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	node, err := service.ExamApp.RegisterNode(in.NodeKey, in.Name, in.Region)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(node, "注册成功", c)
+}
+
+// NodeHeartbeat 节点心跳
+// @Tags Exam
+// @Summary 节点心跳（不存在自动注册，负载回传）
+// @Accept application/json
+// @Param data body service.NodeHeartbeatIn true "心跳"
+// @Success 200 {object} response.Response{data=model.ExamNode} "心跳成功"
+// @Router /exam/node/heartbeat [post]
+func (a *ExamApi) NodeHeartbeat(c *gin.Context) {
+	var in service.NodeHeartbeatIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	node, err := service.ExamApp.NodeHeartbeat(in.NodeKey, in.Load)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(node, "心跳成功", c)
+}
+
+// GetNodes 节点列表
+// @Tags Exam
+// @Summary 考试节点列表
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.ExamNode} "获取成功"
+// @Router /exam/node/list [get]
+func (a *ExamApi) GetNodes(c *gin.Context) {
+	list, err := service.ExamApp.GetNodes()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// AssignShard 领卷分片
+// @Tags Exam
+// @Summary 领卷分片分配（region 优先+负载择优，sheetId 幂等）
+// @Accept application/json
+// @Param data body service.AssignIn true "分配请求"
+// @Success 200 {object} response.Response{data=model.ExamShard} "分配成功"
+// @Router /exam/node/assign [post]
+func (a *ExamApi) AssignShard(c *gin.Context) {
+	var in service.AssignIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	shard, err := service.ExamApp.AssignShard(in.ExamId, in.SheetId, in.Region)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(shard, "分配成功", c)
+}
