@@ -3066,3 +3066,21 @@ func (a *LlmopsApi) GetTrainEstimate(c *gin.Context) {
 	}
 	response.OkWithDetailed(est, "估算完成", c)
 }
+
+// ExportModelCallLogs 调用日志导出
+// @Tags Llmops
+// @Summary 模型调用日志 CSV 导出（模型/成败过滤，倒序上限 1 万条）
+// @Security ApiKeyAuth
+// @Param modelId query int false "模型ID"
+// @Param ok query string false "true/false"
+// @Success 200 {object} response.Response{data=string} "导出成功"
+// @Router /llmops/model/callLogs/export [get]
+func (a *LlmopsApi) ExportModelCallLogs(c *gin.Context) {
+	modelId, _ := strconv.ParseUint(c.Query("modelId"), 10, 64)
+	csvText, err := service.LlmopsService.ExportModelCallLogs(uint(modelId), c.Query("ok"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(csvText, "导出成功", c)
+}

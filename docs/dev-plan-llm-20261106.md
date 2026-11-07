@@ -169,4 +169,4 @@
 - [x] P05 | exam: 考试场次日历视图（前端）
 - [x] P06 | exam: 成绩分布直方图（前端 echarts）
 - [x] P07 | llmops: 训练任务费用/时长估算展示
-- [ ] P08 | llmops: 模型调用日志 CSV 导出
+- [x] P08 | llmops: 模型调用日志 CSV 导出
