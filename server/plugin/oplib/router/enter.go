@@ -17,6 +17,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	{
 		op.GET("list", v1.Api.GetOperators)
 		op.POST("", v1.Api.SaveOperator)
+		op.POST("run", v1.Api.RunOperator)
+		op.GET("runLogs", v1.Api.GetRunLogs)
 		op.DELETE("", v1.Api.DeleteOperator)
 	}
 }

@@ -74,3 +74,46 @@ func (a *oplibApi) DeleteOperator(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// RunOperator 执行算子
+// @Tags Oplib
+// @Summary 执行算子（schema 校验→执行→留痕；builtin）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.RunIn true "执行请求"
+// @Success 200 {object} response.Response{data=model.OplibRunLog} "执行完成"
+// @Router /oplib/operator/run [post]
+func (a *oplibApi) RunOperator(c *gin.Context) {
+	var in service.RunIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	runLog, err := service.OplibApp.ExecuteOperator(in.ID, in.Args)
+	if err != nil && runLog == nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(runLog, "执行完成", c)
+}
+
+// GetRunLogs 执行留痕
+// @Tags Oplib
+// @Summary 算子执行留痕列表（算子过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Param operatorId query int false "算子ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /oplib/operator/runLogs [get]
+func (a *oplibApi) GetRunLogs(c *gin.Context) {
+	operatorId, _ := strconv.ParseUint(c.Query("operatorId"), 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.OplibApp.GetRunLogs(uint(operatorId), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}

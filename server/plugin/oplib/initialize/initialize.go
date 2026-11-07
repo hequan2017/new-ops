@@ -22,6 +22,7 @@ import (
 func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.OplibOperator),
+		new(model.OplibRunLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "oplib 注册表失败!")
@@ -41,6 +42,8 @@ func Api(ctx context.Context) {
 	entities := []sysModel.SysApi{
 		{Path: "/oplib/operator/list", Description: "算子列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/oplib/operator", Description: "保存算子", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/oplib/operator/run", Description: "执行算子", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/oplib/operator/runLogs", Description: "算子执行留痕", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/oplib/operator", Description: "删除算子", ApiGroup: "大模型平台", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
@@ -78,6 +81,8 @@ func Casbin(ctx context.Context) {
 	for _, p := range []struct{ Path, Method string }{
 		{"/oplib/operator/list", "GET"},
 		{"/oplib/operator", "POST"},
+		{"/oplib/operator/run", "POST"},
+		{"/oplib/operator/runLogs", "GET"},
 		{"/oplib/operator", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
