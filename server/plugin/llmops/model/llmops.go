@@ -320,13 +320,14 @@ type LlmopsAgentSession struct {
 
 func (LlmopsAgentSession) TableName() string { return "llmops_agent_session" }
 
-// LlmopsAgentMessage 会话消息（assistant 可携带任务拆解计划）
+// LlmopsAgentMessage 会话消息（assistant 可携带任务拆解计划与工具回路 trace）
 type LlmopsAgentMessage struct {
 	global.GVA_MODEL
 	SessionId uint   `json:"sessionId" gorm:"index;comment:会话ID"`
 	Role      string `json:"role" gorm:"type:varchar(16);comment:user/assistant/system"`
 	Content   string `json:"content" gorm:"type:mediumtext;comment:内容"`
 	PlanJSON  string `json:"planJSON" gorm:"type:text;comment:任务拆解计划JSON"`
+	TraceJSON string `json:"traceJSON" gorm:"type:text;comment:工具回路traceJSON"`
 }
 
 func (LlmopsAgentMessage) TableName() string { return "llmops_agent_message" }

@@ -131,6 +131,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ag.POST("memory/inject", v1.Api.InjectAgentMemories)
 		ag.POST("memory/extract", v1.Api.ExtractAgentMemory)
 		ag.POST("multiRun", v1.Api.AgentMultiRun)
+		ag.POST("debugChat", v1.Api.AgentDebugChat)
+		ag.GET("sessions", v1.Api.ListAgentSessions)
 		ag.DELETE("memory", v1.Api.DeleteAgentMemory)
 		ag.DELETE("", v1.Api.DeleteAgent)
 	}

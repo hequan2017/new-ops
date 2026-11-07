@@ -1903,3 +1903,51 @@ func (a *LlmopsApi) AgentMultiRun(c *gin.Context) {
 	}
 	response.OkWithDetailed(res, "运行完成", c)
 }
+
+// AgentDebugChat 调试对话
+// @Tags Llmops
+// @Summary 智能体调试对话（非 qa 走工具回路，trace 留档）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.AgentChatIn true "对话请求"
+// @Success 200 {object} response.Response{data=map[string]any} "对话完成"
+// @Router /llmops/agent/debugChat [post]
+func (a *LlmopsApi) AgentDebugChat(c *gin.Context) {
+	var in service.AgentChatIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	reply, plan, traces, err := service.LlmopsService.AgentDebugChat(in.SessionId, in.Message)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"reply": reply, "plan": plan, "traces": traces}, "对话完成", c)
+}
+
+// ListAgentSessions 会话列表
+// @Tags Llmops
+// @Summary 智能体会话列表（调试历史）
+// @Security ApiKeyAuth
+// @Param agentId query int true "智能体ID"
+// @Param userKey query string false "用户标识"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/agent/sessions [get]
+func (a *LlmopsApi) ListAgentSessions(c *gin.Context) {
+	agentId, err := strconv.ParseUint(c.Query("agentId"), 10, 64)
+	if err != nil || agentId == 0 {
+		response.FailWithMessage("agentId 不能为空", c)
+		return
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.LlmopsService.ListAgentSessions(uint(agentId), c.Query("userKey"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
