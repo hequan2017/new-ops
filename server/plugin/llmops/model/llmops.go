@@ -343,3 +343,34 @@ type LlmopsAgentMemory struct {
 }
 
 func (LlmopsAgentMemory) TableName() string { return "llmops_agent_memory" }
+
+// LlmopsAgentEval 智能体评测任务（要求(5) 评测阶段）
+type LlmopsAgentEval struct {
+	global.GVA_MODEL
+	Name         string `json:"name" gorm:"comment:评测名;unique"`
+	AgentId      uint   `json:"agentId" gorm:"index;comment:被测智能体ID"`
+	SamplesJSON  string `json:"samplesJSON" gorm:"type:mediumtext;comment:样本[{question,expected}]"`
+	ScorerType   string `json:"scorerType" gorm:"type:varchar(16);default:contains;comment:contains/keyword/llm"`
+	JudgeModelId uint   `json:"judgeModelId" gorm:"default:0;comment:LLM 评分模型(llm 型必填)"`
+	Keywords     string `json:"keywords" gorm:"type:varchar(500);comment:keyword 词表(逗号分隔)"`
+	Status       string `json:"status" gorm:"type:varchar(16);default:pending;index;comment:pending/running/done/failed"`
+	SampleCount  int    `json:"sampleCount" gorm:"default:0;comment:样本数"`
+	PassCount    int    `json:"passCount" gorm:"default:0;comment:通过数"`
+	ErrMsg       string `json:"errMsg" gorm:"type:varchar(500);comment:错误"`
+}
+
+func (LlmopsAgentEval) TableName() string { return "llmops_agent_eval" }
+
+// LlmopsAgentEvalResult 智能体评测明细
+type LlmopsAgentEvalResult struct {
+	global.GVA_MODEL
+	EvalId   uint    `json:"evalId" gorm:"index;comment:评测任务ID"`
+	Idx      int     `json:"idx" gorm:"comment:样本序号"`
+	Question string  `json:"question" gorm:"type:varchar(1024);comment:问题"`
+	Reply    string  `json:"reply" gorm:"type:text;comment:智能体回答"`
+	Score    float64 `json:"score" gorm:"comment:得分0-1"`
+	Pass     bool    `json:"pass" gorm:"comment:是否通过"`
+	Detail   string  `json:"detail" gorm:"type:varchar(500);comment:评分说明"`
+}
+
+func (LlmopsAgentEvalResult) TableName() string { return "llmops_agent_eval_result" }

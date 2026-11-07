@@ -46,6 +46,8 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsAgentSession),
 		new(model.LlmopsAgentMessage),
 		new(model.LlmopsAgentMemory),
+		new(model.LlmopsAgentEval),
+		new(model.LlmopsAgentEvalResult),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -139,6 +141,10 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/agent/multiRun", Description: "多智能体运行", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/agent/debugChat", Description: "智能体调试对话", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/agent/sessions", Description: "智能体会话列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/agent/eval/list", Description: "智能体评测列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/agent/eval", Description: "保存智能体评测", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/agent/eval/run", Description: "执行智能体评测", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/agent/eval/results", Description: "智能体评测明细", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/agent/memory", Description: "删除长期记忆", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent", Description: "删除智能体", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/train", Description: "删除训练任务", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -315,6 +321,10 @@ func Casbin(ctx context.Context) {
 		{"/llmops/agent/multiRun", "POST"},
 		{"/llmops/agent/debugChat", "POST"},
 		{"/llmops/agent/sessions", "GET"},
+		{"/llmops/agent/eval/list", "GET"},
+		{"/llmops/agent/eval", "POST"},
+		{"/llmops/agent/eval/run", "POST"},
+		{"/llmops/agent/eval/results", "GET"},
 		{"/llmops/agent/memory", "DELETE"},
 		{"/llmops/agent", "DELETE"},
 		{"/llmops/train", "DELETE"},

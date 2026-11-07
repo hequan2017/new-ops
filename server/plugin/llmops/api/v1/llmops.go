@@ -1951,3 +1951,83 @@ func (a *LlmopsApi) ListAgentSessions(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// GetAgentEvals 智能体评测列表
+// @Tags Llmops
+// @Summary 智能体评测任务列表
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.LlmopsAgentEval} "获取成功"
+// @Router /llmops/agent/eval/list [get]
+func (a *LlmopsApi) GetAgentEvals(c *gin.Context) {
+	list, err := service.LlmopsService.GetAgentEvals()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveAgentEval 保存智能体评测
+// @Tags Llmops
+// @Summary 新建/更新智能体评测（评分配置即检）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsAgentEval true "评测任务"
+// @Success 200 {object} response.Response{data=model.LlmopsAgentEval} "保存成功"
+// @Router /llmops/agent/eval [post]
+func (a *LlmopsApi) SaveAgentEval(c *gin.Context) {
+	var in model.LlmopsAgentEval
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	ev, err := service.LlmopsService.SaveAgentEval(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(ev, "保存成功", c)
+}
+
+// RunAgentEval 执行智能体评测
+// @Tags Llmops
+// @Summary 执行智能体评测（≤30 样本，双轨评分）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "评测ID"
+// @Success 200 {object} response.Response{data=model.LlmopsAgentEval} "评测完成"
+// @Router /llmops/agent/eval/run [post]
+func (a *LlmopsApi) RunAgentEval(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	ev, err := service.LlmopsService.RunAgentEval(req.ID)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(ev, "评测完成", c)
+}
+
+// GetAgentEvalResults 智能体评测明细
+// @Tags Llmops
+// @Summary 智能体评测明细
+// @Security ApiKeyAuth
+// @Param evalId query int true "评测ID"
+// @Success 200 {object} response.Response{data=[]model.LlmopsAgentEvalResult} "获取成功"
+// @Router /llmops/agent/eval/results [get]
+func (a *LlmopsApi) GetAgentEvalResults(c *gin.Context) {
+	evalId, err := strconv.ParseUint(c.Query("evalId"), 10, 64)
+	if err != nil || evalId == 0 {
+		response.FailWithMessage("evalId 不能为空", c)
+		return
+	}
+	list, err := service.LlmopsService.GetAgentEvalResults(uint(evalId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
