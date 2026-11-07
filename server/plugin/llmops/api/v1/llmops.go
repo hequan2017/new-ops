@@ -1881,3 +1881,25 @@ func (a *LlmopsApi) ExtractAgentMemory(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"fact": fact}, "抽取完成", c)
 }
+
+// AgentMultiRun 多智能体运行
+// @Tags Llmops
+// @Summary 多智能体编排运行（sequential 串联/converge 并行汇聚）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.MultiRunIn true "运行请求"
+// @Success 200 {object} response.Response{data=service.MultiRunResult} "运行完成"
+// @Router /llmops/agent/multiRun [post]
+func (a *LlmopsApi) AgentMultiRun(c *gin.Context) {
+	var in service.MultiRunIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	res, err := service.LlmopsService.AgentMultiRun(in.AgentId, in.Input)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(res, "运行完成", c)
+}

@@ -149,6 +149,12 @@ type MemoryExtractIn struct {
 	ModelId uint   `json:"modelId" binding:"required"`
 }
 
+// MultiRunIn 多智能体运行请求
+type MultiRunIn struct {
+	AgentId uint   `json:"agentId" binding:"required"`
+	Input   string `json:"input" binding:"required"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge
