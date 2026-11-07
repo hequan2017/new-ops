@@ -174,6 +174,10 @@
             </template>
           </el-table-column>
         </el-table>
+        <div v-if="scores.length" style="margin-top: 12px">
+          <h4 style="margin: 0 0 6px">分数段分布（按得分率 10% 一档）</h4>
+          <div ref="histChart" style="width: 100%; height: 260px"></div>
+        </div>
       </el-tab-pane>
     </el-tabs>
 
@@ -303,8 +307,9 @@
 </template>
 
 <script setup>
-  import { ref, reactive, onMounted } from 'vue'
+  import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import * as echarts from 'echarts'
   import {
     getQuestions, saveQuestion, deleteQuestion, importQuestions,
     getPapers, savePaper, composePaper, deletePaper,
@@ -542,6 +547,43 @@
       sLoading.value = false
     }
   }
+
+  // 分数段直方图（得分率 0-100% 十档）
+  const histChart = ref(null)
+  let histInst = null
+  const renderHist = () => {
+    if (!histChart.value || !scores.value.length) return
+    if (!histInst) histInst = echarts.init(histChart.value)
+    const buckets = new Array(10).fill(0)
+    let scaled = 0
+    for (const s of scores.value) {
+      if (!s.full) continue
+      const ratio = s.total / s.full
+      const idx = Math.min(9, Math.floor(ratio * 10))
+      buckets[idx]++
+      scaled++
+    }
+    if (!scaled) return
+    histInst.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { left: 40, right: 16, top: 24, bottom: 28 },
+      xAxis: { type: 'category', data: buckets.map((_, i) => `${i * 10}-${i * 10 + 10}%`) },
+      yAxis: { type: 'value', minInterval: 1 },
+      series: [{ type: 'bar', data: buckets, barMaxWidth: 36,
+        itemStyle: { color: '#409eff' } }],
+    })
+  }
+  const disposeHist = () => {
+    if (histInst) { histInst.dispose(); histInst = null }
+  }
+  watch([scores, tab], () => {
+    if (tab.value === 's' && scores.value.length) {
+      nextTick(renderHist)
+    } else {
+      disposeHist()
+    }
+  })
+  onUnmounted(disposeHist)
   const pubVisible = ref(false)
   const pubLoading = ref(false)
   const pubForm = reactive({ judgeModelId: 0, multiPartial: true })
