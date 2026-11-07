@@ -184,6 +184,12 @@ func (s *LlmopsServiceStruct) RunTrainDryRun(jobId uint) (*model.LlmopsTrainJob,
 	if job.BaseModel == "" {
 		return nil, fmt.Errorf("[%d]基座模型不能为空", ErrCodeTrainRender)
 	}
+	// 数据集联动校验（存在性+用途匹配；K04）
+	if job.DatasetId > 0 {
+		if _, err := s.ValidateDatasetForUse(job.DatasetId, purposeForJob(job.Type)); err != nil {
+			return nil, err
+		}
+	}
 	// RLHF 两阶段链路校验与奖励模型路径解析
 	rewardPath := ""
 	if job.Type == "rl" {

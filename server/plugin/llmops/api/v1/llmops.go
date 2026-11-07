@@ -2767,3 +2767,24 @@ func (a *LlmopsApi) ExportDataset(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"content": content, "filename": filename}, "导出成功", c)
 }
+
+// GetDatasetRefs 数据集引用计数
+// @Tags Llmops
+// @Summary 数据集被任务引用计数（训练任务/评估任务）
+// @Security ApiKeyAuth
+// @Param id query int true "数据集ID"
+// @Success 200 {object} response.Response{data=service.DatasetRefs} "获取成功"
+// @Router /llmops/dataset/refs [get]
+func (a *LlmopsApi) GetDatasetRefs(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	refs, err := service.LlmopsService.GetDatasetRefs(uint(id))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(refs, "获取成功", c)
+}

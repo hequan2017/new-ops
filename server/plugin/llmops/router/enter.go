@@ -177,6 +177,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		dst.POST("", v1.Api.SaveDataset)
 		dst.POST("import", v1.Api.ImportDatasetContent)
 		dst.GET("export", v1.Api.ExportDataset)
+		dst.GET("refs", v1.Api.GetDatasetRefs)
 		dst.DELETE("", v1.Api.DeleteDataset)
 	}
 	pt := Router.Group("llmops/prompt")
