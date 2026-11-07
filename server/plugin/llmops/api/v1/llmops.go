@@ -2862,3 +2862,104 @@ func (a *LlmopsApi) ConsumeQuota(c *gin.Context) {
 	}
 	response.OkWithDetailed(q, "扣减成功", c)
 }
+
+// TakeOverSession 人工接管
+// @Tags Llmops
+// @Summary 会话人工接管（接管中拒自动回复）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.TakeOverIn true "接管请求"
+// @Success 200 {object} response.Response{data=model.LlmopsAgentSession} "接管成功"
+// @Router /llmops/intervene/takeover [post]
+func (a *LlmopsApi) TakeOverSession(c *gin.Context) {
+	var in service.TakeOverIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sess, err := service.LlmopsService.TakeOverSession(in.SessionId, in.Operator)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sess, "接管成功", c)
+}
+
+// ReleaseSession 解除接管
+// @Tags Llmops
+// @Summary 解除人工接管
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "会话ID"
+// @Success 200 {object} response.Response{data=model.LlmopsAgentSession} "已解除"
+// @Router /llmops/intervene/release [post]
+func (a *LlmopsApi) ReleaseSession(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sess, err := service.LlmopsService.ReleaseSession(req.ID)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sess, "已解除", c)
+}
+
+// GetSensitiveWords 敏感词列表
+// @Tags Llmops
+// @Summary 敏感词列表
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.LlmopsSensitiveWord} "获取成功"
+// @Router /llmops/sensitive/list [get]
+func (a *LlmopsApi) GetSensitiveWords(c *gin.Context) {
+	list, err := service.LlmopsService.ListSensitiveWords()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveSensitiveWord 保存敏感词
+// @Tags Llmops
+// @Summary 新增/更新敏感词（block/replace）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsSensitiveWord true "敏感词"
+// @Success 200 {object} response.Response{data=model.LlmopsSensitiveWord} "保存成功"
+// @Router /llmops/sensitive [post]
+func (a *LlmopsApi) SaveSensitiveWord(c *gin.Context) {
+	var in model.LlmopsSensitiveWord
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	w, err := service.LlmopsService.SaveSensitiveWord(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(w, "保存成功", c)
+}
+
+// DeleteSensitiveWord 删除敏感词
+// @Tags Llmops
+// @Summary 删除敏感词
+// @Security ApiKeyAuth
+// @Param id query int true "敏感词ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/sensitive [delete]
+func (a *LlmopsApi) DeleteSensitiveWord(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteSensitiveWord(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}

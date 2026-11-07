@@ -313,9 +313,11 @@ func (LlmopsAgentVersion) TableName() string { return "llmops_agent_version" }
 // LlmopsAgentSession 智能体会话
 type LlmopsAgentSession struct {
 	global.GVA_MODEL
-	AgentId uint   `json:"agentId" gorm:"index;comment:智能体ID"`
-	Title   string `json:"title" gorm:"type:varchar(255);comment:会话标题"`
-	UserKey string `json:"userKey" gorm:"type:varchar(64);comment:用户标识"`
+	AgentId     uint   `json:"agentId" gorm:"index;comment:智能体ID"`
+	Title       string `json:"title" gorm:"type:varchar(255);comment:会话标题"`
+	UserKey     string `json:"userKey" gorm:"type:varchar(64);comment:用户标识"`
+	TakenOver   bool   `json:"takenOver" gorm:"default:false;comment:人工接管中"`
+	TakenOverBy string `json:"takenOverBy" gorm:"type:varchar(64);comment:接管人"`
 }
 
 func (LlmopsAgentSession) TableName() string { return "llmops_agent_session" }

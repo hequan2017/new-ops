@@ -171,6 +171,17 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		conn.POST("test", v1.Api.TestConnector)
 		conn.DELETE("", v1.Api.DeleteConnector)
 	}
+	iv := Router.Group("llmops/intervene")
+	{
+		iv.POST("takeover", v1.Api.TakeOverSession)
+		iv.POST("release", v1.Api.ReleaseSession)
+	}
+	sw := Router.Group("llmops/sensitive")
+	{
+		sw.GET("list", v1.Api.GetSensitiveWords)
+		sw.POST("", v1.Api.SaveSensitiveWord)
+		sw.DELETE("", v1.Api.DeleteSensitiveWord)
+	}
 	qt := Router.Group("llmops/quota")
 	{
 		qt.GET("list", v1.Api.GetQuotas)

@@ -197,6 +197,16 @@ func (s *LlmopsServiceStruct) AgentChat(sessionId uint, userMsg string) (string,
 	if err := global.GVA_DB.First(&ag, sess.AgentId).Error; err != nil {
 		return "", nil, fmt.Errorf("[%d]智能体不存在", ErrCodeAgentNotFound)
 	}
+	// 干预机制前置（L03）：人工接管中拒自动回复；敏感词 block 拦 / replace 净化
+	if sess.TakenOver {
+		return takeoverNotice, nil, nil
+	}
+	blocked, cleaned, _, cerr := s.CheckTextInput(userMsg)
+	if cerr != nil {
+		return "", nil, cerr
+	}
+	userMsg = cleaned
+	_ = blocked
 	history, err := s.GetSessionMessages(sessionId, agentHistoryWindow)
 	if err != nil {
 		return "", nil, err

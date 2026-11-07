@@ -59,6 +59,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsPromptAsset),
 		new(model.LlmopsDataset),
 		new(model.LlmopsQuota),
+		new(model.LlmopsSensitiveWord),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -194,6 +195,11 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/quota/list", Description: "配额列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/quota", Description: "设置配额", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/quota/consume", Description: "配额扣减", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/intervene/takeover", Description: "会话人工接管", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/intervene/release", Description: "解除人工接管", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/sensitive/list", Description: "敏感词列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/sensitive", Description: "保存敏感词", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/sensitive", Description: "删除敏感词", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/dataset", Description: "删除数据集", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/prompt/versions", Description: "Prompt 模板版本", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/prompt", Description: "删除 Prompt 模板", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -486,6 +492,11 @@ func Casbin(ctx context.Context) {
 		{"/llmops/quota/list", "GET"},
 		{"/llmops/quota", "POST"},
 		{"/llmops/quota/consume", "POST"},
+		{"/llmops/intervene/takeover", "POST"},
+		{"/llmops/intervene/release", "POST"},
+		{"/llmops/sensitive/list", "GET"},
+		{"/llmops/sensitive", "POST"},
+		{"/llmops/sensitive", "DELETE"},
 		{"/llmops/dataset", "DELETE"},
 		{"/llmops/prompt/versions", "GET"},
 		{"/llmops/prompt", "DELETE"},
