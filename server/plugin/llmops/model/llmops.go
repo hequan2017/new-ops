@@ -484,3 +484,18 @@ type LlmopsPromptAsset struct {
 }
 
 func (LlmopsPromptAsset) TableName() string { return "llmops_prompt_asset" }
+
+// LlmopsDataset 数据集（采购件⑤ AI 开发数据集：用途/格式/版本/许可证）
+type LlmopsDataset struct {
+	global.GVA_MODEL
+	Name        string `json:"name" gorm:"comment:数据集名;unique"`
+	Purpose     string `json:"purpose" gorm:"type:varchar(16);index;comment:sft/rlhf/eval/exam"`
+	Format      string `json:"format" gorm:"type:varchar(8);default:jsonl;comment:jsonl/csv"`
+	Version     string `json:"version" gorm:"type:varchar(16);default:v1;comment:版本"`
+	License     string `json:"license" gorm:"type:varchar(64);comment:许可证"`
+	SampleCount int    `json:"sampleCount" gorm:"default:0;comment:样本数"`
+	Content     string `json:"content" gorm:"type:mediumtext;comment:数据内容(JSONL/CSV 文本)"`
+	Desc        string `json:"desc" gorm:"type:varchar(500);comment:描述"`
+}
+
+func (LlmopsDataset) TableName() string { return "llmops_dataset" }

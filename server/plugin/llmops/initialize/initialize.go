@@ -57,6 +57,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsPromptTemplate),
 		new(model.LlmopsPromptVersion),
 		new(model.LlmopsPromptAsset),
+		new(model.LlmopsDataset),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -183,6 +184,9 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/prompt/asset/list", Description: "Prompt 配套资产列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/prompt/asset", Description: "保存 Prompt 配套资产", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/prompt/asset", Description: "删除 Prompt 配套资产", ApiGroup: "大模型平台", Method: "DELETE"},
+		{Path: "/llmops/dataset/list", Description: "数据集列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/dataset", Description: "保存数据集", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/dataset", Description: "删除数据集", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/prompt/versions", Description: "Prompt 模板版本", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/prompt", Description: "删除 Prompt 模板", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent/memory", Description: "删除长期记忆", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -457,6 +461,9 @@ func Casbin(ctx context.Context) {
 		{"/llmops/prompt/asset/list", "GET"},
 		{"/llmops/prompt/asset", "POST"},
 		{"/llmops/prompt/asset", "DELETE"},
+		{"/llmops/dataset/list", "GET"},
+		{"/llmops/dataset", "POST"},
+		{"/llmops/dataset", "DELETE"},
 		{"/llmops/prompt/versions", "GET"},
 		{"/llmops/prompt", "DELETE"},
 		{"/llmops/agent/memory", "DELETE"},

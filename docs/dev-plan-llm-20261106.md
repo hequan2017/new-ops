@@ -143,7 +143,7 @@
 
 ## 阶段 K · AI 开发数据集（采购件⑤；11-09 凌晨）
 
-- [ ] K01 | llmops: 数据集 model `LlmopsDataset`（name/purpose[sft,rlhf,eval,exam]/format[jsonl,csv]/样本数/version/license/desc）+ CRUD
+- [x] K01 | llmops: 数据集 model `LlmopsDataset`（name/purpose[sft,rlhf,eval,exam]/format[jsonl,csv]/样本数/version/license/desc）+ CRUD
 - [ ] K02 | llmops: 导入导出——JSONL 逐行校验（purpose 对应 schema：sft=instruction+output 等）+ 错误行报告 + 下载 API + 单测
 - [ ] K03 | llmops: 种子数据集——仓库内置 3 份教育垂类示例（sft 对话/评测集/考试题集，各 ≥20 样本）+ 幂等种子导入
 - [ ] K04 | llmops: 数据集联动——训练/评估/考试任务引用校验（存在性+purpose 匹配）+ 引用计数 + 单测

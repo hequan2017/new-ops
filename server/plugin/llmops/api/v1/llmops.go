@@ -2666,3 +2666,61 @@ func (a *LlmopsApi) GetAgentAbnormalSessions(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// GetDatasets 数据集列表
+// @Tags Llmops
+// @Summary 数据集列表（用途过滤）
+// @Security ApiKeyAuth
+// @Param purpose query string false "sft/rlhf/eval/exam"
+// @Success 200 {object} response.Response{data=[]model.LlmopsDataset} "获取成功"
+// @Router /llmops/dataset/list [get]
+func (a *LlmopsApi) GetDatasets(c *gin.Context) {
+	list, err := service.LlmopsService.GetDatasets(c.Query("purpose"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveDataset 保存数据集
+// @Tags Llmops
+// @Summary 新建/更新数据集（样本数自动计数）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsDataset true "数据集"
+// @Success 200 {object} response.Response{data=model.LlmopsDataset} "保存成功"
+// @Router /llmops/dataset [post]
+func (a *LlmopsApi) SaveDataset(c *gin.Context) {
+	var in model.LlmopsDataset
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	d, err := service.LlmopsService.SaveDataset(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(d, "保存成功", c)
+}
+
+// DeleteDataset 删除数据集
+// @Tags Llmops
+// @Summary 删除数据集（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "数据集ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/dataset [delete]
+func (a *LlmopsApi) DeleteDataset(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteDataset(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
