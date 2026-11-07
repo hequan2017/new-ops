@@ -171,6 +171,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		conn.POST("test", v1.Api.TestConnector)
 		conn.DELETE("", v1.Api.DeleteConnector)
 	}
+	qt := Router.Group("llmops/quota")
+	{
+		qt.GET("list", v1.Api.GetQuotas)
+		qt.POST("", v1.Api.SetQuota)
+		qt.POST("consume", v1.Api.ConsumeQuota)
+	}
 	db := Router.Group("llmops/dashboard")
 	{
 		db.GET("", v1.Api.GetDashboard)

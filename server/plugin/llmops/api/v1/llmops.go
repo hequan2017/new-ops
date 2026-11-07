@@ -2803,3 +2803,62 @@ func (a *LlmopsApi) GetDashboard(c *gin.Context) {
 	}
 	response.OkWithDetailed(st, "获取成功", c)
 }
+
+// GetQuotas 配额列表
+// @Tags Llmops
+// @Summary 资源配额列表（维度过滤）
+// @Security ApiKeyAuth
+// @Param scope query string false "user/agent"
+// @Success 200 {object} response.Response{data=[]model.LlmopsQuota} "获取成功"
+// @Router /llmops/quota/list [get]
+func (a *LlmopsApi) GetQuotas(c *gin.Context) {
+	list, err := service.LlmopsService.GetQuotas(c.Query("scope"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SetQuota 设置配额
+// @Tags Llmops
+// @Summary 设置资源配额（upsert；-1 表示不限）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.QuotaIn true "配额"
+// @Success 200 {object} response.Response{data=model.LlmopsQuota} "设置成功"
+// @Router /llmops/quota [post]
+func (a *LlmopsApi) SetQuota(c *gin.Context) {
+	var in service.QuotaIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	q, err := service.LlmopsService.SetQuota(in.Scope, in.ScopeKey, in.DailyTokenLimit, in.DailyCallLimit)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(q, "设置成功", c)
+}
+
+// ConsumeQuota 配额扣减
+// @Tags Llmops
+// @Summary 配额扣减（行锁事务：跨日重置，超限拒）
+// @Accept application/json
+// @Param data body service.QuotaConsumeIn true "扣减请求"
+// @Success 200 {object} response.Response{data=model.LlmopsQuota} "扣减成功"
+// @Router /llmops/quota/consume [post]
+func (a *LlmopsApi) ConsumeQuota(c *gin.Context) {
+	var in service.QuotaConsumeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	q, err := service.LlmopsService.ConsumeQuota(in.Scope, in.ScopeKey, in.Tokens, in.Calls)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(q, "扣减成功", c)
+}

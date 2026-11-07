@@ -58,6 +58,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsPromptVersion),
 		new(model.LlmopsPromptAsset),
 		new(model.LlmopsDataset),
+		new(model.LlmopsQuota),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -190,6 +191,9 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/dataset/export", Description: "数据集导出", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/dataset/refs", Description: "数据集引用计数", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/dashboard", Description: "平台数据看板", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/quota/list", Description: "配额列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/quota", Description: "设置配额", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/quota/consume", Description: "配额扣减", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/dataset", Description: "删除数据集", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/prompt/versions", Description: "Prompt 模板版本", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/prompt", Description: "删除 Prompt 模板", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -479,6 +483,9 @@ func Casbin(ctx context.Context) {
 		{"/llmops/dataset/export", "GET"},
 		{"/llmops/dataset/refs", "GET"},
 		{"/llmops/dashboard", "GET"},
+		{"/llmops/quota/list", "GET"},
+		{"/llmops/quota", "POST"},
+		{"/llmops/quota/consume", "POST"},
 		{"/llmops/dataset", "DELETE"},
 		{"/llmops/prompt/versions", "GET"},
 		{"/llmops/prompt", "DELETE"},
