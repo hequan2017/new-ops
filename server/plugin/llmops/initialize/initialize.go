@@ -209,6 +209,14 @@ func Menu(ctx context.Context) {
 			Sort:      4,
 			Meta:      sysModel.Meta{Title: "训练调优", Icon: "video-play"},
 		},
+		{
+			Path:      "llmopsAgent",
+			Name:      "llmopsAgent",
+			Hidden:    false,
+			Component: "plugin/llmops/view/agent/index.vue",
+			Sort:      5,
+			Meta:      sysModel.Meta{Title: "智能体", Icon: "chat-dot-round"},
+		},
 	}
 	pluginUtils.RegisterMenus(entities...)
 }
