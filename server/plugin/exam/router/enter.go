@@ -13,6 +13,13 @@ var RouterGroupApp = new(RouterGroup)
 
 // Init 注册 exam 路由（private 组，JWT+casbin 由 initialize.Router 显式挂载）
 func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
+	cd := Router.Group("exam/candidate")
+	{
+		cd.GET("list", v1.Api.GetCandidates)
+		cd.POST("import", v1.Api.ImportCandidates)
+		cd.POST("claim", v1.Api.ClaimTicket)
+		cd.DELETE("", v1.Api.DeleteCandidate)
+	}
 	e := Router.Group("exam/exam")
 	{
 		e.GET("list", v1.Api.GetExams)

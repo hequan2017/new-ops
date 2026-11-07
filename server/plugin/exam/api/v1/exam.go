@@ -286,3 +286,87 @@ type examTransitionIn struct {
 	ID uint   `json:"id" binding:"required"`
 	To string `json:"to" binding:"required"`
 }
+
+// GetCandidates 考生列表
+// @Tags Exam
+// @Summary 考生列表（考试过滤，分页）
+// @Security ApiKeyAuth
+// @Param examId query int false "考试ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /exam/candidate/list [get]
+func (a *ExamApi) GetCandidates(c *gin.Context) {
+	examId, _ := strconv.ParseUint(c.Query("examId"), 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ExamApp.GetCandidates(uint(examId), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// ImportCandidates 考生名单导入
+// @Tags Exam
+// @Summary 名单导入（自动发券，重名跳过）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.CandImportIn true "导入请求"
+// @Success 200 {object} response.Response{data=map[string]any} "导入完成"
+// @Router /exam/candidate/import [post]
+func (a *ExamApi) ImportCandidates(c *gin.Context) {
+	var in service.CandImportIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	imported, skipped, err := service.ExamApp.ImportCandidates(in.ExamId, in.Names)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"imported": imported, "skipped": skipped}, "导入完成", c)
+}
+
+// ClaimTicket 发券
+// @Tags Exam
+// @Summary 考生自助领券（行锁幂等，重复领取返回已有券码）
+// @Accept application/json
+// @Param data body service.ClaimIn true "领取请求"
+// @Success 200 {object} response.Response{data=model.ExamCandidate} "领取成功"
+// @Router /exam/candidate/claim [post]
+func (a *ExamApi) ClaimTicket(c *gin.Context) {
+	var in service.ClaimIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	cand, err := service.ExamApp.ClaimTicket(in.ExamId, in.UserKey, in.Name)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(cand, "领取成功", c)
+}
+
+// DeleteCandidate 删除考生
+// @Tags Exam
+// @Summary 删除考生
+// @Security ApiKeyAuth
+// @Param id query int true "考生ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /exam/candidate [delete]
+func (a *ExamApi) DeleteCandidate(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.ExamApp.DeleteCandidate(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
