@@ -437,6 +437,7 @@ func (a *ExamApi) SaveAnswers(c *gin.Context) {
 // SubmitSheet 交卷
 // @Tags Exam
 // @Summary 交卷（行锁防重，幂等返回已交卷答卷）
+// @Security ApiKeyAuth
 // @Accept application/json
 // @Param data body service.SubmitIn true "交卷请求"
 // @Success 200 {object} response.Response{data=model.ExamAnswerSheet} "交卷成功"
@@ -586,6 +587,7 @@ func (a *ExamApi) RegisterNode(c *gin.Context) {
 // NodeHeartbeat 节点心跳
 // @Tags Exam
 // @Summary 节点心跳（不存在自动注册，负载回传）
+// @Security ApiKeyAuth
 // @Accept application/json
 // @Param data body service.NodeHeartbeatIn true "心跳"
 // @Success 200 {object} response.Response{data=model.ExamNode} "心跳成功"
@@ -643,6 +645,7 @@ func (a *ExamApi) AssignShard(c *gin.Context) {
 // ReportBehavior 行为上报
 // @Tags Exam
 // @Summary 考试行为上报（切屏/粘贴/复制/退出全屏，白名单）
+// @Security ApiKeyAuth
 // @Accept application/json
 // @Param data body service.BehaviorIn true "行为上报"
 // @Success 200 {object} response.Response{msg=string} "上报成功"
@@ -726,6 +729,7 @@ func (a *ExamApi) TerminalRegister(c *gin.Context) {
 
 // TerminalHeartbeat 终端心跳
 // @Tags ExamTerminal
+// @Description 终端公开面：机器码白名单鉴权（不走管理端 JWT）
 // @Summary 终端心跳（机器码白名单）
 // @Accept application/json
 // @Param data body service.NodeHeartbeatIn true "心跳"
@@ -751,6 +755,7 @@ func (a *ExamApi) TerminalHeartbeat(c *gin.Context) {
 
 // TerminalExams 可考列表
 // @Tags ExamTerminal
+// @Description 终端公开面：X-Terminal-Key 白名单鉴权
 // @Summary 终端可考列表（机器码白名单；ongoing+时间窗）
 // @Param X-Terminal-Key header string true "终端机器码"
 // @Success 200 {object} response.Response{data=[]service.TerminalExam} "获取成功"
@@ -770,6 +775,7 @@ func (a *ExamApi) TerminalExams(c *gin.Context) {
 
 // TerminalResume 断线续考
 // @Tags ExamTerminal
+// @Description 终端公开面：券码即凭证
 // @Summary 断线续考（券码幂等恢复题目+已存答案+剩余秒数）
 // @Accept application/json
 // @Param data body service.ResumeIn true "续考请求"
@@ -791,6 +797,7 @@ func (a *ExamApi) TerminalResume(c *gin.Context) {
 
 // TerminalSaveAnswers 终端保存答案
 // @Tags ExamTerminal
+// @Description 终端公开面：券码即凭证（乐观锁）
 // @Summary 终端面保存答案（复用乐观锁幂等链）
 // @Accept application/json
 // @Param data body service.SaveAnswersIn true "保存请求"
@@ -812,6 +819,7 @@ func (a *ExamApi) TerminalSaveAnswers(c *gin.Context) {
 
 // TerminalSubmit 终端交卷
 // @Tags ExamTerminal
+// @Description 终端公开面：券码即凭证（行锁防重）
 // @Summary 终端面交卷（复用行锁防重链）
 // @Accept application/json
 // @Param data body service.SubmitIn true "交卷请求"
@@ -833,6 +841,7 @@ func (a *ExamApi) TerminalSubmit(c *gin.Context) {
 
 // RunPractice 实操执行
 // @Tags ExamTerminal
+// @Description 终端公开面：券码即凭证（过程留痕）
 // @Summary 实操题执行（算子/智能体双通道，过程留痕并写回答卷）
 // @Accept application/json
 // @Param data body service.PracticeIn true "实操请求"
@@ -854,6 +863,7 @@ func (a *ExamApi) RunPractice(c *gin.Context) {
 
 // GetPracticeLogs 实操过程日志
 // @Tags ExamTerminal
+// @Description 终端公开面：sheetId 即凭证
 // @Summary 实操执行历史（对话式作答留痕，倒序 20 条）
 // @Param sheetId query int true "答卷ID"
 // @Param questionId query int false "实操题ID"
