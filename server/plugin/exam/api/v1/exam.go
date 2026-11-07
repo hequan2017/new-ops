@@ -370,3 +370,87 @@ func (a *ExamApi) DeleteCandidate(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// LoginByTicket 券码登录
+// @Tags Exam
+// @Summary 考生券码登录（幂等创建答卷）
+// @Accept application/json
+// @Param data body service.TicketLoginIn true "登录请求"
+// @Success 200 {object} response.Response{data=map[string]any} "登录成功"
+// @Router /exam/answer/login [post]
+func (a *ExamApi) LoginByTicket(c *gin.Context) {
+	var in service.TicketLoginIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sheet, exam, err := service.ExamApp.LoginByTicket(in.Ticket, in.UserKey)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"sheet": sheet, "exam": gin.H{"id": exam.ID, "name": exam.Name, "durationMin": exam.DurationMin, "endTime": exam.EndTime}}, "登录成功", c)
+}
+
+// GetSheetQuestions 拉题
+// @Tags Exam
+// @Summary 拉取答卷题目（标准答案脱敏）与已存答案
+// @Security ApiKeyAuth
+// @Param sheetId query int true "答卷ID"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /exam/answer/questions [get]
+func (a *ExamApi) GetSheetQuestions(c *gin.Context) {
+	sheetId, err := strconv.ParseUint(c.Query("sheetId"), 10, 64)
+	if err != nil || sheetId == 0 {
+		response.FailWithMessage("sheetId 不能为空", c)
+		return
+	}
+	qs, sheet, answers, err := service.ExamApp.GetSheetQuestions(uint(sheetId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"questions": qs, "sheet": sheet, "answers": answers}, "获取成功", c)
+}
+
+// SaveAnswers 保存答案
+// @Tags Exam
+// @Summary 幂等保存答案（乐观锁版本 + 时间窗校验）
+// @Accept application/json
+// @Param data body service.SaveAnswersIn true "保存请求"
+// @Success 200 {object} response.Response{data=model.ExamAnswerSheet} "保存成功"
+// @Router /exam/answer/save [post]
+func (a *ExamApi) SaveAnswers(c *gin.Context) {
+	var in service.SaveAnswersIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sheet, err := service.ExamApp.SaveAnswers(in.SheetId, in.Answers, in.Version)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sheet, "保存成功", c)
+}
+
+// SubmitSheet 交卷
+// @Tags Exam
+// @Summary 交卷（行锁防重，幂等返回已交卷答卷）
+// @Accept application/json
+// @Param data body service.SubmitIn true "交卷请求"
+// @Success 200 {object} response.Response{data=model.ExamAnswerSheet} "交卷成功"
+// @Router /exam/answer/submit [post]
+func (a *ExamApi) SubmitSheet(c *gin.Context) {
+	var in service.SubmitIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sheet, err := service.ExamApp.SubmitSheet(in.SheetId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sheet, "交卷成功", c)
+}
