@@ -144,4 +144,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ag.DELETE("memory", v1.Api.DeleteAgentMemory)
 		ag.DELETE("", v1.Api.DeleteAgent)
 	}
+	sk := Router.Group("llmops/skill")
+	{
+		sk.GET("list", v1.Api.GetSkills)
+		sk.POST("", v1.Api.SaveSkill)
+		sk.DELETE("", v1.Api.DeleteSkill)
+	}
 }

@@ -49,6 +49,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsAgentEval),
 		new(model.LlmopsAgentEvalResult),
 		new(model.LlmopsAgentCallLog),
+		new(model.LlmopsSkill),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -150,6 +151,9 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/agent/stats", Description: "智能体调用统计", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/agent/monitor", Description: "智能体运行监控", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/agent/abnormalSessions", Description: "智能体异常会话", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/skill/list", Description: "技能列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/skill", Description: "保存技能", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/skill", Description: "删除技能", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent/memory", Description: "删除长期记忆", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent", Description: "删除智能体", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/train", Description: "删除训练任务", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -251,6 +255,45 @@ func PresetModels(ctx context.Context) {
 	}
 }
 
+// BuiltinSkills 内置技能种子（幂等 FirstOrCreate；要求(6) 预置内置技能）
+func BuiltinSkills(ctx context.Context) {
+	presets := []model.LlmopsSkill{
+		{
+			Name: "文本摘要", Type: "builtin", Status: "enabled",
+			Desc: "将输入文本概括为 3-5 句摘要",
+			DefJSON: `{"kind":"prompt","system":"你是摘要助手，只输出摘要本身。","template":"请用 3-5 句话概括以下内容：\n{input}"}`,
+		},
+		{
+			Name: "中英翻译", Type: "builtin", Status: "enabled",
+			Desc: "中英互译（可指定目标语言）",
+			DefJSON: `{"kind":"prompt","system":"你是专业翻译，只输出译文。","template":"把以下内容翻译成{lang}：\n{input}","params":{"lang":{"desc":"目标语言","default":"英文"}}}`,
+		},
+		{
+			Name: "SQL生成", Type: "builtin", Status: "enabled",
+			Desc: "按表结构生成 SQL 查询",
+			DefJSON: `{"kind":"prompt","system":"你是 SQL 专家，只输出一条可执行 SQL，不要解释。","template":"表结构：\n{schema}\n\n需求：{input}","params":{"schema":{"desc":"建表语句或字段说明","default":"(用户补充表结构)"}}}`,
+		},
+		{
+			Name: "关键词提取", Type: "builtin", Status: "enabled",
+			Desc: "提取文本关键词，输出 JSON 数组",
+			DefJSON: `{"kind":"prompt","system":"只输出 JSON 字符串数组，不要其它内容。","template":"提取以下文本的关键词（最多 10 个）：\n{input}"}`,
+		},
+		{
+			Name: "表格问答", Type: "builtin", Status: "enabled",
+			Desc: "基于 markdown 表格回答问题",
+			DefJSON: `{"kind":"prompt","system":"根据表格回答问题，答案简洁并注明依据行。","template":"表格：\n{table}\n\n问题：{input}","params":{"table":{"desc":"markdown 表格","default":"(用户补充表格)"}}}`,
+		},
+	}
+	for i := range presets {
+		var exist model.LlmopsSkill
+		if err := global.GVA_DB.WithContext(ctx).Where("name = ?", presets[i].Name).First(&exist).Error; err != nil {
+			if err := global.GVA_DB.WithContext(ctx).Create(&presets[i]).Error; err != nil {
+				global.GVA_LOG.Error(fmt.Sprintf("llmops 内置技能种子失败: %v", err))
+			}
+		}
+	}
+}
+
 // Casbin 注册 llmops 策略（幂等）：仅 888 全量（平台管理面）
 func Casbin(ctx context.Context) {
 	e := srvUtils.GetCasbin()
@@ -342,6 +385,9 @@ func Casbin(ctx context.Context) {
 		{"/llmops/agent/stats", "GET"},
 		{"/llmops/agent/monitor", "GET"},
 		{"/llmops/agent/abnormalSessions", "GET"},
+		{"/llmops/skill/list", "GET"},
+		{"/llmops/skill", "POST"},
+		{"/llmops/skill", "DELETE"},
 		{"/llmops/agent/memory", "DELETE"},
 		{"/llmops/agent", "DELETE"},
 		{"/llmops/train", "DELETE"},

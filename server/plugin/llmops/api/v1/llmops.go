@@ -2100,6 +2100,65 @@ func (a *LlmopsApi) GetAgentMonitor(c *gin.Context) {
 	response.OkWithDetailed(view, "获取成功", c)
 }
 
+// GetSkills 技能列表
+// @Tags Llmops
+// @Summary 技能列表（类型/状态过滤）
+// @Security ApiKeyAuth
+// @Param type query string false "builtin/extended/custom"
+// @Param status query string false "enabled/disabled"
+// @Success 200 {object} response.Response{data=[]model.LlmopsSkill} "获取成功"
+// @Router /llmops/skill/list [get]
+func (a *LlmopsApi) GetSkills(c *gin.Context) {
+	list, err := service.LlmopsService.GetSkills(c.Query("type"), c.Query("status"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveSkill 保存技能
+// @Tags Llmops
+// @Summary 新建/更新技能（定义即检，prompt 型协议）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsSkill true "技能"
+// @Success 200 {object} response.Response{data=model.LlmopsSkill} "保存成功"
+// @Router /llmops/skill [post]
+func (a *LlmopsApi) SaveSkill(c *gin.Context) {
+	var in model.LlmopsSkill
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sk, err := service.LlmopsService.SaveSkill(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sk, "保存成功", c)
+}
+
+// DeleteSkill 删除技能
+// @Tags Llmops
+// @Summary 删除技能（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "技能ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/skill [delete]
+func (a *LlmopsApi) DeleteSkill(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeleteSkill(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）

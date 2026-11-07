@@ -386,3 +386,15 @@ type LlmopsAgentCallLog struct {
 }
 
 func (LlmopsAgentCallLog) TableName() string { return "llmops_agent_call_log" }
+
+// LlmopsSkill 技能（要求(6) 技能生态引擎：内置/扩展/自定义）
+type LlmopsSkill struct {
+	global.GVA_MODEL
+	Name    string `json:"name" gorm:"comment:技能名;unique"`
+	Type    string `json:"type" gorm:"type:varchar(16);index;comment:builtin/extended/custom"`
+	Desc    string `json:"desc" gorm:"type:varchar(500);comment:描述"`
+	DefJSON string `json:"defJSON" gorm:"type:text;comment:技能定义JSON"`
+	Status  string `json:"status" gorm:"type:varchar(16);default:enabled;index;comment:enabled/disabled"`
+}
+
+func (LlmopsSkill) TableName() string { return "llmops_skill" }
