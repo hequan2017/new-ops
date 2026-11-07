@@ -851,3 +851,25 @@ func (a *ExamApi) RunPractice(c *gin.Context) {
 	}
 	response.OkWithDetailed(log, "执行完成", c)
 }
+
+// GetPracticeLogs 实操过程日志
+// @Tags ExamTerminal
+// @Summary 实操执行历史（对话式作答留痕，倒序 20 条）
+// @Param sheetId query int true "答卷ID"
+// @Param questionId query int false "实操题ID"
+// @Success 200 {object} response.Response{data=[]model.ExamPracticeLog} "获取成功"
+// @Router /exam/terminal/practiceLogs [get]
+func (a *ExamApi) GetPracticeLogs(c *gin.Context) {
+	sheetId, err := strconv.ParseUint(c.Query("sheetId"), 10, 64)
+	if err != nil || sheetId == 0 {
+		response.FailWithMessage("sheetId 不能为空", c)
+		return
+	}
+	questionId, _ := strconv.ParseUint(c.Query("questionId"), 10, 64)
+	list, err := service.ExamApp.GetPracticeLogs(uint(sheetId), uint(questionId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}

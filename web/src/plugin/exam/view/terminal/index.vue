@@ -97,7 +97,21 @@
                 <el-button type="success" size="small" :loading="practicing" @click="doPractice">执行实操</el-button>
               </el-form-item>
             </el-form>
-            <pre v-if="practiceOutput" class="ops-pre">{{ practiceOutput }}</pre>
+            <div v-if="practiceOutput" style="margin-top: 8px">
+              <h5 style="margin: 0 0 4px">本次结果预览</h5>
+              <pre class="ops-pre">{{ prettyOutput }}</pre>
+            </div>
+            <div v-if="practiceLogs.length" style="margin-top: 10px">
+              <h5 style="margin: 0 0 4px">执行历史（对话式留痕）</h5>
+              <el-timeline>
+                <el-timeline-item v-for="pl in practiceLogs" :key="pl.ID"
+                  :timestamp="fmtTime(pl.CreatedAt) + ' · ' + pl.latencyMs + 'ms'"
+                  :type="pl.ok ? 'success' : 'danger'">
+                  <div style="font-size: 12px; color: #888">【{{ pl.channel }} → {{ pl.target }}】{{ pl.ok ? '' : pl.errMsg }}</div>
+                  <pre class="ops-pre" style="max-height: 120px; overflow: auto; margin: 4px 0 0">{{ prettyJSON(pl.output) }}</pre>
+                </el-timeline-item>
+              </el-timeline>
+            </div>
           </div>
         </template>
         <div style="margin-top: 16px; display: flex; justify-content: space-between">
@@ -124,7 +138,7 @@
   import { ElMessage, ElMessageBox } from 'element-plus'
   import {
     terminalRegister, terminalHeartbeat, terminalExams, terminalResume,
-    terminalSave, terminalSubmit, terminalPractice,
+    terminalSave, terminalSubmit, terminalPractice, terminalPracticeLogs,
   } from '@/plugin/exam/api/terminal'
 
   const phase = ref('lobby')
@@ -146,6 +160,7 @@
   const practiceTarget = ref('')
   const practiceOutput = ref('')
   const practicing = ref(false)
+  const practiceLogs = ref([])
 
   const curQ = computed(() => questions.value[curIdx.value] || null)
   const curAnswer = computed({
@@ -160,8 +175,20 @@
     try { return JSON.parse(q.optionsJSON || '[]') } catch (e) { return [] }
   }
   const typeNames = { single: '单选', multiple: '多选', judge: '判断', short: '简答', practice: '实操' }
+  const prettyJSON = (s) => {
+    if (!s) return ''
+    try { return JSON.stringify(JSON.parse(s), null, 2) } catch (e) { return s }
+  }
+  const prettyOutput = computed(() => prettyJSON(practiceOutput.value))
+  const loadPracticeLogs = async () => {
+    if (!sheet.value || !curQ.value) return
+    try {
+      const res = await terminalPracticeLogs({ sheetId: sheet.value.ID, questionId: curQ.value.ID })
+      practiceLogs.value = res.data || []
+    } catch (e) { /* 静默 */ }
+  }
   const typeLabel = (t) => typeNames[t] || t
-  const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
+  const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 19) : '—')
   const countdownText = computed(() => {
     const s = remainSec.value
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60
@@ -177,6 +204,8 @@
   watch(curIdx, () => {
     multiSel.value = (curAnswer.value || '').split(',').filter(Boolean)
     practiceOutput.value = ''
+    practiceLogs.value = []
+    if (curQ.value?.type === 'practice') loadPracticeLogs()
   })
 
   // 终端注册 + 心跳 + 列表
@@ -264,6 +293,7 @@
       practiceOutput.value = res.data?.output || res.data?.errMsg || ''
       ElMessage.success(res.data?.ok ? '执行成功，输出已写入答卷' : '执行失败，见输出')
       await doSave(false)
+      await loadPracticeLogs()
     } finally {
       practicing.value = false
     }

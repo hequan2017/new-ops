@@ -124,3 +124,14 @@ type PracticeIn struct {
 	Target     string `json:"target" binding:"required"`
 	Input      string `json:"input"`
 }
+
+// GetPracticeLogs 实操过程日志（终端面：sheetId 即凭证口径，仅返回本卷日志）
+func (s *ExamService) GetPracticeLogs(sheetId, questionId uint) ([]model.ExamPracticeLog, error) {
+	db := global.GVA_DB.Where("sheet_id = ?", sheetId)
+	if questionId > 0 {
+		db = db.Where("question_id = ?", questionId)
+	}
+	var list []model.ExamPracticeLog
+	err := db.Order("id desc").Limit(20).Find(&list).Error
+	return list, err
+}

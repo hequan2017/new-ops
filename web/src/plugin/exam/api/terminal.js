@@ -8,3 +8,4 @@ export const terminalResume = (data) => service({ url: '/exam/terminal/resume', 
 export const terminalSave = (data) => service({ url: '/exam/terminal/save', method: 'post', data, timeout: 60000 })
 export const terminalSubmit = (data) => service({ url: '/exam/terminal/submit', method: 'post', data, timeout: 60000 })
 export const terminalPractice = (data) => service({ url: '/exam/terminal/practice', method: 'post', data, timeout: 180000 })
+export const terminalPracticeLogs = (params) => service({ url: '/exam/terminal/practiceLogs', method: 'get', params })
