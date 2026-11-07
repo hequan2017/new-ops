@@ -60,7 +60,9 @@
       <div ref="chatBox" style="height: 380px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; padding: 10px">
         <div v-for="m in messages" :key="m.ID" :style="{ textAlign: m.role === 'user' ? 'right' : 'left', margin: '6px 0' }">
           <el-tag size="small" :type="m.role === 'user' ? 'primary' : 'success'" style="margin-right: 6px">{{ m.role === 'user' ? '我' : '智能体' }}</el-tag>
-          <span style="white-space: pre-wrap">{{ m.content }}</span>
+          <span v-if="m.role === 'user'" style="white-space: pre-wrap">{{ m.content }}</span>
+          <span v-else style="white-space: pre-wrap" v-html="renderMd(m.content)"></span>
+          <el-button v-if="m.role === 'assistant'" link size="small" style="margin-left: 6px" @click="copyMsg(m)">复制</el-button>
           <div v-if="m.planJSON" style="font-size: 12px; color: #e6a23c; margin-top: 2px">
             意图：{{ parseJSON(m.planJSON)?.intent }} · 步骤：{{ (parseJSON(m.planJSON)?.steps || []).length }}
           </div>
@@ -247,6 +249,29 @@
   const sessions = ref([])
   const sessionId = ref(null)
   const messages = ref([])
+
+  // 轻量 Markdown 渲染（零依赖：先转义防 XSS，再替换代码围栏/行内代码/加粗/标题）
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const renderMd = (text) => {
+    if (!text) return ''
+    let out = esc(text)
+    out = out.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) =>
+      `<pre style="background:#f5f7fa;border:1px solid #e4e7ed;border-radius:4px;padding:8px;overflow:auto"><code>${code}</code></pre>`)
+    out = out.replace(/`([^`\n]+)`/g, '<code style="background:#f0f2f5;padding:1px 4px;border-radius:3px">$1</code>')
+    out = out.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+    out = out.replace(/^#### (.+)$/gm, '<h5 style="margin:4px 0">$1</h5>')
+    out = out.replace(/^### (.+)$/gm, '<h4 style="margin:4px 0">$1</h4>')
+    out = out.replace(/^## (.+)$/gm, '<h3 style="margin:6px 0">$1</h3>')
+    return out
+  }
+  const copyMsg = async (m) => {
+    try {
+      await navigator.clipboard.writeText(m.content || '')
+      ElMessage.success('已复制')
+    } catch (e) {
+      ElMessage.warning('复制失败，请手动选择')
+    }
+  }
   const loadSessions = async () => {
     const res = await getSessions({ agentId: currentAgent.value.ID, page: 1, pageSize: 50 })
     sessions.value = res.data?.list || []

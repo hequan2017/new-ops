@@ -164,7 +164,7 @@
 
 - [x] P01 | llmops: 数据资产回收站（软删除恢复 API）
 - [x] P02 | llmops: 知识库文档重复检测（simhash 简化版）
-- [ ] P03 | llmops: 智能体调试窗 Markdown 渲染与消息复制
+- [x] P03 | llmops: 智能体调试窗 Markdown 渲染与消息复制
 - [ ] P04 | oplib: 算子执行结果缓存（同参数哈希命中）
 - [ ] P05 | exam: 考试场次日历视图（前端）
 - [ ] P06 | exam: 成绩分布直方图（前端 echarts）
