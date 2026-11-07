@@ -427,3 +427,28 @@ type LlmopsConnector struct {
 }
 
 func (LlmopsConnector) TableName() string { return "llmops_connector" }
+
+// LlmopsSkillToken 技能调用令牌（要求(6) 认证鉴权；哈希落库不可逆，明文仅创建时返回一次）
+type LlmopsSkillToken struct {
+	global.GVA_MODEL
+	Name      string `json:"name" gorm:"comment:令牌名;unique"`
+	TokenHash string `json:"-" gorm:"type:varchar(64);comment:令牌SHA256(不可逆校验)"`
+	Prefix    string `json:"prefix" gorm:"type:varchar(8);comment:令牌前缀(展示识别)"`
+	RateLimit int    `json:"rateLimit" gorm:"default:10;comment:每秒限流次数"`
+	Status    string `json:"status" gorm:"type:varchar(16);default:enabled;index;comment:enabled/revoked"`
+}
+
+func (LlmopsSkillToken) TableName() string { return "llmops_skill_token" }
+
+// LlmopsSkillCallLog 技能调用审计日志（要求(6) 调用日志审计）
+type LlmopsSkillCallLog struct {
+	global.GVA_MODEL
+	TokenId    uint   `json:"tokenId" gorm:"index;comment:令牌ID"`
+	Skill      string `json:"skill" gorm:"type:varchar(128);comment:技能/工具名"`
+	ArgsMasked string `json:"argsMasked" gorm:"type:text;comment:脱敏参数"`
+	Ok         bool   `json:"ok" gorm:"index;comment:是否成功"`
+	LatencyMs  int64  `json:"latencyMs" gorm:"comment:耗时毫秒"`
+	ErrMsg     string `json:"errMsg" gorm:"type:varchar(500);comment:错误"`
+}
+
+func (LlmopsSkillCallLog) TableName() string { return "llmops_skill_call_log" }

@@ -151,6 +151,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		sk.POST("generate", v1.Api.GenerateSkill)
 		sk.POST("export", v1.Api.ExportSkillPackage)
 		sk.POST("import", v1.Api.ImportSkillPackage)
+		sk.POST("call", v1.Api.SkillCall)
+		sk.GET("callLogs", v1.Api.GetSkillCallLogs)
+		sk.GET("token/list", v1.Api.GetSkillTokens)
+		sk.POST("token", v1.Api.CreateSkillToken)
+		sk.POST("token/revoke", v1.Api.RevokeSkillToken)
 		sk.DELETE("", v1.Api.DeleteSkill)
 	}
 	mcp := Router.Group("llmops/mcp")

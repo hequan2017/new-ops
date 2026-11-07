@@ -52,6 +52,8 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsSkill),
 		new(model.LlmopsMcpTool),
 		new(model.LlmopsConnector),
+		new(model.LlmopsSkillToken),
+		new(model.LlmopsSkillCallLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -166,6 +168,11 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/connector/test", Description: "连接器连通测试", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/connector", Description: "删除连接器", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/skill", Description: "删除技能", ApiGroup: "大模型平台", Method: "DELETE"},
+		{Path: "/llmops/skill/call", Description: "技能开放调用", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/skill/callLogs", Description: "技能审计日志", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/skill/token/list", Description: "技能令牌列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/skill/token", Description: "创建技能令牌", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/skill/token/revoke", Description: "吊销技能令牌", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/agent/memory", Description: "删除长期记忆", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent", Description: "删除智能体", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/train", Description: "删除训练任务", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -410,6 +417,11 @@ func Casbin(ctx context.Context) {
 		{"/llmops/connector/test", "POST"},
 		{"/llmops/connector", "DELETE"},
 		{"/llmops/skill", "DELETE"},
+		{"/llmops/skill/call", "POST"},
+		{"/llmops/skill/callLogs", "GET"},
+		{"/llmops/skill/token/list", "GET"},
+		{"/llmops/skill/token", "POST"},
+		{"/llmops/skill/token/revoke", "POST"},
 		{"/llmops/agent/memory", "DELETE"},
 		{"/llmops/agent", "DELETE"},
 		{"/llmops/train", "DELETE"},

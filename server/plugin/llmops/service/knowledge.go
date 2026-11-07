@@ -183,6 +183,19 @@ type McpToolIn struct {
 	HeadersJSON string `json:"headersJSON"`
 }
 
+// TokenIn 令牌创建请求
+type TokenIn struct {
+	Name      string `json:"name" binding:"required"`
+	RateLimit int    `json:"rateLimit"`
+}
+
+// SkillCallIn 技能开放调用请求
+type SkillCallIn struct {
+	Token string `json:"token" binding:"required"`
+	Tool  string `json:"tool" binding:"required"`
+	Args  string `json:"args"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

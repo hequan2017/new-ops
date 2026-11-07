@@ -2360,6 +2360,106 @@ func (a *LlmopsApi) DeleteConnector(c *gin.Context) {
 	response.OkWithMessage("删除成功", c)
 }
 
+// GetSkillTokens 令牌列表
+// @Tags Llmops
+// @Summary 技能调用令牌列表（哈希不回显）
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.LlmopsSkillToken} "获取成功"
+// @Router /llmops/skill/token/list [get]
+func (a *LlmopsApi) GetSkillTokens(c *gin.Context) {
+	list, err := service.LlmopsService.GetSkillTokens()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// CreateSkillToken 创建令牌
+// @Tags Llmops
+// @Summary 创建调用令牌（明文仅本次返回）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.TokenIn true "令牌"
+// @Success 200 {object} response.Response{data=map[string]any} "创建成功"
+// @Router /llmops/skill/token [post]
+func (a *LlmopsApi) CreateSkillToken(c *gin.Context) {
+	var in service.TokenIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	t, plain, err := service.LlmopsService.CreateSkillToken(in.Name, in.RateLimit)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"token": t, "plain": plain}, "创建成功（明文仅此一次，请妥善保存）", c)
+}
+
+// RevokeSkillToken 吊销令牌
+// @Tags Llmops
+// @Summary 吊销调用令牌
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body idReq true "令牌ID"
+// @Success 200 {object} response.Response{msg=string} "已吊销"
+// @Router /llmops/skill/token/revoke [post]
+func (a *LlmopsApi) RevokeSkillToken(c *gin.Context) {
+	var req idReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if err := service.LlmopsService.RevokeSkillToken(req.ID); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("已吊销", c)
+}
+
+// SkillCall 开放调用入口
+// @Tags Llmops
+// @Summary 技能开放调用（令牌+限流+沙箱+审计）
+// @Accept application/json
+// @Param data body service.SkillCallIn true "调用请求"
+// @Success 200 {object} response.Response{data=string} "调用成功"
+// @Router /llmops/skill/call [post]
+func (a *LlmopsApi) SkillCall(c *gin.Context) {
+	var in service.SkillCallIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	result, err := service.LlmopsService.SkillCallWithAuth(in.Token, in.Tool, in.Args)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(result, "调用成功", c)
+}
+
+// GetSkillCallLogs 审计日志
+// @Tags Llmops
+// @Summary 技能调用审计日志（令牌过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Param tokenId query int false "令牌ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/skill/callLogs [get]
+func (a *LlmopsApi) GetSkillCallLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	tokenId, _ := strconv.ParseUint(c.Query("tokenId"), 10, 64)
+	list, total, err := service.LlmopsService.GetSkillCallLogs(page, pageSize, uint(tokenId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）
