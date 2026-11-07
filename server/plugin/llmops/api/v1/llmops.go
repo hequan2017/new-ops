@@ -2788,3 +2788,18 @@ func (a *LlmopsApi) GetDatasetRefs(c *gin.Context) {
 	}
 	response.OkWithDetailed(refs, "获取成功", c)
 }
+
+// GetDashboard 数据看板
+// @Tags Llmops
+// @Summary 平台数据看板（各域计数+近 7 日调用趋势）
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=service.DashboardStats} "获取成功"
+// @Router /llmops/dashboard [get]
+func (a *LlmopsApi) GetDashboard(c *gin.Context) {
+	st, err := service.LlmopsService.GetDashboard()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(st, "获取成功", c)
+}

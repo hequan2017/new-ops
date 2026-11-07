@@ -171,6 +171,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		conn.POST("test", v1.Api.TestConnector)
 		conn.DELETE("", v1.Api.DeleteConnector)
 	}
+	db := Router.Group("llmops/dashboard")
+	{
+		db.GET("", v1.Api.GetDashboard)
+	}
 	dst := Router.Group("llmops/dataset")
 	{
 		dst.GET("list", v1.Api.GetDatasets)
