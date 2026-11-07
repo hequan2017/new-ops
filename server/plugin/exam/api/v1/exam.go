@@ -454,3 +454,46 @@ func (a *ExamApi) SubmitSheet(c *gin.Context) {
 	}
 	response.OkWithDetailed(sheet, "交卷成功", c)
 }
+
+// RunGrade 整卷判分
+// @Tags Exam
+// @Summary 整卷判分（客观自动 + 主观/实操 LLM，submitted 前置）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.GradeIn true "判分请求"
+// @Success 200 {object} response.Response{data=map[string]any} "判分完成"
+// @Router /exam/grade/run [post]
+func (a *ExamApi) RunGrade(c *gin.Context) {
+	var in service.GradeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	total, err := service.ExamApp.GradeSheet(in.SheetId, in.JudgeModelId, in.MultiPartial)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"total": total}, "判分完成", c)
+}
+
+// GetGrades 判分明细
+// @Tags Exam
+// @Summary 判分明细（按答卷）
+// @Security ApiKeyAuth
+// @Param sheetId query int true "答卷ID"
+// @Success 200 {object} response.Response{data=[]model.ExamGrade} "获取成功"
+// @Router /exam/grade/list [get]
+func (a *ExamApi) GetGrades(c *gin.Context) {
+	sheetId, err := strconv.ParseUint(c.Query("sheetId"), 10, 64)
+	if err != nil || sheetId == 0 {
+		response.FailWithMessage("sheetId 不能为空", c)
+		return
+	}
+	list, err := service.ExamApp.GetExamGrades(uint(sheetId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
