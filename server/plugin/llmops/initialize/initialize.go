@@ -240,6 +240,14 @@ func Menu(ctx context.Context) {
 			Sort:      5,
 			Meta:      sysModel.Meta{Title: "智能体", Icon: "chat-dot-round"},
 		},
+		{
+			Path:      "llmopsSkill",
+			Name:      "llmopsSkill",
+			Hidden:    false,
+			Component: "plugin/llmops/view/skill/index.vue",
+			Sort:      6,
+			Meta:      sysModel.Meta{Title: "技能中心", Icon: "coordinate"},
+		},
 	}
 	pluginUtils.RegisterMenus(entities...)
 }
