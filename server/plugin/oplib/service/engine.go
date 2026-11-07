@@ -111,6 +111,18 @@ func (s *OplibService) ExecuteOperator(operatorId uint, argsJSON string) (*model
 	var execErr error
 	switch op.ImplType {
 	case "builtin":
+		// 结果缓存（P04）：同参数哈希命中跳过执行；script 有副作用不缓存
+		if hit, cerr := executeWithCache(op.Name, args); cerr == nil {
+			result, execErr = hit.Result, nil
+			b, _ := json.Marshal(hit)
+			log.ResultJSON = string(b)
+			log.Ok = true
+			log.LatencyMs = time.Since(started).Milliseconds()
+			if err := global.GVA_DB.Create(log).Error; err != nil {
+				return nil, err
+			}
+			return log, nil
+		}
 		result, execErr = runBuiltin(op.Name, argsJSON)
 	case "script":
 		result, execErr = RunScriptOperator(&op, argsJSON)
