@@ -157,7 +157,7 @@
 - [x] L04 | llmops: 操作留痕核查——写接口全过操作日志中间件核对清单，补漏
 - [x] L05 | docs: README 新增「大模型平台/算子库/考试系统/数据集」能力小节 + 功能总览表
 - [x] L06 | server: llmops/oplib/exam swagger 注释全量核对补齐
-- [ ] L07 | 全量回归：server/agent 测试 + web build 全绿，修复发现的小问题
+- [x] L07 | 全量回归：server/agent 测试 + web build 全绿，修复发现的小问题（三面一次通过零修复项：server 28 包 ok/agent 1 包 ok/web build 2.15s；收官总结留待 L08 在备用池后统一写）
 - [ ] L08 | 收官：本文件底部写总结（完成/跳过统计、采购需求逐项覆盖对照表、遗留清单）
 
 ## 备用增强池（主条目全部完成后依次取用）
