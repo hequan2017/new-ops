@@ -4,6 +4,8 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 
+	"github.com/hequan2017/new-ops/server/middleware"
+
 	v1 "github.com/hequan2017/new-ops/server/plugin/exam/api/v1"
 )
 
@@ -15,62 +17,62 @@ var RouterGroupApp = new(RouterGroup)
 func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	ac := Router.Group("exam/anticheat")
 	{
-		ac.POST("report", v1.Api.ReportBehavior)
+		ac.POST("report", middleware.OperationRecord(), v1.Api.ReportBehavior)
 		ac.GET("stats", v1.Api.GetBehaviorStats)
-		ac.POST("check", v1.Api.CheckSimilarity)
+		ac.POST("check", middleware.OperationRecord(), v1.Api.CheckSimilarity)
 	}
 	nd := Router.Group("exam/node")
 	{
-		nd.POST("register", v1.Api.RegisterNode)
+		nd.POST("register", middleware.OperationRecord(), v1.Api.RegisterNode)
 		nd.POST("heartbeat", v1.Api.NodeHeartbeat)
 		nd.GET("list", v1.Api.GetNodes)
-		nd.POST("assign", v1.Api.AssignShard)
+		nd.POST("assign", middleware.OperationRecord(), v1.Api.AssignShard)
 	}
 	sc := Router.Group("exam/score")
 	{
-		sc.POST("publish", v1.Api.PublishScores)
+		sc.POST("publish", middleware.OperationRecord(), v1.Api.PublishScores)
 		sc.GET("list", v1.Api.GetScores)
 		sc.GET("export", v1.Api.ExportScores)
 	}
 	gr := Router.Group("exam/grade")
 	{
-		gr.POST("run", v1.Api.RunGrade)
+		gr.POST("run", middleware.OperationRecord(), v1.Api.RunGrade)
 		gr.GET("list", v1.Api.GetGrades)
 	}
 	aw := Router.Group("exam/answer")
 	{
 		aw.POST("login", v1.Api.LoginByTicket)
 		aw.GET("questions", v1.Api.GetSheetQuestions)
-		aw.POST("save", v1.Api.SaveAnswers)
-		aw.POST("submit", v1.Api.SubmitSheet)
+		aw.POST("save", middleware.OperationRecord(), v1.Api.SaveAnswers)
+		aw.POST("submit", middleware.OperationRecord(), v1.Api.SubmitSheet)
 	}
 	cd := Router.Group("exam/candidate")
 	{
 		cd.GET("list", v1.Api.GetCandidates)
-		cd.POST("import", v1.Api.ImportCandidates)
+		cd.POST("import", middleware.OperationRecord(), v1.Api.ImportCandidates)
 		cd.POST("claim", v1.Api.ClaimTicket)
-		cd.DELETE("", v1.Api.DeleteCandidate)
+		cd.DELETE("", middleware.OperationRecord(), v1.Api.DeleteCandidate)
 	}
 	e := Router.Group("exam/exam")
 	{
 		e.GET("list", v1.Api.GetExams)
-		e.POST("", v1.Api.SaveExam)
-		e.POST("transition", v1.Api.TransitionExam)
-		e.DELETE("", v1.Api.DeleteExam)
+		e.POST("", middleware.OperationRecord(), v1.Api.SaveExam)
+		e.POST("transition", middleware.OperationRecord(), v1.Api.TransitionExam)
+		e.DELETE("", middleware.OperationRecord(), v1.Api.DeleteExam)
 	}
 	p := Router.Group("exam/paper")
 	{
 		p.GET("list", v1.Api.GetPapers)
-		p.POST("", v1.Api.SavePaper)
-		p.POST("compose", v1.Api.ComposePaper)
-		p.DELETE("", v1.Api.DeletePaper)
+		p.POST("", middleware.OperationRecord(), v1.Api.SavePaper)
+		p.POST("compose", middleware.OperationRecord(), v1.Api.ComposePaper)
+		p.DELETE("", middleware.OperationRecord(), v1.Api.DeletePaper)
 	}
 	q := Router.Group("exam/question")
 	{
 		q.GET("list", v1.Api.GetQuestions)
-		q.POST("", v1.Api.SaveQuestion)
-		q.POST("import", v1.Api.ImportQuestions)
-		q.DELETE("", v1.Api.DeleteQuestion)
+		q.POST("", middleware.OperationRecord(), v1.Api.SaveQuestion)
+		q.POST("import", middleware.OperationRecord(), v1.Api.ImportQuestions)
+		q.DELETE("", middleware.OperationRecord(), v1.Api.DeleteQuestion)
 	}
 }
 
