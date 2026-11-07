@@ -2724,3 +2724,46 @@ func (a *LlmopsApi) DeleteDataset(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// ImportDatasetContent 数据集导入
+// @Tags Llmops
+// @Summary 数据集内容导入（JSONL 逐行校验，仅有效行入库，坏行报告）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.DatasetImportIn true "导入请求"
+// @Success 200 {object} response.Response{data=map[string]any} "导入完成"
+// @Router /llmops/dataset/import [post]
+func (a *LlmopsApi) ImportDatasetContent(c *gin.Context) {
+	var in service.DatasetImportIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	valid, errs, err := service.LlmopsService.ImportDatasetContent(in.ID, in.Content, in.Purpose)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"valid": valid, "errors": errs}, "导入完成", c)
+}
+
+// ExportDataset 数据集导出
+// @Tags Llmops
+// @Summary 数据集内容导出（原样返回供下载）
+// @Security ApiKeyAuth
+// @Param id query int true "数据集ID"
+// @Success 200 {object} response.Response{data=map[string]any} "导出成功"
+// @Router /llmops/dataset/export [get]
+func (a *LlmopsApi) ExportDataset(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	content, filename, err := service.LlmopsService.ExportDataset(uint(id))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"content": content, "filename": filename}, "导出成功", c)
+}
