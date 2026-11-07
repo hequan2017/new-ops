@@ -103,6 +103,7 @@
   "/src/plugin/llmops/view/data/index.vue": "Index",
   "/src/plugin/llmops/view/kb/index.vue": "Index",
   "/src/plugin/llmops/view/model/index.vue": "Index",
+  "/src/plugin/llmops/view/prompt/index.vue": "Index",
   "/src/plugin/llmops/view/skill/index.vue": "Index",
   "/src/plugin/llmops/view/train/index.vue": "Index",
   "/src/plugin/monitor/components/PerfChart.vue": "PerfChart",

@@ -2582,6 +2582,64 @@ func (a *LlmopsApi) OptimizePrompts(c *gin.Context) {
 	response.OkWithDetailed(results, "优化完成", c)
 }
 
+// GetPromptAssets 配套资产列表
+// @Tags Llmops
+// @Summary Prompt 配套资产列表（业务规则/术语/思维链，类型过滤）
+// @Security ApiKeyAuth
+// @Param kind query string false "rule/term/cot"
+// @Success 200 {object} response.Response{data=[]model.LlmopsPromptAsset} "获取成功"
+// @Router /llmops/prompt/asset/list [get]
+func (a *LlmopsApi) GetPromptAssets(c *gin.Context) {
+	list, err := service.LlmopsService.GetPromptAssets(c.Query("kind"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SavePromptAsset 保存配套资产
+// @Tags Llmops
+// @Summary 新建/更新 Prompt 配套资产
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.LlmopsPromptAsset true "资产"
+// @Success 200 {object} response.Response{data=model.LlmopsPromptAsset} "保存成功"
+// @Router /llmops/prompt/asset [post]
+func (a *LlmopsApi) SavePromptAsset(c *gin.Context) {
+	var in model.LlmopsPromptAsset
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	asset, err := service.LlmopsService.SavePromptAsset(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(asset, "保存成功", c)
+}
+
+// DeletePromptAsset 删除配套资产
+// @Tags Llmops
+// @Summary 删除 Prompt 配套资产
+// @Security ApiKeyAuth
+// @Param id query int true "资产ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /llmops/prompt/asset [delete]
+func (a *LlmopsApi) DeletePromptAsset(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.DeletePromptAsset(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）

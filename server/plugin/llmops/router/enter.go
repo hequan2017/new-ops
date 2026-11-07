@@ -176,6 +176,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		pt.GET("list", v1.Api.GetPrompts)
 		pt.POST("", v1.Api.SavePrompt)
 		pt.POST("render", v1.Api.RenderPrompt)
+		pt.POST("optimize", v1.Api.OptimizePrompts)
+		pt.GET("asset/list", v1.Api.GetPromptAssets)
+		pt.POST("asset", v1.Api.SavePromptAsset)
+		pt.DELETE("asset", v1.Api.DeletePromptAsset)
 		pt.GET("versions", v1.Api.GetPromptVersions)
 		pt.DELETE("", v1.Api.DeletePrompt)
 	}

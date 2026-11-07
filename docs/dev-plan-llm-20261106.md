@@ -109,7 +109,7 @@
 - [x] G01 | llmops: Prompt 模板 `LlmopsPromptTemplate`（name/content/变量占位符解析校验/版本号）+ CRUD + `{{var}}` 解析单测
 - [x] G02 | llmops: 模板渲染 API——POST /llmops/prompt/render（变量填充+缺失报错）+ 版本快照 + 单测
 - [x] G03 | llmops: Prompt 在线优化——chat 模型改写（保留原版对比）+ 批量优化任务（队列+逐条结果对比）
-- [ ] G04 | llmops: 业务规则/行业术语库/专家思维链——三表 CRUD + 模板引用关联 + web Prompt 工作台页；web build 绿
+- [x] G04 | llmops: 业务规则/行业术语库/专家思维链——三表 CRUD + 模板引用关联 + web Prompt 工作台页；web build 绿
 
 ## 阶段 H · 算子库（采购件②；11-08 晚）
 

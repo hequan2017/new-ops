@@ -56,6 +56,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsSkillCallLog),
 		new(model.LlmopsPromptTemplate),
 		new(model.LlmopsPromptVersion),
+		new(model.LlmopsPromptAsset),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -178,6 +179,10 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/prompt/list", Description: "Prompt 模板列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/prompt", Description: "保存 Prompt 模板", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/prompt/render", Description: "Prompt 模板渲染", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/prompt/optimize", Description: "Prompt 优化", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/prompt/asset/list", Description: "Prompt 配套资产列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/prompt/asset", Description: "保存 Prompt 配套资产", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/prompt/asset", Description: "删除 Prompt 配套资产", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/prompt/versions", Description: "Prompt 模板版本", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/prompt", Description: "删除 Prompt 模板", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent/memory", Description: "删除长期记忆", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -254,6 +259,14 @@ func Menu(ctx context.Context) {
 			Component: "plugin/llmops/view/skill/index.vue",
 			Sort:      6,
 			Meta:      sysModel.Meta{Title: "技能中心", Icon: "coordinate"},
+		},
+		{
+			Path:      "llmopsPrompt",
+			Name:      "llmopsPrompt",
+			Hidden:    false,
+			Component: "plugin/llmops/view/prompt/index.vue",
+			Sort:      7,
+			Meta:      sysModel.Meta{Title: "Prompt 工作台", Icon: "edit-pen"},
 		},
 	}
 	pluginUtils.RegisterMenus(entities...)
@@ -440,6 +453,10 @@ func Casbin(ctx context.Context) {
 		{"/llmops/prompt/list", "GET"},
 		{"/llmops/prompt", "POST"},
 		{"/llmops/prompt/render", "POST"},
+		{"/llmops/prompt/optimize", "POST"},
+		{"/llmops/prompt/asset/list", "GET"},
+		{"/llmops/prompt/asset", "POST"},
+		{"/llmops/prompt/asset", "DELETE"},
 		{"/llmops/prompt/versions", "GET"},
 		{"/llmops/prompt", "DELETE"},
 		{"/llmops/agent/memory", "DELETE"},

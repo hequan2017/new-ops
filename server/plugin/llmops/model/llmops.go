@@ -473,3 +473,14 @@ type LlmopsPromptVersion struct {
 }
 
 func (LlmopsPromptVersion) TableName() string { return "llmops_prompt_version" }
+
+// LlmopsPromptAsset Prompt 配套资产（要求(7) 业务规则/行业术语库/专家思维链，kind 区分）
+type LlmopsPromptAsset struct {
+	global.GVA_MODEL
+	Name       string `json:"name" gorm:"comment:资产名"`
+	Kind       string `json:"kind" gorm:"type:varchar(16);index;comment:rule/term/cot"`
+	Content    string `json:"content" gorm:"type:text;comment:内容(规则条文/术语释义/思维链步骤)"`
+	TemplateId uint   `json:"templateId" gorm:"default:0;comment:引用模板ID(可空)"`
+}
+
+func (LlmopsPromptAsset) TableName() string { return "llmops_prompt_asset" }
