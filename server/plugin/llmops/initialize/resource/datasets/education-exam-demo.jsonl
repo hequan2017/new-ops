@@ -1,0 +1,20 @@
+{"type": "single", "stem": "SFT 指的是？", "options": ["监督微调", "强化学习", "预训练", "蒸馏"], "answer": "监督微调", "score": 2, "knowledgePoint": "微调", "difficulty": 1}
+{"type": "judge", "stem": "LoRA 会更新原模型的全部权重。", "answer": "错", "score": 1, "knowledgePoint": "微调", "difficulty": 1}
+{"type": "multiple", "stem": "以下属于模型压缩方法的有？", "options": ["量化", "剪枝", "蒸馏", "数据增强"], "answer": "量化,剪枝,蒸馏", "score": 3, "knowledgePoint": "压缩", "difficulty": 2}
+{"type": "single", "stem": "RAG 的核心思想是？", "options": ["检索外部知识辅助生成", "扩大参数量", "降低温度", "增加训练轮数"], "answer": "检索外部知识辅助生成", "score": 2, "knowledgePoint": "RAG", "difficulty": 1}
+{"type": "judge", "stem": "余弦相似度与向量长度无关。", "answer": "对", "score": 1, "knowledgePoint": "检索", "difficulty": 2}
+{"type": "short", "stem": "简述 RLHF 两个阶段及其作用。", "answer": "奖励模型学习人类偏好；强化学习依据奖励信号优化策略", "score": 5, "knowledgePoint": "RLHF", "difficulty": 3}
+{"type": "single", "stem": "混合检索中重排（Rerank）发生在？", "options": ["召回前", "召回后融合时", "训练时", "部署时"], "answer": "召回后融合时", "score": 2, "knowledgePoint": "检索", "difficulty": 2}
+{"type": "multiple", "stem": "缓解幻觉的手段包括？", "options": ["RAG 提供事实依据", "要求引用来源", "降低温度", "提高学习率"], "answer": "RAG 提供事实依据,要求引用来源,降低温度", "score": 3, "knowledgePoint": "幻觉", "difficulty": 3}
+{"type": "judge", "stem": "MCP 是模型上下文协议的缩写。", "answer": "对", "score": 1, "knowledgePoint": "MCP", "difficulty": 1}
+{"type": "short", "stem": "描述智能体工具调用回路的一个完整轮次。", "answer": "模型决策调用工具，系统执行并回填观察，模型反思后继续或作答", "score": 5, "knowledgePoint": "智能体", "difficulty": 4}
+{"type": "single", "stem": "梯度累积的主要目的是？", "options": ["等效扩大 batch", "加快推理", "减少参数", "防止过拟合"], "answer": "等效扩大 batch", "score": 2, "knowledgePoint": "训练", "difficulty": 2}
+{"type": "judge", "stem": "ZeRO-1 阶段开始切分模型参数本身。", "answer": "错", "score": 1, "knowledgePoint": "训练", "difficulty": 3}
+{"type": "single", "stem": "验证集最主要的用途是？", "options": ["参与训练", "监控过拟合选检查点", "扩大数据量", "测试延迟"], "answer": "监控过拟合选检查点", "score": 2, "knowledgePoint": "评估", "difficulty": 1}
+{"type": "multiple", "stem": "Prompt 工程的组成部分包括？", "options": ["角色设定", "少样本示例", "输出格式约束", "学习率"], "answer": "角色设定,少样本示例,输出格式约束", "score": 3, "knowledgePoint": "Prompt", "difficulty": 2}
+{"type": "short", "stem": "解释为什么向量检索需要配合关键词检索。", "answer": "向量擅长语义、关键词擅长精确匹配，融合提升覆盖率与准确性", "score": 5, "knowledgePoint": "检索", "difficulty": 3}
+{"type": "single", "stem": "令牌桶限流的特点是？", "options": ["允许突发限平均", "严格固定窗口", "完全不限", "只限并发数"], "answer": "允许突发限平均", "score": 2, "knowledgePoint": "工程", "difficulty": 2}
+{"type": "judge", "stem": "知识图谱多跳推理需要两步以上关系推导。", "answer": "对", "score": 1, "knowledgePoint": "图谱", "difficulty": 2}
+{"type": "single", "stem": "温度参数调高会？", "options": ["更确定", "更多样易跑偏", "更省显存", "更准确"], "answer": "更多样易跑偏", "score": 2, "knowledgePoint": "推理", "difficulty": 1}
+{"type": "practice", "stem": "使用关键词抽取算子提取以下文本关键词：大模型微调需要高质量数据集。", "answer": "关键词含 微调/数据集", "score": 5, "knowledgePoint": "实操", "difficulty": 3}
+{"type": "multiple", "stem": "考试系统防作弊可用的手段包括？", "options": ["切屏上报", "粘贴监控", "答案相似度抽查", "提高温度"], "answer": "切屏上报,粘贴监控,答案相似度抽查", "score": 3, "knowledgePoint": "工程", "difficulty": 2}

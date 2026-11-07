@@ -29,6 +29,7 @@ func (p *plugin) Register(group *gin.Engine) {
 	initialize.Menu(ctx)
 	initialize.PresetModels(ctx)
 	initialize.BuiltinSkills(ctx)
+	initialize.SeedDatasets(ctx)
 	initialize.Casbin(ctx)
 	initialize.Router(group)
 }

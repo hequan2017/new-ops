@@ -1,0 +1,20 @@
+{"question": "监督微调的英文缩写是什么", "expected": "SFT"}
+{"question": "LoRA 训练的是原模型全部权重吗", "expected": "否，只训练注入的低秩矩阵"}
+{"question": "RLHF 分为哪两个训练阶段", "expected": "奖励模型训练与强化学习训练"}
+{"question": "RAG 的中文全称", "expected": "检索增强生成"}
+{"question": "余弦相似度为 1 表示什么", "expected": "两个向量方向完全相同，语义最相似"}
+{"question": "知识图谱中的一跳是什么含义", "expected": "沿一条边进行一次关系查询"}
+{"question": "幻觉的英文术语", "expected": "Hallucination"}
+{"question": "混合检索至少需要哪两路召回", "expected": "向量语义召回与关键词全文召回"}
+{"question": "少样本提示的英文术语", "expected": "Few-shot Prompting"}
+{"question": "梯度累积会额外占用多少显存", "expected": "几乎不增加，只多用一份梯度累加缓冲"}
+{"question": "ZeRO 第几阶段开始切分优化器状态", "expected": "第 1 阶段"}
+{"question": "4bit 量化相比 8bit 的主要代价", "expected": "模型精度损失更大"}
+{"question": "温度设为 0 意味着什么", "expected": "输出接近确定性贪心解码"}
+{"question": "MCP 的中文含义", "expected": "模型上下文协议"}
+{"question": "令牌桶限流允许什么模式", "expected": "允许短时突发、限制平均速率"}
+{"question": "验证集的作用是什么", "expected": "监控过拟合并选择最优检查点"}
+{"question": "多选题错选一个应如何计分", "expected": "按规则配置，通常该题零分"}
+{"question": "DAG 编排中节点最多几个父节点（本项目口径）", "expected": "至多一个"}
+{"question": "智能体短期记忆指什么", "expected": "会话内最近若干轮消息窗口"}
+{"question": "模型压缩的三种常见方法", "expected": "量化、剪枝、蒸馏"}
