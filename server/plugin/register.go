@@ -8,6 +8,7 @@ import (
 	_ "github.com/hequan2017/new-ops/server/plugin/auto"
 	_ "github.com/hequan2017/new-ops/server/plugin/container"
 	_ "github.com/hequan2017/new-ops/server/plugin/dbops"
+	_ "github.com/hequan2017/new-ops/server/plugin/exam"
 	_ "github.com/hequan2017/new-ops/server/plugin/gpu"
 	_ "github.com/hequan2017/new-ops/server/plugin/job"
 	_ "github.com/hequan2017/new-ops/server/plugin/k8s"
