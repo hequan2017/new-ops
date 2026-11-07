@@ -111,6 +111,19 @@ type AgentPublishIn struct {
 	Remark string `json:"remark"`
 }
 
+// SessionIn 创建会话请求
+type SessionIn struct {
+	AgentId uint   `json:"agentId" binding:"required"`
+	UserKey string `json:"userKey"`
+	Title   string `json:"title"`
+}
+
+// AgentChatIn 会话对话请求
+type AgentChatIn struct {
+	SessionId uint   `json:"sessionId" binding:"required"`
+	Message   string `json:"message" binding:"required"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

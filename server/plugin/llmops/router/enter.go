@@ -123,6 +123,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ag.POST("stage", v1.Api.SetAgentStage)
 		ag.POST("publish", v1.Api.PublishAgent)
 		ag.GET("versions", v1.Api.GetAgentVersions)
+		ag.POST("session", v1.Api.CreateAgentSession)
+		ag.GET("messages", v1.Api.GetAgentMessages)
+		ag.POST("chat", v1.Api.AgentChat)
 		ag.DELETE("", v1.Api.DeleteAgent)
 	}
 }

@@ -309,3 +309,24 @@ type LlmopsAgentVersion struct {
 }
 
 func (LlmopsAgentVersion) TableName() string { return "llmops_agent_version" }
+
+// LlmopsAgentSession 智能体会话
+type LlmopsAgentSession struct {
+	global.GVA_MODEL
+	AgentId uint   `json:"agentId" gorm:"index;comment:智能体ID"`
+	Title   string `json:"title" gorm:"type:varchar(255);comment:会话标题"`
+	UserKey string `json:"userKey" gorm:"type:varchar(64);comment:用户标识"`
+}
+
+func (LlmopsAgentSession) TableName() string { return "llmops_agent_session" }
+
+// LlmopsAgentMessage 会话消息（assistant 可携带任务拆解计划）
+type LlmopsAgentMessage struct {
+	global.GVA_MODEL
+	SessionId uint   `json:"sessionId" gorm:"index;comment:会话ID"`
+	Role      string `json:"role" gorm:"type:varchar(16);comment:user/assistant/system"`
+	Content   string `json:"content" gorm:"type:mediumtext;comment:内容"`
+	PlanJSON  string `json:"planJSON" gorm:"type:text;comment:任务拆解计划JSON"`
+}
+
+func (LlmopsAgentMessage) TableName() string { return "llmops_agent_message" }

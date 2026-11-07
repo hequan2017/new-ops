@@ -1708,3 +1708,68 @@ func (a *LlmopsApi) DeleteAgent(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// CreateAgentSession 创建会话
+// @Tags Llmops
+// @Summary 创建智能体会话
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.SessionIn true "会话请求"
+// @Success 200 {object} response.Response{data=model.LlmopsAgentSession} "创建成功"
+// @Router /llmops/agent/session [post]
+func (a *LlmopsApi) CreateAgentSession(c *gin.Context) {
+	var in service.SessionIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sess, err := service.LlmopsService.CreateSession(in.AgentId, in.UserKey, in.Title)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sess, "创建成功", c)
+}
+
+// GetAgentMessages 会话消息
+// @Tags Llmops
+// @Summary 会话消息（正序，近 N 条）
+// @Security ApiKeyAuth
+// @Param sessionId query int true "会话ID"
+// @Success 200 {object} response.Response{data=[]model.LlmopsAgentMessage} "获取成功"
+// @Router /llmops/agent/messages [get]
+func (a *LlmopsApi) GetAgentMessages(c *gin.Context) {
+	sessionId, err := strconv.ParseUint(c.Query("sessionId"), 10, 64)
+	if err != nil || sessionId == 0 {
+		response.FailWithMessage("sessionId 不能为空", c)
+		return
+	}
+	list, err := service.LlmopsService.GetSessionMessages(uint(sessionId), 50)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// AgentChat 会话对话
+// @Tags Llmops
+// @Summary 智能体单轮对话（qa 直答；其余先意图拆解后作答）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.AgentChatIn true "对话请求"
+// @Success 200 {object} response.Response{data=map[string]any} "对话完成"
+// @Router /llmops/agent/chat [post]
+func (a *LlmopsApi) AgentChat(c *gin.Context) {
+	var in service.AgentChatIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	reply, plan, err := service.LlmopsService.AgentChat(in.SessionId, in.Message)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"reply": reply, "plan": plan}, "对话完成", c)
+}
