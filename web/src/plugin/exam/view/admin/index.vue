@@ -132,6 +132,23 @@
         </el-table>
       </el-tab-pane>
 
+      <!-- 场次日历 -->
+      <el-tab-pane label="日历" name="cal">
+        <el-calendar v-model="calDate">
+          <template #date-cell="{ data }">
+            <div style="min-height: 42px">
+              <div style="font-size: 12px">{{ data.day.slice(8) }}</div>
+              <div v-for="e in examsOn(data.day)" :key="e.ID">
+                <el-tag size="small" :type="examTag(e.status)" style="margin: 1px 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis">
+                  {{ e.name }}
+                </el-tag>
+              </div>
+            </div>
+          </template>
+        </el-calendar>
+        <el-alert type="info" :closable="false" title="按开考日期展示全部场次；点击格内考试名可在「场次」页签管理" style="margin-top: 8px" />
+      </el-tab-pane>
+
       <!-- 成绩 -->
       <el-tab-pane label="成绩" name="s">
         <el-form inline>
@@ -311,6 +328,9 @@
   const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
 
   const tab = ref('q')
+  const calDate = ref(new Date())
+  const dayKey = (t) => String(t).slice(0, 10)
+  const examsOn = (day) => exams.value.filter((e) => dayKey(e.startTime) === day)
 
   // 题库
   const questions = ref([])
