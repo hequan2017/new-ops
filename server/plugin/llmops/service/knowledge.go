@@ -196,6 +196,12 @@ type SkillCallIn struct {
 	Args  string `json:"args"`
 }
 
+// OptimizeIn Prompt 优化请求（items 1-10 条，ModelId=0 走能力调度）
+type OptimizeIn struct {
+	Items   []OptimizeItem `json:"items" binding:"required,min=1"`
+	ModelId uint           `json:"modelId"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

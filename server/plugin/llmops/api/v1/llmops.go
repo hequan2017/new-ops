@@ -2560,6 +2560,28 @@ func (a *LlmopsApi) RenderPrompt(c *gin.Context) {
 	response.OkWithDetailed(gin.H{"rendered": rendered, "vars": usedVars}, "渲染完成", c)
 }
 
+// OptimizePrompts Prompt 优化
+// @Tags Llmops
+// @Summary Prompt 在线/批量优化（≤10 条，逐条结果带原版对比，单条失败不中断）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.OptimizeIn true "优化请求"
+// @Success 200 {object} response.Response{data=[]service.OptimizeResult} "优化完成"
+// @Router /llmops/prompt/optimize [post]
+func (a *LlmopsApi) OptimizePrompts(c *gin.Context) {
+	var in service.OptimizeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	results, err := service.LlmopsService.OptimizePrompts(in.Items, in.ModelId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(results, "优化完成", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）
