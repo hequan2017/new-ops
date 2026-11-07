@@ -7,12 +7,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/llmops/model"
 )
+
+// debugNow 调试对话计时起点（独立小函数便于测试替换）
+func debugNow() time.Time { return time.Now() }
 
 // collectAgentTools 注册表快照（调试会话可用工具面）
 func collectAgentTools() map[string]AgentTool {
@@ -49,6 +53,7 @@ func (s *LlmopsServiceStruct) AgentDebugChat(sessionId uint, userMsg string) (st
 	var reply string
 	var plan *AgentPlan
 	var traces []ToolTrace
+	started := debugNow()
 	if ag.Mode == "qa" {
 		reply, plan, err = runAgentTurn(chatFn, "qa", ag.SysPrompt, historyMessages(history), userMsg, ag.MaxTurns)
 	} else {
@@ -65,6 +70,7 @@ func (s *LlmopsServiceStruct) AgentDebugChat(sessionId uint, userMsg string) (st
 		}
 		reply, traces, err = runToolLoop(loopFn, collectAgentTools(), userMsg, ag.MaxTurns)
 	}
+	s.recordAgentCall(ag.ID, sessionId, started, err)
 	if err != nil {
 		return "", nil, nil, err
 	}

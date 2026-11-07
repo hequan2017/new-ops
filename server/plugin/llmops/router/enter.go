@@ -137,6 +137,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ag.POST("eval", v1.Api.SaveAgentEval)
 		ag.POST("eval/run", v1.Api.RunAgentEval)
 		ag.GET("eval/results", v1.Api.GetAgentEvalResults)
+		ag.POST("rollback", v1.Api.RollbackAgent)
+		ag.GET("stats", v1.Api.GetAgentCallStats)
 		ag.DELETE("memory", v1.Api.DeleteAgentMemory)
 		ag.DELETE("", v1.Api.DeleteAgent)
 	}

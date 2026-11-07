@@ -207,7 +207,9 @@ func (s *LlmopsServiceStruct) AgentChat(sessionId uint, userMsg string) (string,
 		content, _, err := s.ChatCompletion(ctx, ag.ModelId, msgs, nil)
 		return content, err
 	}
+	started := time.Now()
 	reply, plan, err := runAgentTurn(fn, ag.Mode, ag.SysPrompt, historyMessages(history), userMsg, ag.MaxTurns)
+	s.recordAgentCall(ag.ID, sessionId, started, err)
 	if err != nil {
 		return "", nil, err
 	}

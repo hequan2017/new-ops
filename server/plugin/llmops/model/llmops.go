@@ -374,3 +374,15 @@ type LlmopsAgentEvalResult struct {
 }
 
 func (LlmopsAgentEvalResult) TableName() string { return "llmops_agent_eval_result" }
+
+// LlmopsAgentCallLog 智能体调用日志（E09 调用统计 / E10 运行监控数据源）
+type LlmopsAgentCallLog struct {
+	global.GVA_MODEL
+	AgentId   uint   `json:"agentId" gorm:"index;comment:智能体ID"`
+	SessionId uint   `json:"sessionId" gorm:"index;comment:会话ID"`
+	LatencyMs int64  `json:"latencyMs" gorm:"comment:耗时毫秒"`
+	Ok        bool   `json:"ok" gorm:"index;comment:是否成功"`
+	ErrMsg    string `json:"errMsg" gorm:"type:varchar(500);comment:错误"`
+}
+
+func (LlmopsAgentCallLog) TableName() string { return "llmops_agent_call_log" }

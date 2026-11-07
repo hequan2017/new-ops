@@ -155,6 +155,12 @@ type MultiRunIn struct {
 	Input   string `json:"input" binding:"required"`
 }
 
+// AgentRollbackIn 智能体回滚请求
+type AgentRollbackIn struct {
+	AgentId uint `json:"agentId" binding:"required"`
+	Version int  `json:"version" binding:"required"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge

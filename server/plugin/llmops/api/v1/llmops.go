@@ -2031,3 +2031,48 @@ func (a *LlmopsApi) GetAgentEvalResults(c *gin.Context) {
 	}
 	response.OkWithDetailed(list, "获取成功", c)
 }
+
+// RollbackAgent 回滚版本
+// @Tags Llmops
+// @Summary 智能体回滚到指定版本（快照回写）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.AgentRollbackIn true "回滚请求"
+// @Success 200 {object} response.Response{data=model.LlmopsAgent} "回滚成功"
+// @Router /llmops/agent/rollback [post]
+func (a *LlmopsApi) RollbackAgent(c *gin.Context) {
+	var in service.AgentRollbackIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	ag, err := service.LlmopsService.RollbackAgent(in.AgentId, in.Version)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(ag, "回滚成功", c)
+}
+
+// GetAgentCallStats 调用统计
+// @Tags Llmops
+// @Summary 智能体调用统计（次数/成功失败/平均与 P95 时延，近 N 小时）
+// @Security ApiKeyAuth
+// @Param agentId query int true "智能体ID"
+// @Param hours query int false "统计窗口小时数(默认 24)"
+// @Success 200 {object} response.Response{data=service.AgentCallStat} "获取成功"
+// @Router /llmops/agent/stats [get]
+func (a *LlmopsApi) GetAgentCallStats(c *gin.Context) {
+	agentId, err := strconv.ParseUint(c.Query("agentId"), 10, 64)
+	if err != nil || agentId == 0 {
+		response.FailWithMessage("agentId 不能为空", c)
+		return
+	}
+	hours, _ := strconv.Atoi(c.DefaultQuery("hours", "24"))
+	stat, err := service.LlmopsService.GetAgentCallStats(uint(agentId), hours)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(stat, "获取成功", c)
+}

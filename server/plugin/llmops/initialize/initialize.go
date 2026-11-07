@@ -48,6 +48,7 @@ func Gorm(ctx context.Context) {
 		new(model.LlmopsAgentMemory),
 		new(model.LlmopsAgentEval),
 		new(model.LlmopsAgentEvalResult),
+		new(model.LlmopsAgentCallLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "llmops 注册表失败!")
@@ -145,6 +146,8 @@ func Api(ctx context.Context) {
 		{Path: "/llmops/agent/eval", Description: "保存智能体评测", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/agent/eval/run", Description: "执行智能体评测", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/llmops/agent/eval/results", Description: "智能体评测明细", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/llmops/agent/rollback", Description: "智能体版本回滚", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/llmops/agent/stats", Description: "智能体调用统计", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/llmops/agent/memory", Description: "删除长期记忆", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/agent", Description: "删除智能体", ApiGroup: "大模型平台", Method: "DELETE"},
 		{Path: "/llmops/train", Description: "删除训练任务", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -325,6 +328,8 @@ func Casbin(ctx context.Context) {
 		{"/llmops/agent/eval", "POST"},
 		{"/llmops/agent/eval/run", "POST"},
 		{"/llmops/agent/eval/results", "GET"},
+		{"/llmops/agent/rollback", "POST"},
+		{"/llmops/agent/stats", "GET"},
 		{"/llmops/agent/memory", "DELETE"},
 		{"/llmops/agent", "DELETE"},
 		{"/llmops/train", "DELETE"},
