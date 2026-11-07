@@ -3022,3 +3022,26 @@ func (a *LlmopsApi) PurgeAsset(c *gin.Context) {
 	}
 	response.OkWithMessage("清除成功", c)
 }
+
+// DetectDocDuplicate 文档重复检测
+// @Tags Llmops
+// @Summary 知识库文档重复检测（simhash 海明距离 ≤3 判疑似重复）
+// @Security ApiKeyAuth
+// @Param kbId query int true "知识库ID"
+// @Param docId query int true "文档ID"
+// @Success 200 {object} response.Response{data=[]service.DupHit} "检测完成"
+// @Router /llmops/kb/duplicate [get]
+func (a *LlmopsApi) DetectDocDuplicate(c *gin.Context) {
+	kbId, err1 := strconv.ParseUint(c.Query("kbId"), 10, 64)
+	docId, err2 := strconv.ParseUint(c.Query("docId"), 10, 64)
+	if err1 != nil || err2 != nil || kbId == 0 || docId == 0 {
+		response.FailWithMessage("kbId/docId 不能为空", c)
+		return
+	}
+	hits, err := service.LlmopsService.DetectDocDuplicate(uint(kbId), uint(docId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(hits, "检测完成", c)
+}

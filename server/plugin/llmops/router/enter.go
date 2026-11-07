@@ -88,6 +88,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		kb.DELETE("graph/edge", middleware.OperationRecord(), v1.Api.DeleteGraphEdge)
 		kb.POST("summary/generate", middleware.OperationRecord(), v1.Api.GenerateDocSummary)
 		kb.GET("summary", v1.Api.GetDocSummary)
+		kb.GET("duplicate", v1.Api.DetectDocDuplicate)
 		kb.POST("summary/search", v1.Api.SearchSummaries)
 		kb.DELETE("doc", middleware.OperationRecord(), v1.Api.DeleteKnowledgeDoc)
 		kb.DELETE("", middleware.OperationRecord(), v1.Api.DeleteKnowledge)
