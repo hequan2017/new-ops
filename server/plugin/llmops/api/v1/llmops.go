@@ -2963,3 +2963,62 @@ func (a *LlmopsApi) DeleteSensitiveWord(c *gin.Context) {
 	}
 	response.OkWithMessage("删除成功", c)
 }
+
+// GetRecycleBin 回收站列表
+// @Tags Llmops
+// @Summary 数据资产回收站（软删除资产，倒序分页）
+// @Security ApiKeyAuth
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/asset/recycle [get]
+func (a *LlmopsApi) GetRecycleBin(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.LlmopsService.GetRecycleBin(page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// RestoreAsset 恢复资产
+// @Tags Llmops
+// @Summary 从回收站恢复资产
+// @Security ApiKeyAuth
+// @Param id query int true "资产ID"
+// @Success 200 {object} response.Response{msg=string} "恢复成功"
+// @Router /llmops/asset/restore [put]
+func (a *LlmopsApi) RestoreAsset(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.RestoreAsset(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("恢复成功", c)
+}
+
+// PurgeAsset 彻底清除
+// @Tags Llmops
+// @Summary 彻底清除回收站资产（硬删，事件流水保留）
+// @Security ApiKeyAuth
+// @Param id query int true "资产ID"
+// @Success 200 {object} response.Response{msg=string} "清除成功"
+// @Router /llmops/asset/purge [delete]
+func (a *LlmopsApi) PurgeAsset(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.LlmopsService.PurgeAsset(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("清除成功", c)
+}

@@ -130,3 +130,43 @@ func (s *LlmopsServiceStruct) DeleteAsset(id uint) error {
 	recordAssetEvent(global.GVA_DB, id, "delete", "软删除:"+asset.Name)
 	return nil
 }
+
+// GetRecycleBin 回收站列表（软删除资产，倒序分页）
+func (s *LlmopsServiceStruct) GetRecycleBin(page, pageSize int) ([]model.LlmopsDataAsset, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+	db := global.GVA_DB.Unscoped().Model(&model.LlmopsDataAsset{}).Where("deleted_at IS NOT NULL")
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var list []model.LlmopsDataAsset
+	err := db.Order("deleted_at desc").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
+	return list, total, err
+}
+
+// RestoreAsset 从回收站恢复（含标签/分类原样）
+func (s *LlmopsServiceStruct) RestoreAsset(id uint) error {
+	var asset model.LlmopsDataAsset
+	if err := global.GVA_DB.Unscoped().Where("id = ? AND deleted_at IS NOT NULL", id).First(&asset).Error; err != nil {
+		return fmt.Errorf("[%d]回收站中不存在该资产", ErrCodeAssetNotFound)
+	}
+	return global.GVA_DB.Unscoped().Model(&asset).Update("deleted_at", nil).Error
+}
+
+// PurgeAsset 彻底清除（回收站硬删；事件流水保留审计）
+func (s *LlmopsServiceStruct) PurgeAsset(id uint) error {
+	var asset model.LlmopsDataAsset
+	if err := global.GVA_DB.Unscoped().Where("id = ? AND deleted_at IS NOT NULL", id).First(&asset).Error; err != nil {
+		return fmt.Errorf("[%d]回收站中不存在该资产（仅已软删可清除）", ErrCodeAssetNotFound)
+	}
+	if err := global.GVA_DB.Unscoped().Delete(&asset).Error; err != nil {
+		return err
+	}
+	global.GVA_DB.Where("asset_id = ?", id).Delete(&model.LlmopsQaPair{})
+	return nil
+}

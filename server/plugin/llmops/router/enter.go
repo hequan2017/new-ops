@@ -31,6 +31,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		asset.POST("transcribe", middleware.OperationRecord(), v1.Api.TranscribeMedia)
 		asset.POST("categorize", middleware.OperationRecord(), v1.Api.CategorizeAsset)
 		asset.GET("events", v1.Api.GetAssetEvents)
+		asset.GET("recycle", v1.Api.GetRecycleBin)
+		asset.PUT("restore", middleware.OperationRecord(), v1.Api.RestoreAsset)
+		asset.DELETE("purge", middleware.OperationRecord(), v1.Api.PurgeAsset)
 		asset.DELETE("", middleware.OperationRecord(), v1.Api.DeleteAsset)
 	}
 	cat := Router.Group("llmops/category")
