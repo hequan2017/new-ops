@@ -31,6 +31,7 @@ func Gorm(ctx context.Context) {
 		new(model.ExamLevelRule),
 		new(model.ExamNode),
 		new(model.ExamShard),
+		new(model.ExamBehavior),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "exam 注册表失败!")
@@ -65,6 +66,9 @@ func Api(ctx context.Context) {
 		{Path: "/exam/node/heartbeat", Description: "考试节点心跳", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/node/list", Description: "考试节点列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/exam/node/assign", Description: "领卷分片分配", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/anticheat/report", Description: "考试行为上报", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/anticheat/stats", Description: "考试行为统计", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/exam/anticheat/check", Description: "答案相似度抽查", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate/import", Description: "考生名单导入", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate/claim", Description: "考生领券", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate", Description: "删除考生", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -128,6 +132,9 @@ func Casbin(ctx context.Context) {
 		{"/exam/node/heartbeat", "POST"},
 		{"/exam/node/list", "GET"},
 		{"/exam/node/assign", "POST"},
+		{"/exam/anticheat/report", "POST"},
+		{"/exam/anticheat/stats", "GET"},
+		{"/exam/anticheat/check", "POST"},
 		{"/exam/candidate/import", "POST"},
 		{"/exam/candidate/claim", "POST"},
 		{"/exam/candidate", "DELETE"},

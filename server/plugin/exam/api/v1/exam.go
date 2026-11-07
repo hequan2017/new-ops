@@ -639,3 +639,66 @@ func (a *ExamApi) AssignShard(c *gin.Context) {
 	}
 	response.OkWithDetailed(shard, "分配成功", c)
 }
+
+// ReportBehavior 行为上报
+// @Tags Exam
+// @Summary 考试行为上报（切屏/粘贴/复制/退出全屏，白名单）
+// @Accept application/json
+// @Param data body service.BehaviorIn true "行为上报"
+// @Success 200 {object} response.Response{msg=string} "上报成功"
+// @Router /exam/anticheat/report [post]
+func (a *ExamApi) ReportBehavior(c *gin.Context) {
+	var in service.BehaviorIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if err := service.ExamApp.ReportBehavior(in.SheetId, in.Event, in.Detail); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("上报成功", c)
+}
+
+// GetBehaviorStats 行为统计
+// @Tags Exam
+// @Summary 行为事件计数（按答卷聚合）
+// @Security ApiKeyAuth
+// @Param sheetId query int true "答卷ID"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /exam/anticheat/stats [get]
+func (a *ExamApi) GetBehaviorStats(c *gin.Context) {
+	sheetId, err := strconv.ParseUint(c.Query("sheetId"), 10, 64)
+	if err != nil || sheetId == 0 {
+		response.FailWithMessage("sheetId 不能为空", c)
+		return
+	}
+	stats, err := service.ExamApp.GetBehaviorStats(uint(sheetId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(stats, "获取成功", c)
+}
+
+// CheckSimilarity 相似度抽查
+// @Tags Exam
+// @Summary 主观题答案相似度抽查（同考次已交卷两两比对，可疑对 top N）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.SimCheckIn true "抽查请求"
+// @Success 200 {object} response.Response{data=[]service.SuspiciousPair} "抽查完成"
+// @Router /exam/anticheat/check [post]
+func (a *ExamApi) CheckSimilarity(c *gin.Context) {
+	var in service.SimCheckIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	pairs, err := service.ExamApp.CheckSimilarity(in.ExamId, in.SampleSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(pairs, "抽查完成", c)
+}
