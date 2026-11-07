@@ -179,6 +179,9 @@ type mcpToolAdapter struct {
 func (a *mcpToolAdapter) Name() string        { return "mcp:" + a.tool.Name }
 func (a *mcpToolAdapter) Description() string { return a.tool.Desc }
 
+// EndpointURL 暴露目标地址（F06 沙箱 URL 白名单受检面）
+func (a *mcpToolAdapter) EndpointURL() string { return a.tool.Endpoint }
+
 // Execute 调用代理：参数校验 → HTTP 调用 → 截断返回
 func (a *mcpToolAdapter) Execute(_ context.Context, argsJSON string) (string, error) {
 	schema, _ := ParseArgsSchema(a.tool.ArgsSchema)
