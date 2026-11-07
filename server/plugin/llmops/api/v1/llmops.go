@@ -3045,3 +3045,24 @@ func (a *LlmopsApi) DetectDocDuplicate(c *gin.Context) {
 	}
 	response.OkWithDetailed(hits, "检测完成", c)
 }
+
+// GetTrainEstimate 训练估算
+// @Tags Llmops
+// @Summary 训练任务费用/时长估算（按数据集实际内容统计，经验模型）
+// @Security ApiKeyAuth
+// @Param id query int true "任务ID"
+// @Success 200 {object} response.Response{data=service.TrainEstimate} "估算完成"
+// @Router /llmops/train/estimate [get]
+func (a *LlmopsApi) GetTrainEstimate(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	est, err := service.LlmopsService.GetTrainEstimate(uint(id))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(est, "估算完成", c)
+}
