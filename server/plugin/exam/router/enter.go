@@ -73,3 +73,13 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		q.DELETE("", v1.Api.DeleteQuestion)
 	}
 }
+
+// InitTerminal 终端公开路由（机器码白名单鉴权，服务层校验）
+func (rg *RouterGroup) InitTerminal(Public *gin.RouterGroup) {
+	t := Public.Group("exam/terminal")
+	{
+		t.POST("register", v1.Api.TerminalRegister)
+		t.POST("heartbeat", v1.Api.TerminalHeartbeat)
+		t.GET("exams", v1.Api.TerminalExams)
+	}
+}

@@ -44,6 +44,9 @@ func Router(engine *gin.Engine) {
 	private := engine.Group(global.GVA_CONFIG.System.RouterPrefix).Group("")
 	private.Use(middleware.JWTAuth()).Use(middleware.CasbinHandler())
 	router.RouterGroupApp.Init(private)
+	// 终端公开面（机器码白名单鉴权，不走 JWT——采购件④ 独立接入）
+	public := engine.Group(global.GVA_CONFIG.System.RouterPrefix).Group("")
+	router.RouterGroupApp.InitTerminal(public)
 }
 
 // Api 注册 exam API 记录
@@ -69,6 +72,9 @@ func Api(ctx context.Context) {
 		{Path: "/exam/anticheat/report", Description: "考试行为上报", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/anticheat/stats", Description: "考试行为统计", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/exam/anticheat/check", Description: "答案相似度抽查", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/terminal/register", Description: "考试终端注册", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/terminal/heartbeat", Description: "考试终端心跳", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/terminal/exams", Description: "终端可考列表", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/exam/candidate/import", Description: "考生名单导入", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate/claim", Description: "考生领券", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate", Description: "删除考生", ApiGroup: "大模型平台", Method: "DELETE"},

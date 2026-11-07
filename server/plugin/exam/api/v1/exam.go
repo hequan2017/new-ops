@@ -702,3 +702,68 @@ func (a *ExamApi) CheckSimilarity(c *gin.Context) {
 	}
 	response.OkWithDetailed(pairs, "抽查完成", c)
 }
+
+// TerminalRegister 终端注册
+// @Tags ExamTerminal
+// @Summary 考试终端注册（机器码 upsert，返回节点信息）
+// @Accept application/json
+// @Param data body service.NodeIn true "终端注册"
+// @Success 200 {object} response.Response{data=model.ExamNode} "注册成功"
+// @Router /exam/terminal/register [post]
+func (a *ExamApi) TerminalRegister(c *gin.Context) {
+	var in service.NodeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	node, err := service.ExamApp.RegisterNode(in.NodeKey, in.Name, in.Region)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(node, "注册成功", c)
+}
+
+// TerminalHeartbeat 终端心跳
+// @Tags ExamTerminal
+// @Summary 终端心跳（机器码白名单）
+// @Accept application/json
+// @Param data body service.NodeHeartbeatIn true "心跳"
+// @Success 200 {object} response.Response{data=model.ExamNode} "心跳成功"
+// @Router /exam/terminal/heartbeat [post]
+func (a *ExamApi) TerminalHeartbeat(c *gin.Context) {
+	var in service.NodeHeartbeatIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if _, err := service.ExamApp.VerifyTerminalKey(in.NodeKey); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	node, err := service.ExamApp.NodeHeartbeat(in.NodeKey, in.Load)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(node, "心跳成功", c)
+}
+
+// TerminalExams 可考列表
+// @Tags ExamTerminal
+// @Summary 终端可考列表（机器码白名单；ongoing+时间窗）
+// @Param X-Terminal-Key header string true "终端机器码"
+// @Success 200 {object} response.Response{data=[]service.TerminalExam} "获取成功"
+// @Router /exam/terminal/exams [get]
+func (a *ExamApi) TerminalExams(c *gin.Context) {
+	if _, err := service.ExamApp.VerifyTerminalKey(c.GetHeader("X-Terminal-Key")); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	list, err := service.ExamApp.ListTerminalExams()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
