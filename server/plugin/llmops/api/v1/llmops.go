@@ -2159,6 +2159,28 @@ func (a *LlmopsApi) DeleteSkill(c *gin.Context) {
 	response.OkWithMessage("删除成功", c)
 }
 
+// GenerateSkill 零代码创建技能
+// @Tags Llmops
+// @Summary 自然语言零代码创建技能（LLM 生成定义，校验后 custom 入库）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.SkillGenIn true "生成请求"
+// @Success 200 {object} response.Response{data=model.LlmopsSkill} "生成成功"
+// @Router /llmops/skill/generate [post]
+func (a *LlmopsApi) GenerateSkill(c *gin.Context) {
+	var in service.SkillGenIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sk, err := service.LlmopsService.CreateSkillFromDescription(in.Desc)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sk, "生成成功", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）

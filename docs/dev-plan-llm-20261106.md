@@ -96,7 +96,7 @@
 ## 阶段 F · 技能生态与开放集成（要求(6)；11-08 下午）
 
 - [x] F01 | llmops: Skill model `LlmopsSkill`（name/type[builtin,extended,custom]/defJSON/status）+ CRUD + 内置技能种子 5 个（文本摘要/翻译/SQL 生成/关键词提取/表格问答）
-- [ ] F02 | llmops: 零代码创建技能——自然语言描述→chat 生成技能定义 JSON→校验→入库 + 假模型单测
+- [x] F02 | llmops: 零代码创建技能——自然语言描述→chat 生成技能定义 JSON→校验→入库 + 假模型单测
 - [ ] F03 | llmops: 技能包导入导出——JSON 导出/一键安装（校验+冲突提示）
 - [ ] F04 | llmops: MCP 工具封装——业务系统 API 注册（baseUrl/method/参数模板/鉴权头密文）→ 工具描述生成 + 调用代理（对齐 server/mcp 现状口径）+ httptest 单测
 - [ ] F05 | llmops: 连接器——ERP/CRM/OA/SCM 连接器配置（类型模板+字段映射 JSON）+ 连通测试 API

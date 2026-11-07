@@ -161,6 +161,11 @@ type AgentRollbackIn struct {
 	Version int  `json:"version" binding:"required"`
 }
 
+// SkillGenIn 零代码技能生成请求
+type SkillGenIn struct {
+	Desc string `json:"desc" binding:"required"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge
