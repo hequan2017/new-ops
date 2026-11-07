@@ -85,6 +85,9 @@ func (s *OplibService) SaveOperator(in *model.OplibOperator) (*model.OplibOperat
 	if err := ValidateSchema(in.OutputSchema); err != nil {
 		return nil, err
 	}
+	if err := saveScriptFields(in); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(in.Version) == "" {
 		in.Version = "v1"
 	}
@@ -105,6 +108,7 @@ func (s *OplibService) SaveOperator(in *model.OplibOperator) (*model.OplibOperat
 		err := global.GVA_DB.Model(&op).Updates(map[string]any{
 			"name": in.Name, "category": in.Category, "impl_type": in.ImplType,
 			"input_schema": in.InputSchema, "output_schema": in.OutputSchema,
+			"script_lang": in.ScriptLang, "script_code": in.ScriptCode,
 			"version": in.Version, "desc": in.Desc,
 		}).Error
 		if err != nil {

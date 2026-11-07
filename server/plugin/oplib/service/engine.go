@@ -112,8 +112,10 @@ func (s *OplibService) ExecuteOperator(operatorId uint, argsJSON string) (*model
 	switch op.ImplType {
 	case "builtin":
 		result, execErr = runBuiltin(op.Name, argsJSON)
+	case "script":
+		result, execErr = RunScriptOperator(&op, argsJSON)
 	default:
-		execErr = fmt.Errorf("[%d]script 执行器待 H05 接入", ErrCodeOpExec)
+		execErr = fmt.Errorf("[%d]未知实现类型: %s", ErrCodeOpExec, op.ImplType)
 	}
 	log.LatencyMs = time.Since(started).Milliseconds()
 	log.Ok = execErr == nil
