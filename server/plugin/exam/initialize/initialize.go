@@ -27,6 +27,8 @@ func Gorm(ctx context.Context) {
 		new(model.ExamCandidate),
 		new(model.ExamAnswerSheet),
 		new(model.ExamGrade),
+		new(model.ExamScore),
+		new(model.ExamLevelRule),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "exam 注册表失败!")
@@ -54,6 +56,9 @@ func Api(ctx context.Context) {
 		{Path: "/exam/answer/submit", Description: "答卷交卷", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/grade/run", Description: "整卷判分", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/grade/list", Description: "判分明细", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/exam/score/publish", Description: "成绩发布", ApiGroup: "大模型平台", Method: "POST"},
+		{Path: "/exam/score/list", Description: "成绩列表", ApiGroup: "大模型平台", Method: "GET"},
+		{Path: "/exam/score/export", Description: "成绩导出", ApiGroup: "大模型平台", Method: "GET"},
 		{Path: "/exam/candidate/import", Description: "考生名单导入", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate/claim", Description: "考生领券", ApiGroup: "大模型平台", Method: "POST"},
 		{Path: "/exam/candidate", Description: "删除考生", ApiGroup: "大模型平台", Method: "DELETE"},
@@ -110,6 +115,9 @@ func Casbin(ctx context.Context) {
 		{"/exam/answer/submit", "POST"},
 		{"/exam/grade/run", "POST"},
 		{"/exam/grade/list", "GET"},
+		{"/exam/score/publish", "POST"},
+		{"/exam/score/list", "GET"},
+		{"/exam/score/export", "GET"},
 		{"/exam/candidate/import", "POST"},
 		{"/exam/candidate/claim", "POST"},
 		{"/exam/candidate", "DELETE"},

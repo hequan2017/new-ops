@@ -497,3 +497,67 @@ func (a *ExamApi) GetGrades(c *gin.Context) {
 	}
 	response.OkWithDetailed(list, "获取成功", c)
 }
+
+// PublishScores 发布成绩
+// @Tags Exam
+// @Summary 发布成绩（逐卷判分 + 等级判定 + 幂等落档）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.PublishIn true "发布请求"
+// @Success 200 {object} response.Response{data=map[string]any} "发布完成"
+// @Router /exam/score/publish [post]
+func (a *ExamApi) PublishScores(c *gin.Context) {
+	var in service.PublishIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	published, err := service.ExamApp.PublishScores(in.ExamId, in.JudgeModelId, in.MultiPartial)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"published": published}, "发布完成", c)
+}
+
+// GetScores 成绩列表
+// @Tags Exam
+// @Summary 成绩单列表（总分降序，分页）
+// @Security ApiKeyAuth
+// @Param examId query int false "考试ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /exam/score/list [get]
+func (a *ExamApi) GetScores(c *gin.Context) {
+	examId, _ := strconv.ParseUint(c.Query("examId"), 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ExamApp.GetScores(uint(examId), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// ExportScores 成绩 CSV
+// @Tags Exam
+// @Summary 成绩 CSV 导出（总分降序）
+// @Security ApiKeyAuth
+// @Param examId query int true "考试ID"
+// @Success 200 {object} response.Response{data=string} "导出成功"
+// @Router /exam/score/export [get]
+func (a *ExamApi) ExportScores(c *gin.Context) {
+	examId, err := strconv.ParseUint(c.Query("examId"), 10, 64)
+	if err != nil || examId == 0 {
+		response.FailWithMessage("examId 不能为空", c)
+		return
+	}
+	csvText, err := service.ExamApp.ExportScores(uint(examId))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(csvText, "导出成功", c)
+}
