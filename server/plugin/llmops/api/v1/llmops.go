@@ -2076,3 +2076,53 @@ func (a *LlmopsApi) GetAgentCallStats(c *gin.Context) {
 	}
 	response.OkWithDetailed(stat, "获取成功", c)
 }
+
+// GetAgentMonitor 监控聚合
+// @Tags Llmops
+// @Summary 智能体运行监控（统计+时延四桶分布+异常会话数）
+// @Security ApiKeyAuth
+// @Param agentId query int true "智能体ID"
+// @Param hours query int false "窗口小时数(默认 24)"
+// @Success 200 {object} response.Response{data=service.AgentMonitorView} "获取成功"
+// @Router /llmops/agent/monitor [get]
+func (a *LlmopsApi) GetAgentMonitor(c *gin.Context) {
+	agentId, err := strconv.ParseUint(c.Query("agentId"), 10, 64)
+	if err != nil || agentId == 0 {
+		response.FailWithMessage("agentId 不能为空", c)
+		return
+	}
+	hours, _ := strconv.Atoi(c.DefaultQuery("hours", "24"))
+	view, err := service.LlmopsService.GetAgentMonitor(uint(agentId), hours)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(view, "获取成功", c)
+}
+
+// GetAgentAbnormalSessions 异常会话列表
+// @Tags Llmops
+// @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）
+// @Security ApiKeyAuth
+// @Param agentId query int true "智能体ID"
+// @Param hours query int false "窗口小时数(默认 24)"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /llmops/agent/abnormalSessions [get]
+func (a *LlmopsApi) GetAgentAbnormalSessions(c *gin.Context) {
+	agentId, err := strconv.ParseUint(c.Query("agentId"), 10, 64)
+	if err != nil || agentId == 0 {
+		response.FailWithMessage("agentId 不能为空", c)
+		return
+	}
+	hours, _ := strconv.Atoi(c.DefaultQuery("hours", "24"))
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.LlmopsService.GetAgentAbnormalSessions(uint(agentId), hours, page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}

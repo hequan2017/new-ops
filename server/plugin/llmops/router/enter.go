@@ -139,6 +139,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ag.GET("eval/results", v1.Api.GetAgentEvalResults)
 		ag.POST("rollback", v1.Api.RollbackAgent)
 		ag.GET("stats", v1.Api.GetAgentCallStats)
+		ag.GET("monitor", v1.Api.GetAgentMonitor)
+		ag.GET("abnormalSessions", v1.Api.GetAgentAbnormalSessions)
 		ag.DELETE("memory", v1.Api.DeleteAgentMemory)
 		ag.DELETE("", v1.Api.DeleteAgent)
 	}
