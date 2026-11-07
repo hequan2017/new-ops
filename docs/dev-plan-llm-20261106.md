@@ -116,7 +116,7 @@
 - [x] H01 | oplib: 插件骨架 + 算子 model `OplibOperator`（name/category[数据处理,特征,检索,后处理,评估]/inputSchema/outputSchema/implType[builtin,script]/version/desc）+ CRUD + 种子（核实 A01 已登记错误码段）
 - [x] H02 | oplib: 内置算子集 8 个——文本清洗/分句/去重/关键词抽取（bigram 频次）/字数统计/JSON↔CSV 转换/正则提取/大小写归一，纯 Go + 单测
 - [x] H03 | oplib: 算子执行引擎——参数校验（简化 schema：type/required/enum）+ 执行 + 留痕 `OplibRunLog` + 单测
-- [ ] H04 | oplib: 算子编排——DAG 管道 `OplibPipeline`（节点+边 JSON，拓扑排序校验环）+ 顺序执行引擎 + 单测
+- [x] H04 | oplib: 算子编排——DAG 管道 `OplibPipeline`（节点+边 JSON，拓扑排序校验环）+ 顺序执行引擎 + 单测
 - [ ] H05 | oplib: 脚本算子——受限执行（解释器白名单/超时/临时目录清理）+ 测试运行 API + 单测
 - [ ] H06 | oplib: web 算子库页——算子列表/执行测试台/管道编排 + 菜单种子；web build 绿
 

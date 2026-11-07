@@ -117,3 +117,82 @@ func (a *oplibApi) GetRunLogs(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// GetPipelines 管道列表
+// @Tags Oplib
+// @Summary 算子管道列表
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=[]model.OplibPipeline} "获取成功"
+// @Router /oplib/pipeline/list [get]
+func (a *oplibApi) GetPipelines(c *gin.Context) {
+	list, err := service.OplibApp.GetPipelines()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SavePipeline 保存管道
+// @Tags Oplib
+// @Summary 新建/更新算子管道（定义拓扑校验即检）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body model.OplibPipeline true "管道"
+// @Success 200 {object} response.Response{data=model.OplibPipeline} "保存成功"
+// @Router /oplib/pipeline [post]
+func (a *oplibApi) SavePipeline(c *gin.Context) {
+	var in model.OplibPipeline
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	p, err := service.OplibApp.SavePipeline(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(p, "保存成功", c)
+}
+
+// RunPipeline 执行管道
+// @Tags Oplib
+// @Summary 执行算子管道（拓扑序执行，整体留痕）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.PipeRunIn true "执行请求"
+// @Success 200 {object} response.Response{data=service.PipeResult} "执行完成"
+// @Router /oplib/pipeline/run [post]
+func (a *oplibApi) RunPipeline(c *gin.Context) {
+	var in service.PipeRunIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	res, err := service.OplibApp.RunPipeline(in.ID, in.Input)
+	if err != nil && res == nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(res, "执行完成", c)
+}
+
+// DeletePipeline 删除管道
+// @Tags Oplib
+// @Summary 删除算子管道（软删除）
+// @Security ApiKeyAuth
+// @Param id query int true "管道ID"
+// @Success 200 {object} response.Response{msg=string} "删除成功"
+// @Router /oplib/pipeline [delete]
+func (a *oplibApi) DeletePipeline(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.OplibApp.DeletePipeline(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}

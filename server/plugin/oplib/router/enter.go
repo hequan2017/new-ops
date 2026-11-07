@@ -13,6 +13,13 @@ var RouterGroupApp = new(RouterGroup)
 
 // Init 注册 oplib 路由（private 组，JWT+casbin 由 initialize.Router 显式挂载）
 func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
+	pl := Router.Group("oplib/pipeline")
+	{
+		pl.GET("list", v1.Api.GetPipelines)
+		pl.POST("", v1.Api.SavePipeline)
+		pl.POST("run", v1.Api.RunPipeline)
+		pl.DELETE("", v1.Api.DeletePipeline)
+	}
 	op := Router.Group("oplib/operator")
 	{
 		op.GET("list", v1.Api.GetOperators)
