@@ -149,6 +149,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		sk.GET("list", v1.Api.GetSkills)
 		sk.POST("", v1.Api.SaveSkill)
 		sk.POST("generate", v1.Api.GenerateSkill)
+		sk.POST("export", v1.Api.ExportSkillPackage)
+		sk.POST("import", v1.Api.ImportSkillPackage)
 		sk.DELETE("", v1.Api.DeleteSkill)
 	}
 }

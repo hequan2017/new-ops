@@ -2181,6 +2181,50 @@ func (a *LlmopsApi) GenerateSkill(c *gin.Context) {
 	response.OkWithDetailed(sk, "生成成功", c)
 }
 
+// ExportSkillPackage 技能包导出
+// @Tags Llmops
+// @Summary 按 ID 列表导出技能包 JSON
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.SkillExportIn true "导出请求"
+// @Success 200 {object} response.Response{data=string} "导出成功"
+// @Router /llmops/skill/export [post]
+func (a *LlmopsApi) ExportSkillPackage(c *gin.Context) {
+	var in service.SkillExportIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	pkg, err := service.LlmopsService.ExportSkillPackage(in.Ids)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(pkg, "导出成功", c)
+}
+
+// ImportSkillPackage 技能包导入
+// @Tags Llmops
+// @Summary 一键安装技能包（默认冲突跳过并报告，overwrite 覆盖）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Param data body service.SkillImportIn true "导入请求"
+// @Success 200 {object} response.Response{data=map[string]any} "导入完成"
+// @Router /llmops/skill/import [post]
+func (a *LlmopsApi) ImportSkillPackage(c *gin.Context) {
+	var in service.SkillImportIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	imported, conflicts, err := service.LlmopsService.ImportSkillPackage(in.Raw, in.Overwrite)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"imported": imported, "conflicts": conflicts}, "导入完成", c)
+}
+
 // GetAgentAbnormalSessions 异常会话列表
 // @Tags Llmops
 // @Summary 异常会话列表（窗口内存在失败调用的会话，按失败次数降序）

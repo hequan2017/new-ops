@@ -166,6 +166,17 @@ type SkillGenIn struct {
 	Desc string `json:"desc" binding:"required"`
 }
 
+// SkillExportIn 技能包导出请求
+type SkillExportIn struct {
+	Ids []uint `json:"ids" binding:"required,min=1"`
+}
+
+// SkillImportIn 技能包导入请求
+type SkillImportIn struct {
+	Raw       string `json:"raw" binding:"required"`
+	Overwrite bool   `json:"overwrite"`
+}
+
 // GetKnowledges 知识库列表
 func (s *LlmopsServiceStruct) GetKnowledges() ([]model.LlmopsKnowledge, error) {
 	var list []model.LlmopsKnowledge
