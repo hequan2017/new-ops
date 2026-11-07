@@ -115,6 +115,14 @@ func Menu(ctx context.Context) {
 			Sort:      9,
 			Meta:      sysModel.Meta{Title: "考试管理", Icon: "notebook-2"},
 		},
+		{
+			Path:      "examTerminal",
+			Name:      "examTerminal",
+			Hidden:    true,
+			Component: "plugin/exam/view/terminal/index.vue",
+			Sort:      10,
+			Meta:      sysModel.Meta{Title: "考试终端", Icon: "monitor"},
+		},
 	}
 	pluginUtils.RegisterMenus(entities...)
 }

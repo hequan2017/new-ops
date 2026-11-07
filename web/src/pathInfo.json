@@ -90,6 +90,7 @@
   "/src/plugin/dbops/view/order/index.vue": "dbopsOrder",
   "/src/plugin/email/view/index.vue": "Email",
   "/src/plugin/exam/view/admin/index.vue": "Index",
+  "/src/plugin/exam/view/terminal/index.vue": "Index",
   "/src/plugin/gpu/view/instance/index.vue": "gpuInstance",
   "/src/plugin/job/view/batchExec/index.vue": "jobBatchExec",
   "/src/plugin/job/view/script/index.vue": "jobScript",
