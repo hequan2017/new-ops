@@ -767,3 +767,66 @@ func (a *ExamApi) TerminalExams(c *gin.Context) {
 	}
 	response.OkWithDetailed(list, "获取成功", c)
 }
+
+// TerminalResume 断线续考
+// @Tags ExamTerminal
+// @Summary 断线续考（券码幂等恢复题目+已存答案+剩余秒数）
+// @Accept application/json
+// @Param data body service.ResumeIn true "续考请求"
+// @Success 200 {object} response.Response{data=map[string]any} "恢复成功"
+// @Router /exam/terminal/resume [post]
+func (a *ExamApi) TerminalResume(c *gin.Context) {
+	var in service.ResumeIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	qs, sheet, answers, remainSec, err := service.ExamApp.ResumeSession(in.Ticket, in.UserKey)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"questions": qs, "sheet": sheet, "answers": answers, "remainSec": remainSec}, "恢复成功", c)
+}
+
+// TerminalSaveAnswers 终端保存答案
+// @Tags ExamTerminal
+// @Summary 终端面保存答案（复用乐观锁幂等链）
+// @Accept application/json
+// @Param data body service.SaveAnswersIn true "保存请求"
+// @Success 200 {object} response.Response{data=model.ExamAnswerSheet} "保存成功"
+// @Router /exam/terminal/save [post]
+func (a *ExamApi) TerminalSaveAnswers(c *gin.Context) {
+	var in service.SaveAnswersIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sheet, err := service.ExamApp.SaveAnswers(in.SheetId, in.Answers, in.Version)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sheet, "保存成功", c)
+}
+
+// TerminalSubmit 终端交卷
+// @Tags ExamTerminal
+// @Summary 终端面交卷（复用行锁防重链）
+// @Accept application/json
+// @Param data body service.SubmitIn true "交卷请求"
+// @Success 200 {object} response.Response{data=model.ExamAnswerSheet} "交卷成功"
+// @Router /exam/terminal/submit [post]
+func (a *ExamApi) TerminalSubmit(c *gin.Context) {
+	var in service.SubmitIn
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	sheet, err := service.ExamApp.SubmitSheet(in.SheetId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(sheet, "交卷成功", c)
+}
