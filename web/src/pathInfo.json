@@ -108,6 +108,7 @@
   "/src/plugin/llmops/view/train/index.vue": "Index",
   "/src/plugin/monitor/components/PerfChart.vue": "PerfChart",
   "/src/plugin/monitor/view/alert/index.vue": "monitorAlert",
+  "/src/plugin/oplib/view/operator/index.vue": "Index",
   "/src/plugin/pipeline/view/pipeline/index.vue": "pipelineList",
   "/src/plugin/term/components/LogTail.vue": "LogTail",
   "/src/plugin/term/components/XtermShell.vue": "XtermShell",
