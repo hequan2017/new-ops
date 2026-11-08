@@ -33,4 +33,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		para.POST("", middleware.OperationRecord(), v1.Api.SaveParallel)
 		para.DELETE("", middleware.OperationRecord(), v1.Api.DeleteParallel)
 	}
+	clean := Router.Group("fanhua/clean")
+	{
+		clean.POST("dry", v1.Api.CleanDry)
+		clean.POST("", middleware.OperationRecord(), v1.Api.CleanCorpora)
+	}
 }

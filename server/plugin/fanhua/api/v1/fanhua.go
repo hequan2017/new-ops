@@ -211,3 +211,57 @@ func (a *FanhuaApi) SearchParallel(c *gin.Context) {
 	}
 	response.OkWithDetailed(hits, "检索成功", c)
 }
+
+// cleanDryReq 清洗试运行请求
+type cleanDryReq struct {
+	Text   string `json:"text" binding:"required"`
+	Dedupe bool   `json:"dedupe"`
+}
+
+// cleanIdsReq 语料清洗请求
+type cleanIdsReq struct {
+	IDs    []uint `json:"ids" binding:"required"`
+	Dedupe bool   `json:"dedupe"`
+}
+
+// CleanDry 清洗试运行
+// @Tags Fanhua
+// @Summary 单文本清洗试运行（零宽/脱敏/乱码/重复行，不落库）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.cleanDryReq true "清洗请求"
+// @Success 200 {object} response.Response{data=service.CleanReport} "清洗成功"
+// @Router /fanhua/clean/dry [post]
+func (a *FanhuaApi) CleanDry(c *gin.Context) {
+	var in cleanDryReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	text, stats := service.CleanText(in.Text, in.Dedupe)
+	response.OkWithDetailed(service.CleanReport{Text: text, Stats: stats}, "清洗成功", c)
+}
+
+// CleanCorpora 语料批量清洗
+// @Tags Fanhua
+// @Summary 语料库批量清洗（按 ID 清洗正文并回写，逐条报告）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.cleanIdsReq true "清洗请求"
+// @Success 200 {object} response.Response{data=[]service.CleanReport} "清洗完成"
+// @Router /fanhua/clean [post]
+func (a *FanhuaApi) CleanCorpora(c *gin.Context) {
+	var in cleanIdsReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	reports, err := service.FanhuaApp.CleanCorpora(in.IDs, in.Dedupe)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(reports, "清洗完成", c)
+}
