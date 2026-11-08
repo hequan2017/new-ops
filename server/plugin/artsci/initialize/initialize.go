@@ -23,6 +23,7 @@ func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.ArtsciTool),
 		new(model.ArtsciRunLog),
+		new(model.ArtsciGrading),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "artsci 注册表失败!")
@@ -46,6 +47,8 @@ func Api(ctx context.Context) {
 		{Path: "/artsci/tool/run", Description: "执行学科工具", ApiGroup: "学科工具集", Method: "POST"},
 		{Path: "/artsci/tool/runLogs", Description: "工具执行留痕", ApiGroup: "学科工具集", Method: "GET"},
 		{Path: "/artsci/tool", Description: "删除学科工具", ApiGroup: "学科工具集", Method: "DELETE"},
+		{Path: "/artsci/grading", Description: "提交作业批改", ApiGroup: "学科工具集", Method: "POST"},
+		{Path: "/artsci/grading/list", Description: "批改记录列表", ApiGroup: "学科工具集", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -78,6 +81,8 @@ func Casbin(ctx context.Context) {
 		{"/artsci/tool/run", "POST"},
 		{"/artsci/tool/runLogs", "GET"},
 		{"/artsci/tool", "DELETE"},
+		{"/artsci/grading", "POST"},
+		{"/artsci/grading/list", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

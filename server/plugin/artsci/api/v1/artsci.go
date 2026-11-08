@@ -148,3 +148,46 @@ func (a *ArtsciApi) GetRunLogs(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// GradeEssay 智能作业批改
+// @Tags Artsci
+// @Summary 提交作业批改（llm 结构化评分/规则口径 fallback，成败均落记录）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.ArtsciGrading true "批改请求"
+// @Success 200 {object} response.Response{data=model.ArtsciGrading} "批改完成"
+// @Router /artsci/grading [post]
+func (a *ArtsciApi) GradeEssay(c *gin.Context) {
+	var in model.ArtsciGrading
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	rec, err := service.ArtsciApp.GradeEssay(&in)
+	if err != nil {
+		response.OkWithDetailed(rec, "批改失败（已留痕）: "+err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(rec, "批改完成", c)
+}
+
+// GetGradings 批改记录列表
+// @Tags Artsci
+// @Summary 作业批改记录列表（倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /artsci/grading/list [get]
+func (a *ArtsciApi) GetGradings(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ArtsciApp.GetGradings(page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}

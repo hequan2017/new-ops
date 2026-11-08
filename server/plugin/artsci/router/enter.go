@@ -27,4 +27,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		tool.GET("runLogs", v1.Api.GetRunLogs)
 		tool.DELETE("", middleware.OperationRecord(), v1.Api.DeleteTool)
 	}
+	grading := Router.Group("artsci/grading")
+	{
+		grading.POST("", middleware.OperationRecord(), v1.Api.GradeEssay)
+		grading.GET("list", v1.Api.GetGradings)
+	}
 }
