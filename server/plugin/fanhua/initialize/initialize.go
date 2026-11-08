@@ -28,6 +28,7 @@ func Gorm(ctx context.Context) {
 		new(model.FanhuaTextLabel),
 		new(model.FanhuaImageAsset),
 		new(model.FanhuaImageLabel),
+		new(model.FanhuaVoiceEntry),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "fanhua 注册表失败!")
@@ -70,6 +71,10 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/imageAsset", Description: "登记图片资产", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/imageAsset/label", Description: "图片标注", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/imageLabel/list", Description: "图片标签列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/voice/list", Description: "语音条目列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/voice/search", Description: "海派文化组合检索", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/voice", Description: "保存语音条目", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/voice", Description: "删除语音条目", ApiGroup: "繁花文科大模型", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -121,6 +126,10 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/imageAsset", "POST"},
 		{"/fanhua/imageAsset/label", "POST"},
 		{"/fanhua/imageLabel/list", "GET"},
+		{"/fanhua/voice/list", "GET"},
+		{"/fanhua/voice/search", "POST"},
+		{"/fanhua/voice", "POST"},
+		{"/fanhua/voice", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

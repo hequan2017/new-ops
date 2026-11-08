@@ -600,3 +600,103 @@ func (a *FanhuaApi) GetImageLabels(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// searchCultureReq 海派文化组合检索请求
+type searchCultureReq struct {
+	Query       string `json:"query" binding:"required"`
+	Category    string `json:"category"`
+	SpeakerType string `json:"speakerType"`
+	TopK        int    `json:"topK"`
+}
+
+// voiceIdReq 语音条目删除请求
+type voiceDeleteReq struct{}
+
+// SaveVoiceEntry 保存语音条目
+// @Tags Fanhua
+// @Summary 新建/更新海派文化语音条目
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaVoiceEntry true "语音条目"
+// @Success 200 {object} response.Response{data=model.FanhuaVoiceEntry} "保存成功"
+// @Router /fanhua/voice [post]
+func (a *FanhuaApi) SaveVoiceEntry(c *gin.Context) {
+	var in model.FanhuaVoiceEntry
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SaveVoiceEntry(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeleteVoiceEntry 删除语音条目
+// @Tags Fanhua
+// @Summary 删除语音条目（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "条目ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /fanhua/voice [delete]
+func (a *FanhuaApi) DeleteVoiceEntry(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.FanhuaApp.DeleteVoiceEntry(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetVoiceEntries 语音条目列表
+// @Tags Fanhua
+// @Summary 海派文化语音条目列表（分类/声部过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param category query string false "沪剧台词/弄堂俚语/经典朗读"
+// @Param speakerType query string false "男声/女声/童声"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/voice/list [get]
+func (a *FanhuaApi) GetVoiceEntries(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetVoiceEntries(c.Query("category"), c.Query("speakerType"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// SearchCulture 海派文化组合检索
+// @Tags Fanhua
+// @Summary 组合检索（语音条目分词命中打分+平行语料相似度双路）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.searchCultureReq true "检索请求"
+// @Success 200 {object} response.Response{data=map[string]any} "检索成功"
+// @Router /fanhua/voice/search [post]
+func (a *FanhuaApi) SearchCulture(c *gin.Context) {
+	var in searchCultureReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SearchCulture(in.Query, in.Category, in.SpeakerType, in.TopK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "检索成功", c)
+}

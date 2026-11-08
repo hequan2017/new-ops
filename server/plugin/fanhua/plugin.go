@@ -27,6 +27,7 @@ func (p *plugin) Register(group *gin.Engine) {
 	initialize.Gorm(ctx)
 	initialize.SeedParallels(ctx)
 	initialize.SeedEntities(ctx)
+	initialize.SeedVoiceEntries(ctx)
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
 	initialize.Casbin(ctx)

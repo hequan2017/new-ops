@@ -61,4 +61,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		imgAsset.POST("label", middleware.OperationRecord(), v1.Api.LabelImage)
 	}
 	Router.Group("fanhua/imageLabel").GET("list", v1.Api.GetImageLabels)
+	voice := Router.Group("fanhua/voice")
+	{
+		voice.GET("list", v1.Api.GetVoiceEntries)
+		voice.POST("search", v1.Api.SearchCulture)
+		voice.POST("", middleware.OperationRecord(), v1.Api.SaveVoiceEntry)
+		voice.DELETE("", middleware.OperationRecord(), v1.Api.DeleteVoiceEntry)
+	}
 }
