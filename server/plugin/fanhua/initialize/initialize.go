@@ -26,6 +26,8 @@ func Gorm(ctx context.Context) {
 		new(model.FanhuaEntity),
 		new(model.FanhuaEntityHit),
 		new(model.FanhuaTextLabel),
+		new(model.FanhuaImageAsset),
+		new(model.FanhuaImageLabel),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "fanhua 注册表失败!")
@@ -64,6 +66,10 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/label/stats", Description: "标注分布统计", ApiGroup: "繁花文科大模型", Method: "GET"},
 		{Path: "/fanhua/label/build", Description: "构建标注", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/label", Description: "人工改标", ApiGroup: "繁花文科大模型", Method: "PUT"},
+		{Path: "/fanhua/imageAsset/list", Description: "图片资产列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/imageAsset", Description: "登记图片资产", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/imageAsset/label", Description: "图片标注", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/imageLabel/list", Description: "图片标签列表", ApiGroup: "繁花文科大模型", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -111,6 +117,10 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/label/stats", "GET"},
 		{"/fanhua/label/build", "POST"},
 		{"/fanhua/label", "PUT"},
+		{"/fanhua/imageAsset/list", "GET"},
+		{"/fanhua/imageAsset", "POST"},
+		{"/fanhua/imageAsset/label", "POST"},
+		{"/fanhua/imageLabel/list", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

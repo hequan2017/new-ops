@@ -54,4 +54,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		label.POST("build", middleware.OperationRecord(), v1.Api.BuildTextLabels)
 		label.PUT("", middleware.OperationRecord(), v1.Api.UpdateLabel)
 	}
+	imgAsset := Router.Group("fanhua/imageAsset")
+	{
+		imgAsset.GET("list", v1.Api.GetImageAssets)
+		imgAsset.POST("", middleware.OperationRecord(), v1.Api.SaveImageAsset)
+		imgAsset.POST("label", middleware.OperationRecord(), v1.Api.LabelImage)
+	}
+	Router.Group("fanhua/imageLabel").GET("list", v1.Api.GetImageLabels)
 }

@@ -505,3 +505,98 @@ func (a *FanhuaApi) LabelStats(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "获取成功", c)
 }
+
+// labelImageReq 图片标签请求
+type labelImageReq struct {
+	AssetId  uint   `json:"assetId" binding:"required"`
+	TagsJSON string `json:"tagsJSON" binding:"required"`
+}
+
+// SaveImageAsset 登记图片资产
+// @Tags Fanhua
+// @Summary 登记图片资产（路径/MIME/train-test 用途）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaImageAsset true "图片资产"
+// @Success 200 {object} response.Response{data=model.FanhuaImageAsset} "登记成功"
+// @Router /fanhua/imageAsset [post]
+func (a *FanhuaApi) SaveImageAsset(c *gin.Context) {
+	var in model.FanhuaImageAsset
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SaveImageAsset(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "登记成功", c)
+}
+
+// GetImageAssets 图片资产列表
+// @Tags Fanhua
+// @Summary 图片资产列表（用途/关键字过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param split query string false "train/test/none"
+// @Param keyword query string false "名称关键字"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/imageAsset/list [get]
+func (a *FanhuaApi) GetImageAssets(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetImageAssets(c.Query("split"), c.Query("keyword"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// LabelImage 写图片标签
+// @Tags Fanhua
+// @Summary 图片标签 upsert（一图一条，写即置已标注）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.labelImageReq true "标签请求"
+// @Success 200 {object} response.Response{data=model.FanhuaImageLabel} "标注成功"
+// @Router /fanhua/imageAsset/label [post]
+func (a *FanhuaApi) LabelImage(c *gin.Context) {
+	var in labelImageReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.LabelImage(in.AssetId, in.TagsJSON)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "标注成功", c)
+}
+
+// GetImageLabels 图片标签列表
+// @Tags Fanhua
+// @Summary 图片标签列表（标注状态过滤，倒序分页，含资产信息）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param labeled query string false "yes/no"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/imageLabel/list [get]
+func (a *FanhuaApi) GetImageLabels(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetImageLabels(c.Query("labeled"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
