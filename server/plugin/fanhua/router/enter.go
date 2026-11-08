@@ -38,4 +38,5 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		clean.POST("dry", v1.Api.CleanDry)
 		clean.POST("", middleware.OperationRecord(), v1.Api.CleanCorpora)
 	}
+	Router.Group("fanhua").POST("tokenize", v1.Api.Tokenize)
 }

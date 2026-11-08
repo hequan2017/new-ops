@@ -51,6 +51,7 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/parallel", Description: "删除平行语料", ApiGroup: "繁花文科大模型", Method: "DELETE"},
 		{Path: "/fanhua/clean/dry", Description: "清洗试运行", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/clean", Description: "语料批量清洗", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/tokenize", Description: "沪语分词", ApiGroup: "繁花文科大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -88,6 +89,7 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/parallel", "DELETE"},
 		{"/fanhua/clean/dry", "POST"},
 		{"/fanhua/clean", "POST"},
+		{"/fanhua/tokenize", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

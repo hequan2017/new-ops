@@ -265,3 +265,29 @@ func (a *FanhuaApi) CleanCorpora(c *gin.Context) {
 	}
 	response.OkWithDetailed(reports, "清洗完成", c)
 }
+
+// tokenizeReq 分词请求
+type tokenizeReq struct {
+	Text string `json:"text" binding:"required"`
+}
+
+// Tokenize 沪语分词
+// @Tags Fanhua
+// @Summary 沪语分词（专用词典最大正向匹配+OOV bigram 兜底，附词频降序）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.tokenizeReq true "分词请求"
+// @Success 200 {object} response.Response{data=map[string]any} "分词成功"
+// @Router /fanhua/tokenize [post]
+func (a *FanhuaApi) Tokenize(c *gin.Context) {
+	var in tokenizeReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{
+		"tokens": service.Segment(in.Text),
+		"freq":   service.WordFreq(in.Text),
+	}, "分词成功", c)
+}
