@@ -69,6 +69,7 @@
   "/src/plugin/aiops/view/llm/index.vue": "aiopsLlm",
   "/src/plugin/announcement/form/info.vue": "InfoForm",
   "/src/plugin/announcement/view/info.vue": "Info",
+  "/src/plugin/artsci/view/lab/index.vue": "Index",
   "/src/plugin/asset/view/credential/index.vue": "AssetCredential",
   "/src/plugin/asset/view/group/index.vue": "AssetGroup",
   "/src/plugin/asset/view/host/index.vue": "AssetHost",

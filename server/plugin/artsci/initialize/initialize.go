@@ -70,7 +70,7 @@ func Api(ctx context.Context) {
 	pluginUtils.RegisterApis(entities...)
 }
 
-// Menu 注册 artsci 菜单（学科工具集父级，子页面随 M10 挂其下）
+// Menu 注册 artsci 菜单（首元素为学科工具集父级，子页面挂其下）
 func Menu(ctx context.Context) {
 	entities := []sysModel.SysBaseMenu{
 		{
@@ -80,6 +80,14 @@ func Menu(ctx context.Context) {
 			Component: "view/routerHolder.vue",
 			Sort:      6,
 			Meta:      sysModel.Meta{Title: "学科工具集", Icon: "collection"},
+		},
+		{
+			Path:      "artsciLab",
+			Name:      "artsciLab",
+			Hidden:    false,
+			Component: "plugin/artsci/view/lab/index.vue",
+			Sort:      1,
+			Meta:      sysModel.Meta{Title: "学科工具台", Icon: "edit-pen"},
 		},
 	}
 	pluginUtils.RegisterMenus(entities...)
