@@ -39,4 +39,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		clean.POST("", middleware.OperationRecord(), v1.Api.CleanCorpora)
 	}
 	Router.Group("fanhua").POST("tokenize", v1.Api.Tokenize)
+	entity := Router.Group("fanhua/entity")
+	{
+		entity.GET("list", v1.Api.GetEntities)
+		entity.GET("hits", v1.Api.GetEntityHits)
+		entity.POST("annotate", middleware.OperationRecord(), v1.Api.AnnotateText)
+		entity.POST("", middleware.OperationRecord(), v1.Api.SaveEntity)
+		entity.DELETE("", middleware.OperationRecord(), v1.Api.DeleteEntity)
+	}
 }

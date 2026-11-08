@@ -291,3 +291,117 @@ func (a *FanhuaApi) Tokenize(c *gin.Context) {
 		"freq":   service.WordFreq(in.Text),
 	}, "分词成功", c)
 }
+
+// annotateReq 实体标注请求
+type annotateReq struct {
+	Text     string `json:"text" binding:"required"`
+	CorpusId uint   `json:"corpusId"`
+}
+
+// SaveEntity 保存实体
+// @Tags Fanhua
+// @Summary 新建/更新海派文化实体
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaEntity true "实体"
+// @Success 200 {object} response.Response{data=model.FanhuaEntity} "保存成功"
+// @Router /fanhua/entity [post]
+func (a *FanhuaApi) SaveEntity(c *gin.Context) {
+	var in model.FanhuaEntity
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SaveEntity(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeleteEntity 删除实体
+// @Tags Fanhua
+// @Summary 删除海派文化实体（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "实体ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /fanhua/entity [delete]
+func (a *FanhuaApi) DeleteEntity(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.FanhuaApp.DeleteEntity(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetEntities 实体列表
+// @Tags Fanhua
+// @Summary 海派文化实体列表（分类过滤）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param category query string false "地域/文化符号/地标"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/entity/list [get]
+func (a *FanhuaApi) GetEntities(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetEntities(c.Query("category"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// AnnotateText 实体标注
+// @Tags Fanhua
+// @Summary 词典匹配实体标注（词条+别名计数降序，结果落库）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.annotateReq true "标注请求"
+// @Success 200 {object} response.Response{data=map[string]any} "标注成功"
+// @Router /fanhua/entity/annotate [post]
+func (a *FanhuaApi) AnnotateText(c *gin.Context) {
+	var in annotateReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.AnnotateText(in.Text, in.CorpusId)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "标注成功", c)
+}
+
+// GetEntityHits 标注记录列表
+// @Tags Fanhua
+// @Summary 实体标注记录列表（倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/entity/hits [get]
+func (a *FanhuaApi) GetEntityHits(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetEntityHits(page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}

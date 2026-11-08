@@ -72,8 +72,15 @@ func TestSegmentMixed(t *testing.T) {
 // TestWordFreq 词频统计降序
 func TestWordFreq(t *testing.T) {
 	freq := WordFreq("侬好侬好阿拉，阿拉白相")
-	if len(freq) == 0 || freq[0].Word != "侬好" || freq[0].Count != 2 {
-		t.Fatalf("「侬好」应 2 次居首: %+v", freq)
+	if len(freq) == 0 || freq[0].Count != 2 {
+		t.Fatalf("最高词频应为 2: %+v", freq)
+	}
+	seen := map[string]int{}
+	for _, f := range freq {
+		seen[f.Word] = f.Count
+	}
+	if seen["侬好"] != 2 || seen["阿拉"] != 2 || seen["白相"] != 1 {
+		t.Fatalf("词频统计不符: %+v", seen)
 	}
 	for i := 1; i < len(freq); i++ {
 		if freq[i].Count > freq[i-1].Count {

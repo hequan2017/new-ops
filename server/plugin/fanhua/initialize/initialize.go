@@ -23,6 +23,8 @@ func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.FanhuaCorpus),
 		new(model.FanhuaParallel),
+		new(model.FanhuaEntity),
+		new(model.FanhuaEntityHit),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "fanhua 注册表失败!")
@@ -52,6 +54,11 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/clean/dry", Description: "清洗试运行", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/clean", Description: "语料批量清洗", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/tokenize", Description: "沪语分词", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/entity/list", Description: "实体列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/entity/hits", Description: "实体标注记录", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/entity/annotate", Description: "实体标注", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/entity", Description: "保存实体", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/entity", Description: "删除实体", ApiGroup: "繁花文科大模型", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -90,6 +97,11 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/clean/dry", "POST"},
 		{"/fanhua/clean", "POST"},
 		{"/fanhua/tokenize", "POST"},
+		{"/fanhua/entity/list", "GET"},
+		{"/fanhua/entity/hits", "GET"},
+		{"/fanhua/entity/annotate", "POST"},
+		{"/fanhua/entity", "POST"},
+		{"/fanhua/entity", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
