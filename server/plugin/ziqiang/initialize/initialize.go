@@ -3,8 +3,10 @@ package initialize
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/middleware"
@@ -12,12 +14,20 @@ import (
 	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 	srvUtils "github.com/hequan2017/new-ops/server/utils"
 
+	"github.com/hequan2017/new-ops/server/plugin/ziqiang/model"
 	"github.com/hequan2017/new-ops/server/plugin/ziqiang/router"
 )
 
-// Gorm 注册 ziqiang 数据表（幂等）。M0 骨架暂无业务表，O02 语料起在此追加 AutoMigrate。
+// Gorm 注册 ziqiang 数据表（幂等）
 func Gorm(ctx context.Context) {
-	_ = ctx
+	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
+		new(model.ZqTextCorpus),
+		new(model.ZqComparePair),
+	)
+	if err != nil {
+		err = errors.Wrap(err, "ziqiang 注册表失败!")
+		global.GVA_LOG.Error(fmt.Sprintf("%+v", err))
+	}
 }
 
 // Router 注册 ziqiang 路由（private 组显式挂 JWT+casbin）
@@ -31,6 +41,12 @@ func Router(engine *gin.Engine) {
 func Api(ctx context.Context) {
 	entities := []sysModel.SysApi{
 		{Path: "/ziqiang/ping", Description: "自强理工科大模型连通性探测", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/textCorpus/list", Description: "文本语料列表", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/textCorpus/import", Description: "批量导入文本语料", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/textCorpus", Description: "保存文本语料", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/textCorpus", Description: "删除文本语料", ApiGroup: "自强理工科大模型", Method: "DELETE"},
+		{Path: "/ziqiang/comparePair/list", Description: "对比样本对列表", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/comparePair", Description: "保存对比样本对", ApiGroup: "自强理工科大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -58,6 +74,12 @@ func Casbin(ctx context.Context) {
 	}
 	for _, p := range []struct{ Path, Method string }{
 		{"/ziqiang/ping", "GET"},
+		{"/ziqiang/textCorpus/list", "GET"},
+		{"/ziqiang/textCorpus/import", "POST"},
+		{"/ziqiang/textCorpus", "POST"},
+		{"/ziqiang/textCorpus", "DELETE"},
+		{"/ziqiang/comparePair/list", "GET"},
+		{"/ziqiang/comparePair", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
