@@ -98,4 +98,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		qa.POST("", middleware.OperationRecord(), v1.Api.DialectQA)
 		qa.GET("logs", v1.Api.GetDialectQaLogs)
 	}
+	audit := Router.Group("fanhua/valuesAudit")
+	{
+		audit.POST("", middleware.OperationRecord(), v1.Api.AuditValues)
+		audit.GET("logs", v1.Api.GetValuesAuditLogs)
+	}
 }

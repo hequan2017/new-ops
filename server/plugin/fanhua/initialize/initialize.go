@@ -36,6 +36,7 @@ func Gorm(ctx context.Context) {
 		new(model.FanhuaGovDataPoint),
 		new(model.FanhuaPromptTemplate),
 		new(model.FanhuaDialectQaLog),
+		new(model.FanhuaValuesAuditLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "fanhua 注册表失败!")
@@ -100,6 +101,8 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/prompt", Description: "删除提示词模板", ApiGroup: "繁花文科大模型", Method: "DELETE"},
 		{Path: "/fanhua/dialectQa", Description: "沪普英方言问答", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/dialectQa/logs", Description: "方言问答日志", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/valuesAudit", Description: "价值观合规审查", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/valuesAudit/logs", Description: "价值观审查日志", ApiGroup: "繁花文科大模型", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -173,6 +176,8 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/prompt", "DELETE"},
 		{"/fanhua/dialectQa", "POST"},
 		{"/fanhua/dialectQa/logs", "GET"},
+		{"/fanhua/valuesAudit", "POST"},
+		{"/fanhua/valuesAudit/logs", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

@@ -1093,3 +1093,57 @@ func (a *FanhuaApi) GetDialectQaLogs(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// auditReq 价值观审查请求
+type auditReq struct {
+	Text string `json:"text" binding:"required"`
+}
+
+// auditFilterReq 审查日志查询参数
+type auditFilterReq struct{}
+
+// AuditValues 价值观合规审查
+// @Tags Fanhua
+// @Summary 中英文本价值观审查（敏感词命中→风险分级+健康度+预警信号，时延 800ms 阈值留痕）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.auditReq true "审查请求"
+// @Success 200 {object} response.Response{data=model.FanhuaValuesAuditLog} "审查完成"
+// @Router /fanhua/valuesAudit [post]
+func (a *FanhuaApi) AuditValues(c *gin.Context) {
+	var in auditReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	log, err := service.FanhuaApp.AuditValues(in.Text)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(log, "审查完成", c)
+}
+
+// GetValuesAuditLogs 审查日志列表
+// @Tags Fanhua
+// @Summary 价值观审查日志列表（等级/预警过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param riskLevel query string false "高/中/低"
+// @Param alarmOnly query bool false "仅预警"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/valuesAudit/logs [get]
+func (a *FanhuaApi) GetValuesAuditLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	alarmOnly := c.Query("alarmOnly") == "true"
+	list, total, err := service.FanhuaApp.GetValuesAuditLogs(c.Query("riskLevel"), alarmOnly, page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
