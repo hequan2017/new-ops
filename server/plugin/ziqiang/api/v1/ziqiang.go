@@ -374,3 +374,144 @@ func (a *ZiqiangApi) SlidingPlagiarism(c *gin.Context) {
 	}
 	response.OkWithDetailed(hits, "识别完成", c)
 }
+
+// SaveGraphEntity 保存实体
+// @Tags Ziqiang
+// @Summary 新建/更新知识产权实体（法律/技术/权利主体）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.ZqEntity true "实体"
+// @Success 200 {object} response.Response{data=model.ZqEntity} "保存成功"
+// @Router /ziqiang/entity [post]
+func (a *ZiqiangApi) SaveGraphEntity(c *gin.Context) {
+	var in model.ZqEntity
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ZiqiangApp.SaveEntity(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeleteGraphEntity 删除实体
+// @Tags Ziqiang
+// @Summary 删除知识产权实体（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "实体ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /ziqiang/entity [delete]
+func (a *ZiqiangApi) DeleteGraphEntity(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.ZiqiangApp.DeleteEntity(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetGraphEntities 实体列表
+// @Tags Ziqiang
+// @Summary 知识产权实体列表（分类过滤）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param category query string false "法律/技术/权利主体"
+// @Success 200 {object} response.Response{data=[]model.ZqEntity} "获取成功"
+// @Router /ziqiang/entity/list [get]
+func (a *ZiqiangApi) GetGraphEntities(c *gin.Context) {
+	list, err := service.ZiqiangApp.GetEntities(c.Query("category"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// SaveGraphEdge 保存关系边
+// @Tags Ziqiang
+// @Summary 新建实体关系边（禁自环）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.ZqEdge true "关系边"
+// @Success 200 {object} response.Response{data=model.ZqEdge} "保存成功"
+// @Router /ziqiang/edge [post]
+func (a *ZiqiangApi) SaveGraphEdge(c *gin.Context) {
+	var in model.ZqEdge
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ZiqiangApp.SaveEdge(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeleteGraphEdge 删除关系边
+// @Tags Ziqiang
+// @Summary 删除关系边
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "边ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /ziqiang/edge [delete]
+func (a *ZiqiangApi) DeleteGraphEdge(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.ZiqiangApp.DeleteEdge(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetGraph 全图
+// @Tags Ziqiang
+// @Summary 知识产权图谱全图（节点+边）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /ziqiang/graph [get]
+func (a *ZiqiangApi) GetGraph(c *gin.Context) {
+	out, err := service.ZiqiangApp.GetGraph()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "获取成功", c)
+}
+
+// GraphBFS 多跳推理
+// @Tags Ziqiang
+// @Summary 图谱 BFS 多跳推理（最短路径，hop 1-6）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param startId query int true "起点实体ID"
+// @Param maxHops query int false "最大跳数(默认2)"
+// @Success 200 {object} response.Response{data=[]service.graphPath} "推理成功"
+// @Router /ziqiang/graph/bfs [get]
+func (a *ZiqiangApi) GraphBFS(c *gin.Context) {
+	startId, _ := strconv.ParseUint(c.Query("startId"), 10, 64)
+	maxHops, _ := strconv.Atoi(c.DefaultQuery("maxHops", "2"))
+	paths, err := service.ZiqiangApp.GraphBFS(uint(startId), maxHops)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(paths, "推理成功", c)
+}

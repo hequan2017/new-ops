@@ -41,4 +41,17 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	Router.Group("ziqiang/dpMask").POST("", v1.Api.DpMaskNumbers)
 	Router.Group("ziqiang/legalTokenize").POST("", v1.Api.LegalTokenize)
 	Router.Group("ziqiang/plagiarismCheck").POST("", v1.Api.SlidingPlagiarism)
+	gEntity := Router.Group("ziqiang/entity")
+	{
+		gEntity.GET("list", v1.Api.GetGraphEntities)
+		gEntity.POST("", middleware.OperationRecord(), v1.Api.SaveGraphEntity)
+		gEntity.DELETE("", middleware.OperationRecord(), v1.Api.DeleteGraphEntity)
+	}
+	gEdge := Router.Group("ziqiang/edge")
+	{
+		gEdge.POST("", middleware.OperationRecord(), v1.Api.SaveGraphEdge)
+		gEdge.DELETE("", middleware.OperationRecord(), v1.Api.DeleteGraphEdge)
+	}
+	Router.Group("ziqiang/graph").GET("", v1.Api.GetGraph)
+	Router.Group("ziqiang/graph").GET("bfs", v1.Api.GraphBFS)
 }

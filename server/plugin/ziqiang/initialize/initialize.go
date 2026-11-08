@@ -24,6 +24,8 @@ func Gorm(ctx context.Context) {
 		new(model.ZqTextCorpus),
 		new(model.ZqComparePair),
 		new(model.ZqImageCorpus),
+		new(model.ZqEntity),
+		new(model.ZqEdge),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "ziqiang 注册表失败!")
@@ -55,6 +57,13 @@ func Api(ctx context.Context) {
 		{Path: "/ziqiang/dpMask", Description: "数值差分隐私脱敏", ApiGroup: "自强理工科大模型", Method: "POST"},
 		{Path: "/ziqiang/legalTokenize", Description: "法律文本分词", ApiGroup: "自强理工科大模型", Method: "POST"},
 		{Path: "/ziqiang/plagiarismCheck", Description: "隐性抄袭识别", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/entity/list", Description: "实体列表", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/entity", Description: "保存实体", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/entity", Description: "删除实体", ApiGroup: "自强理工科大模型", Method: "DELETE"},
+		{Path: "/ziqiang/edge", Description: "保存关系边", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/edge", Description: "删除关系边", ApiGroup: "自强理工科大模型", Method: "DELETE"},
+		{Path: "/ziqiang/graph", Description: "图谱全图", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/graph/bfs", Description: "图谱多跳推理", ApiGroup: "自强理工科大模型", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -95,6 +104,13 @@ func Casbin(ctx context.Context) {
 		{"/ziqiang/dpMask", "POST"},
 		{"/ziqiang/legalTokenize", "POST"},
 		{"/ziqiang/plagiarismCheck", "POST"},
+		{"/ziqiang/entity/list", "GET"},
+		{"/ziqiang/entity", "POST"},
+		{"/ziqiang/entity", "DELETE"},
+		{"/ziqiang/edge", "POST"},
+		{"/ziqiang/edge", "DELETE"},
+		{"/ziqiang/graph", "GET"},
+		{"/ziqiang/graph/bfs", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
