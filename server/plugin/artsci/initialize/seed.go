@@ -16,6 +16,11 @@ func SeedTools(ctx context.Context) {
 			ParamsSchema: `{"epsilon":{"type":"number"},"gridN":{"type":"number"},"dt":{"type":"number"},"steps":{"type":"number"},"snapshotEvery":{"type":"number"}}`,
 			Desc:         "一维 Allen-Cahn 方程显式有限差分求解（周期边界），返回演化帧序列与能量衰减（3.3-1）",
 		},
+		{
+			Name: "DeepHPMs 层次预测", Subject: "数学", Module: "deep-hpms", Status: "enabled",
+			ParamsSchema: `{"xs":{"type":"array"},"ys":{"type":"array"},"degree":{"type":"number"},"residualDegree":{"type":"number"},"predictXs":{"type":"array"}}`,
+			Desc:         "两级层次预测：全局多项式最小二乘+残差局部修正，返回系数/三级 MSE 对比（3.3-4）",
+		},
 	}
 	for i := range presets {
 		var exist model.ArtsciTool
