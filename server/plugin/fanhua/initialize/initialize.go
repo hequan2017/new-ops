@@ -121,6 +121,14 @@ func Menu(ctx context.Context) {
 			Sort:      7,
 			Meta:      sysModel.Meta{Title: "繁花文科大模型", Icon: "notebook-2"},
 		},
+		{
+			Path:      "fanhuaLab",
+			Name:      "fanhuaLab",
+			Hidden:    false,
+			Component: "plugin/fanhua/view/lab/index.vue",
+			Sort:      1,
+			Meta:      sysModel.Meta{Title: "繁花工作台", Icon: "chat-dot-round"},
+		},
 	}
 	pluginUtils.RegisterMenus(entities...)
 }
