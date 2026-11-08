@@ -1147,3 +1147,44 @@ func (a *FanhuaApi) GetValuesAuditLogs(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// SaveGovPhoto 登记社区照片
+// @Tags Fanhua
+// @Summary 登记社区照片元数据（融合查询第三源）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaGovPhoto true "照片元数据"
+// @Success 200 {object} response.Response{data=model.FanhuaGovPhoto} "登记成功"
+// @Router /fanhua/govPhoto [post]
+func (a *FanhuaApi) SaveGovPhoto(c *gin.Context) {
+	var in model.FanhuaGovPhoto
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SaveGovPhoto(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "登记成功", c)
+}
+
+// FusionQuery 城市科学融合查询
+// @Tags Fanhua
+// @Summary 三源融合查询（问卷/POI/照片分源统计+社区画像+治理建议）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param region query string true "区域"
+// @Param period query string false "期间 YYYY-MM"
+// @Success 200 {object} response.Response{data=map[string]any} "查询成功"
+// @Router /fanhua/govFusion [get]
+func (a *FanhuaApi) FusionQuery(c *gin.Context) {
+	out, err := service.FanhuaApp.FusionQuery(c.Query("region"), c.Query("period"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "查询成功", c)
+}
