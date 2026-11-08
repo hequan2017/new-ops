@@ -20,4 +20,5 @@ import (
 	_ "github.com/hequan2017/new-ops/server/plugin/pipeline"
 	_ "github.com/hequan2017/new-ops/server/plugin/term"
 	_ "github.com/hequan2017/new-ops/server/plugin/workflow"
+	_ "github.com/hequan2017/new-ops/server/plugin/ziqiang"
 )
