@@ -4,6 +4,7 @@ import (
 	_ "github.com/hequan2017/new-ops/server/plugin/agent"
 	_ "github.com/hequan2017/new-ops/server/plugin/aiops"
 	_ "github.com/hequan2017/new-ops/server/plugin/announcement"
+	_ "github.com/hequan2017/new-ops/server/plugin/artsci"
 	_ "github.com/hequan2017/new-ops/server/plugin/asset"
 	_ "github.com/hequan2017/new-ops/server/plugin/auto"
 	_ "github.com/hequan2017/new-ops/server/plugin/container"
