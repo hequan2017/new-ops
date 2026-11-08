@@ -294,3 +294,69 @@ func (a *ArtsciApi) GetPapers(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// GetSceneTemplates 场景模板列表
+// @Tags Artsci
+// @Summary 文生图教学场景模板列表（五类 seed）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]model.ArtsciSceneTemplate} "获取成功"
+// @Router /artsci/scene/list [get]
+func (a *ArtsciApi) GetSceneTemplates(c *gin.Context) {
+	list, err := service.ArtsciApp.GetSceneTemplates()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// submitImageTaskReq 文生图任务请求
+type submitImageTaskReq struct {
+	Scene     string `json:"scene" binding:"required"`
+	InputText string `json:"inputText" binding:"required"`
+}
+
+// SubmitImageTask 提交文生图任务
+// @Tags Artsci
+// @Summary 提交文生图任务（模板渲染→适配器生成，状态机 queued/done/failed）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.submitImageTaskReq true "任务请求"
+// @Success 200 {object} response.Response{data=model.ArtsciImageTask} "任务完成"
+// @Router /artsci/imageTask [post]
+func (a *ArtsciApi) SubmitImageTask(c *gin.Context) {
+	var in submitImageTaskReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	task, err := service.ArtsciApp.SubmitImageTask(in.Scene, in.InputText)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(task, "任务完成", c)
+}
+
+// GetImageTasks 文生图任务列表
+// @Tags Artsci
+// @Summary 文生图任务列表（场景过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param scene query string false "场景"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /artsci/imageTask/list [get]
+func (a *ArtsciApi) GetImageTasks(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ArtsciApp.GetImageTasks(c.Query("scene"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}

@@ -26,6 +26,8 @@ func Gorm(ctx context.Context) {
 		new(model.ArtsciGrading),
 		new(model.ArtsciQuestion),
 		new(model.ArtsciPaper),
+		new(model.ArtsciSceneTemplate),
+		new(model.ArtsciImageTask),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "artsci 注册表失败!")
@@ -55,6 +57,9 @@ func Api(ctx context.Context) {
 		{Path: "/artsci/question/list", Description: "题目列表", ApiGroup: "学科工具集", Method: "GET"},
 		{Path: "/artsci/paper", Description: "规则组卷", ApiGroup: "学科工具集", Method: "POST"},
 		{Path: "/artsci/paper/list", Description: "试卷列表", ApiGroup: "学科工具集", Method: "GET"},
+		{Path: "/artsci/scene/list", Description: "文生图场景模板列表", ApiGroup: "学科工具集", Method: "GET"},
+		{Path: "/artsci/imageTask", Description: "提交文生图任务", ApiGroup: "学科工具集", Method: "POST"},
+		{Path: "/artsci/imageTask/list", Description: "文生图任务列表", ApiGroup: "学科工具集", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -93,6 +98,9 @@ func Casbin(ctx context.Context) {
 		{"/artsci/question/list", "GET"},
 		{"/artsci/paper", "POST"},
 		{"/artsci/paper/list", "GET"},
+		{"/artsci/scene/list", "GET"},
+		{"/artsci/imageTask", "POST"},
+		{"/artsci/imageTask/list", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

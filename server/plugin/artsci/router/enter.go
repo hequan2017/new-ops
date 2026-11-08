@@ -42,4 +42,13 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		paper.POST("", middleware.OperationRecord(), v1.Api.BuildPaper)
 		paper.GET("list", v1.Api.GetPapers)
 	}
+	scene := Router.Group("artsci/scene")
+	{
+		scene.GET("list", v1.Api.GetSceneTemplates)
+	}
+	img := Router.Group("artsci/imageTask")
+	{
+		img.POST("", middleware.OperationRecord(), v1.Api.SubmitImageTask)
+		img.GET("list", v1.Api.GetImageTasks)
+	}
 }
