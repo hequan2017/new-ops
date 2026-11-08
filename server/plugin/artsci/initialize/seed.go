@@ -21,6 +21,11 @@ func SeedTools(ctx context.Context) {
 			ParamsSchema: `{"xs":{"type":"array"},"ys":{"type":"array"},"degree":{"type":"number"},"residualDegree":{"type":"number"},"predictXs":{"type":"array"}}`,
 			Desc:         "两级层次预测：全局多项式最小二乘+残差局部修正，返回系数/三级 MSE 对比（3.3-4）",
 		},
+		{
+			Name: "DeepONet 算子逼近", Subject: "数学", Module: "deep-onet", Status: "enabled",
+			ParamsSchema: `{"trainFunctions":{"type":"array"},"trainYs":{"type":"array"},"trainTargets":{"type":"array"},"basisCount":{"type":"number"},"predictFunction":{"type":"array"},"predictYs":{"type":"array"}}`,
+			Desc:         "勒让德 branch/trunk 内积结构算子学习，最小二乘拟合组合系数（3.3-6）",
+		},
 	}
 	for i := range presets {
 		var exist model.ArtsciTool
