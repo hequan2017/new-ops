@@ -1039,3 +1039,57 @@ func (a *FanhuaApi) RenderPrompt(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "渲染成功", c)
 }
+
+// dialectQaReq 方言问答请求
+type dialectQaReq struct {
+	Question  string `json:"question" binding:"required"`
+	ModelId   uint   `json:"modelId"`
+	ElderMode bool   `json:"elderMode"`
+}
+
+// DialectQA 沪普英问答
+// @Tags Fanhua
+// @Summary 沪-普-英方言问答（平行语料注入+价值观前置审查+时延阈值留痕+助老口径）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.dialectQaReq true "问答请求"
+// @Success 200 {object} response.Response{data=model.FanhuaDialectQaLog} "问答完成"
+// @Router /fanhua/dialectQa [post]
+func (a *FanhuaApi) DialectQA(c *gin.Context) {
+	var in dialectQaReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	log, err := service.FanhuaApp.DialectQA(in.Question, in.ModelId, in.ElderMode)
+	if err != nil {
+		if log != nil {
+			response.OkWithDetailed(log, "问答失败（已留痕）: "+err.Error(), c)
+			return
+		}
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(log, "问答完成", c)
+}
+
+// GetDialectQaLogs 问答日志
+// @Tags Fanhua
+// @Summary 方言问答日志列表（倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/dialectQa/logs [get]
+func (a *FanhuaApi) GetDialectQaLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetDialectQaLogs(page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}

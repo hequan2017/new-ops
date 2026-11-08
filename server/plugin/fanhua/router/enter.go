@@ -93,4 +93,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		prompt.POST("", middleware.OperationRecord(), v1.Api.SavePromptTemplate)
 		prompt.DELETE("", middleware.OperationRecord(), v1.Api.DeletePromptTemplate)
 	}
+	qa := Router.Group("fanhua/dialectQa")
+	{
+		qa.POST("", middleware.OperationRecord(), v1.Api.DialectQA)
+		qa.GET("logs", v1.Api.GetDialectQaLogs)
+	}
 }
