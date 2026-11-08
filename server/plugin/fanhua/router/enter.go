@@ -4,6 +4,8 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 
+	"github.com/hequan2017/new-ops/server/middleware"
+
 	v1 "github.com/hequan2017/new-ops/server/plugin/fanhua/api/v1"
 )
 
@@ -16,5 +18,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	base := Router.Group("fanhua")
 	{
 		base.GET("ping", v1.Api.Ping)
+	}
+	corpus := Router.Group("fanhua/corpus")
+	{
+		corpus.GET("list", v1.Api.GetCorpora)
+		corpus.POST("", middleware.OperationRecord(), v1.Api.SaveCorpus)
+		corpus.POST("import", middleware.OperationRecord(), v1.Api.ImportCorpora)
+		corpus.DELETE("", middleware.OperationRecord(), v1.Api.DeleteCorpus)
 	}
 }
