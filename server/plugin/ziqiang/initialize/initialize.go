@@ -53,6 +53,8 @@ func Api(ctx context.Context) {
 		{Path: "/ziqiang/imageCorpus", Description: "登记图像语料", ApiGroup: "自强理工科大模型", Method: "POST"},
 		{Path: "/ziqiang/termCheck", Description: "法律术语校验", ApiGroup: "自强理工科大模型", Method: "POST"},
 		{Path: "/ziqiang/dpMask", Description: "数值差分隐私脱敏", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/legalTokenize", Description: "法律文本分词", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/plagiarismCheck", Description: "隐性抄袭识别", ApiGroup: "自强理工科大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -91,6 +93,8 @@ func Casbin(ctx context.Context) {
 		{"/ziqiang/imageCorpus", "POST"},
 		{"/ziqiang/termCheck", "POST"},
 		{"/ziqiang/dpMask", "POST"},
+		{"/ziqiang/legalTokenize", "POST"},
+		{"/ziqiang/plagiarismCheck", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

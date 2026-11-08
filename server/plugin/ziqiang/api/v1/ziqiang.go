@@ -314,3 +314,63 @@ func (a *ZiqiangApi) DpMaskNumbers(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"masked": masked}, "脱敏完成", c)
 }
+
+// legalTokenizeReq 法律分词请求
+type legalTokenizeReq struct {
+	Text string `json:"text" binding:"required"`
+}
+
+// plagiarismReq 抄袭识别请求
+type plagiarismReq struct {
+	Source    string  `json:"source" binding:"required"`
+	Suspicious string `json:"suspicious" binding:"required"`
+	Window    int     `json:"window"`
+	Threshold float64 `json:"threshold"`
+}
+
+// LegalTokenize 法律分词
+// @Tags Ziqiang
+// @Summary 法律文本分词（50 复合术语词典最大正向匹配，OOV 单字）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.legalTokenizeReq true "分词请求"
+// @Success 200 {object} response.Response{data=[]service.LegalToken} "分词成功"
+// @Router /ziqiang/legalTokenize [post]
+func (a *ZiqiangApi) LegalTokenize(c *gin.Context) {
+	var in legalTokenizeReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(service.LegalSegment(in.Text), "分词成功", c)
+}
+
+// SlidingPlagiarism 隐性抄袭识别
+// @Tags Ziqiang
+// @Summary 滑窗 bigram 隐性抄袭片段识别（窗口/阈值可配）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.plagiarismReq true "识别请求"
+// @Success 200 {object} response.Response{data=[]service.PlagiarismHit} "识别完成"
+// @Router /ziqiang/plagiarismCheck [post]
+func (a *ZiqiangApi) SlidingPlagiarism(c *gin.Context) {
+	var in plagiarismReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	if in.Window == 0 {
+		in.Window = 40
+	}
+	if in.Threshold == 0 {
+		in.Threshold = 0.8
+	}
+	hits, err := service.SlidingPlagiarism(in.Source, in.Suspicious, in.Window, in.Threshold)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(hits, "识别完成", c)
+}

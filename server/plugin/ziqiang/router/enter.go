@@ -39,4 +39,6 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	}
 	Router.Group("ziqiang/termCheck").POST("", v1.Api.CheckTerms)
 	Router.Group("ziqiang/dpMask").POST("", v1.Api.DpMaskNumbers)
+	Router.Group("ziqiang/legalTokenize").POST("", v1.Api.LegalTokenize)
+	Router.Group("ziqiang/plagiarismCheck").POST("", v1.Api.SlidingPlagiarism)
 }
