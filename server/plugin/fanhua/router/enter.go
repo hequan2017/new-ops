@@ -47,4 +47,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		entity.POST("", middleware.OperationRecord(), v1.Api.SaveEntity)
 		entity.DELETE("", middleware.OperationRecord(), v1.Api.DeleteEntity)
 	}
+	label := Router.Group("fanhua/label")
+	{
+		label.GET("list", v1.Api.GetTextLabels)
+		label.GET("stats", v1.Api.LabelStats)
+		label.POST("build", middleware.OperationRecord(), v1.Api.BuildTextLabels)
+		label.PUT("", middleware.OperationRecord(), v1.Api.UpdateLabel)
+	}
 }

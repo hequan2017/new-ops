@@ -25,6 +25,7 @@ func Gorm(ctx context.Context) {
 		new(model.FanhuaParallel),
 		new(model.FanhuaEntity),
 		new(model.FanhuaEntityHit),
+		new(model.FanhuaTextLabel),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "fanhua 注册表失败!")
@@ -59,6 +60,10 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/entity/annotate", Description: "实体标注", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/entity", Description: "保存实体", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/entity", Description: "删除实体", ApiGroup: "繁花文科大模型", Method: "DELETE"},
+		{Path: "/fanhua/label/list", Description: "标注列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/label/stats", Description: "标注分布统计", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/label/build", Description: "构建标注", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/label", Description: "人工改标", ApiGroup: "繁花文科大模型", Method: "PUT"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -102,6 +107,10 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/entity/annotate", "POST"},
 		{"/fanhua/entity", "POST"},
 		{"/fanhua/entity", "DELETE"},
+		{"/fanhua/label/list", "GET"},
+		{"/fanhua/label/stats", "GET"},
+		{"/fanhua/label/build", "POST"},
+		{"/fanhua/label", "PUT"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

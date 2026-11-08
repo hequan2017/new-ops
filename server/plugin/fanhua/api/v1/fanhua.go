@@ -405,3 +405,103 @@ func (a *FanhuaApi) GetEntityHits(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// buildLabelReq 标注构建请求
+type buildLabelReq struct {
+	TrainRatio float64 `json:"trainRatio"`
+	Limit      int     `json:"limit"`
+}
+
+// updateLabelReq 人工改标请求
+type updateLabelReq struct {
+	ID        uint   `json:"id" binding:"required"`
+	Sentiment string `json:"sentiment" binding:"required"`
+	Split     string `json:"split" binding:"required"`
+}
+
+// BuildTextLabels 构建标注
+// @Tags Fanhua
+// @Summary 从语料库构建文本标注（train/test 确定性划分+情感规则预标）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.buildLabelReq true "构建请求"
+// @Success 200 {object} response.Response{data=map[string]any} "构建完成"
+// @Router /fanhua/label/build [post]
+func (a *FanhuaApi) BuildTextLabels(c *gin.Context) {
+	var in buildLabelReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	if in.TrainRatio == 0 {
+		in.TrainRatio = 0.8
+	}
+	out, err := service.FanhuaApp.BuildTextLabels(in.TrainRatio, in.Limit)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "构建完成", c)
+}
+
+// UpdateLabel 人工改标
+// @Tags Fanhua
+// @Summary 人工改标（情感/划分覆盖，置 Labeled）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.updateLabelReq true "改标请求"
+// @Success 200 {object} response.Response{data=model.FanhuaTextLabel} "改标成功"
+// @Router /fanhua/label [put]
+func (a *FanhuaApi) UpdateLabel(c *gin.Context) {
+	var in updateLabelReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.UpdateLabel(in.ID, in.Sentiment, in.Split)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "改标成功", c)
+}
+
+// GetTextLabels 标注列表
+// @Tags Fanhua
+// @Summary 文本标注列表（划分/情感过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param split query string false "train/test/none"
+// @Param sentiment query string false "正面/中立/负面"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/label/list [get]
+func (a *FanhuaApi) GetTextLabels(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetTextLabels(c.Query("split"), c.Query("sentiment"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// LabelStats 标注分布统计
+// @Tags Fanhua
+// @Summary 标注分布统计（划分×情感聚合）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/label/stats [get]
+func (a *FanhuaApi) LabelStats(c *gin.Context) {
+	out, err := service.FanhuaApp.LabelStats()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "获取成功", c)
+}
