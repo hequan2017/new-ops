@@ -23,6 +23,7 @@ func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.ZqTextCorpus),
 		new(model.ZqComparePair),
+		new(model.ZqImageCorpus),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "ziqiang 注册表失败!")
@@ -47,6 +48,9 @@ func Api(ctx context.Context) {
 		{Path: "/ziqiang/textCorpus", Description: "删除文本语料", ApiGroup: "自强理工科大模型", Method: "DELETE"},
 		{Path: "/ziqiang/comparePair/list", Description: "对比样本对列表", ApiGroup: "自强理工科大模型", Method: "GET"},
 		{Path: "/ziqiang/comparePair", Description: "保存对比样本对", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/imageCorpus/list", Description: "图像语料列表", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/imageCorpus/compare", Description: "aHash 比对", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/imageCorpus", Description: "登记图像语料", ApiGroup: "自强理工科大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -80,6 +84,9 @@ func Casbin(ctx context.Context) {
 		{"/ziqiang/textCorpus", "DELETE"},
 		{"/ziqiang/comparePair/list", "GET"},
 		{"/ziqiang/comparePair", "POST"},
+		{"/ziqiang/imageCorpus/list", "GET"},
+		{"/ziqiang/imageCorpus/compare", "GET"},
+		{"/ziqiang/imageCorpus", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

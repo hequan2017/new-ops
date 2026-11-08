@@ -31,4 +31,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		cp.GET("list", v1.Api.GetComparePairs)
 		cp.POST("", middleware.OperationRecord(), v1.Api.SaveComparePair)
 	}
+	ic := Router.Group("ziqiang/imageCorpus")
+	{
+		ic.GET("list", v1.Api.GetImageCorpora)
+		ic.GET("compare", v1.Api.CompareImageHash)
+		ic.POST("", middleware.OperationRecord(), v1.Api.SaveImageCorpus)
+	}
 }
