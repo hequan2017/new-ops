@@ -826,3 +826,126 @@ func (a *FanhuaApi) GetConflictCases(c *gin.Context) {
 	}
 	response.OkWithDetailed(list, "获取成功", c)
 }
+
+// SaveIndicator 保存治理指标
+// @Tags Fanhua
+// @Summary 新建/更新城市治理指标（父子树，含视觉维度）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaGovIndicator true "指标"
+// @Success 200 {object} response.Response{data=model.FanhuaGovIndicator} "保存成功"
+// @Router /fanhua/govIndicator [post]
+func (a *FanhuaApi) SaveIndicator(c *gin.Context) {
+	var in model.FanhuaGovIndicator
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SaveIndicator(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeleteIndicator 删除治理指标
+// @Tags Fanhua
+// @Summary 删除治理指标（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "指标ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /fanhua/govIndicator [delete]
+func (a *FanhuaApi) DeleteIndicator(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.FanhuaApp.DeleteIndicator(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetIndicatorTree 指标树
+// @Tags Fanhua
+// @Summary 城市治理指标树
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]service.indicatorNode} "获取成功"
+// @Router /fanhua/govIndicator/list [get]
+func (a *FanhuaApi) GetIndicatorTree(c *gin.Context) {
+	roots, err := service.FanhuaApp.GetIndicatorTree()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(roots, "获取成功", c)
+}
+
+// SaveDataPoint 写数据点
+// @Tags Fanhua
+// @Summary 写入区域指标数据点（问卷/POI/传感聚合值 0-100）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaGovDataPoint true "数据点"
+// @Success 200 {object} response.Response{data=model.FanhuaGovDataPoint} "写入成功"
+// @Router /fanhua/govData [post]
+func (a *FanhuaApi) SaveDataPoint(c *gin.Context) {
+	var in model.FanhuaGovDataPoint
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SaveDataPoint(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "写入成功", c)
+}
+
+// GetDataPoints 数据点列表
+// @Tags Fanhua
+// @Summary 区域指标数据点列表（区域/期间过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param region query string false "区域"
+// @Param period query string false "期间 YYYY-MM"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/govData/list [get]
+func (a *FanhuaApi) GetDataPoints(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetDataPoints(c.Query("region"), c.Query("period"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// GetRegionProfile 社区画像
+// @Tags Fanhua
+// @Summary 社区画像（指标树加权得分+数据点计数）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param region query string true "区域"
+// @Param period query string false "期间 YYYY-MM"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/govProfile [get]
+func (a *FanhuaApi) GetRegionProfile(c *gin.Context) {
+	out, err := service.FanhuaApp.GetRegionProfile(c.Query("region"), c.Query("period"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "获取成功", c)
+}

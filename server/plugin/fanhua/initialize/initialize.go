@@ -32,6 +32,8 @@ func Gorm(ctx context.Context) {
 		new(model.FanhuaSensitiveWord),
 		new(model.FanhuaComplianceTemplate),
 		new(model.FanhuaConflictCase),
+		new(model.FanhuaGovIndicator),
+		new(model.FanhuaGovDataPoint),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "fanhua 注册表失败!")
@@ -84,6 +86,12 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/values/health", Description: "价值观健康度评估", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/template/list", Description: "合规模板列表", ApiGroup: "繁花文科大模型", Method: "GET"},
 		{Path: "/fanhua/conflict/list", Description: "冲突案例列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/govIndicator/list", Description: "治理指标树", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/govIndicator", Description: "保存治理指标", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/govIndicator", Description: "删除治理指标", ApiGroup: "繁花文科大模型", Method: "DELETE"},
+		{Path: "/fanhua/govData", Description: "写入指标数据点", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/govData/list", Description: "指标数据点列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/govProfile", Description: "社区画像", ApiGroup: "繁花文科大模型", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -145,6 +153,12 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/values/health", "POST"},
 		{"/fanhua/template/list", "GET"},
 		{"/fanhua/conflict/list", "GET"},
+		{"/fanhua/govIndicator/list", "GET"},
+		{"/fanhua/govIndicator", "POST"},
+		{"/fanhua/govIndicator", "DELETE"},
+		{"/fanhua/govData", "POST"},
+		{"/fanhua/govData/list", "GET"},
+		{"/fanhua/govProfile", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

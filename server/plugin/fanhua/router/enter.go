@@ -77,4 +77,13 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	Router.Group("fanhua/values").POST("health", v1.Api.GetHealth)
 	Router.Group("fanhua/template").GET("list", v1.Api.GetTemplates)
 	Router.Group("fanhua/conflict").GET("list", v1.Api.GetConflictCases)
+	gov := Router.Group("fanhua/govIndicator")
+	{
+		gov.GET("list", v1.Api.GetIndicatorTree)
+		gov.POST("", middleware.OperationRecord(), v1.Api.SaveIndicator)
+		gov.DELETE("", middleware.OperationRecord(), v1.Api.DeleteIndicator)
+	}
+	Router.Group("fanhua/govData").GET("list", v1.Api.GetDataPoints)
+	Router.Group("fanhua/govData").POST("", middleware.OperationRecord(), v1.Api.SaveDataPoint)
+	Router.Group("fanhua/govProfile").GET("", v1.Api.GetRegionProfile)
 }
