@@ -51,4 +51,14 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		img.POST("", middleware.OperationRecord(), v1.Api.SubmitImageTask)
 		img.GET("list", v1.Api.GetImageTasks)
 	}
+	imgAsset := Router.Group("artsci/imageAsset")
+	{
+		imgAsset.POST("", middleware.OperationRecord(), v1.Api.RegisterImageAsset)
+		imgAsset.GET("list", v1.Api.GetImageAssets)
+		imgAsset.POST("interpret", middleware.OperationRecord(), v1.Api.InterpretImage)
+	}
+	interp := Router.Group("artsci/interpretation")
+	{
+		interp.GET("list", v1.Api.GetInterpretations)
+	}
 }

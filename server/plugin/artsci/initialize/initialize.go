@@ -28,6 +28,8 @@ func Gorm(ctx context.Context) {
 		new(model.ArtsciPaper),
 		new(model.ArtsciSceneTemplate),
 		new(model.ArtsciImageTask),
+		new(model.ArtsciImageAsset),
+		new(model.ArtsciInterpretation),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "artsci 注册表失败!")
@@ -60,6 +62,10 @@ func Api(ctx context.Context) {
 		{Path: "/artsci/scene/list", Description: "文生图场景模板列表", ApiGroup: "学科工具集", Method: "GET"},
 		{Path: "/artsci/imageTask", Description: "提交文生图任务", ApiGroup: "学科工具集", Method: "POST"},
 		{Path: "/artsci/imageTask/list", Description: "文生图任务列表", ApiGroup: "学科工具集", Method: "GET"},
+		{Path: "/artsci/imageAsset", Description: "登记图像资产", ApiGroup: "学科工具集", Method: "POST"},
+		{Path: "/artsci/imageAsset/list", Description: "图像资产列表", ApiGroup: "学科工具集", Method: "GET"},
+		{Path: "/artsci/imageAsset/interpret", Description: "图像解读与分析", ApiGroup: "学科工具集", Method: "POST"},
+		{Path: "/artsci/interpretation/list", Description: "解读记录列表", ApiGroup: "学科工具集", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -101,6 +107,10 @@ func Casbin(ctx context.Context) {
 		{"/artsci/scene/list", "GET"},
 		{"/artsci/imageTask", "POST"},
 		{"/artsci/imageTask/list", "GET"},
+		{"/artsci/imageAsset", "POST"},
+		{"/artsci/imageAsset/list", "GET"},
+		{"/artsci/imageAsset/interpret", "POST"},
+		{"/artsci/interpretation/list", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

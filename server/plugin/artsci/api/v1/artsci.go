@@ -360,3 +360,103 @@ func (a *ArtsciApi) GetImageTasks(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// RegisterImageAsset 图像资产登记
+// @Tags Artsci
+// @Summary 登记图像资产（路径/MIME/来源元数据）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.ArtsciImageAsset true "图像资产"
+// @Success 200 {object} response.Response{data=model.ArtsciImageAsset} "登记成功"
+// @Router /artsci/imageAsset [post]
+func (a *ArtsciApi) RegisterImageAsset(c *gin.Context) {
+	var in model.ArtsciImageAsset
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ArtsciApp.RegisterImageAsset(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "登记成功", c)
+}
+
+// GetImageAssets 图像资产列表
+// @Tags Artsci
+// @Summary 图像资产列表（关键字过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param keyword query string false "名称关键字"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /artsci/imageAsset/list [get]
+func (a *ArtsciApi) GetImageAssets(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ArtsciApp.GetImageAssets(c.Query("keyword"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// interpretReq 图像解读请求
+type interpretReq struct {
+	AssetId uint   `json:"assetId" binding:"required"`
+	Subject string `json:"subject" binding:"required"`
+	ModelId uint   `json:"modelId"`
+}
+
+// InterpretImage 图像解读
+// @Tags Artsci
+// @Summary 图像解读与分析（表面细节/文化含义两段结构化，llm 或元数据口径）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.interpretReq true "解读请求"
+// @Success 200 {object} response.Response{data=model.ArtsciInterpretation} "解读完成"
+// @Router /artsci/imageAsset/interpret [post]
+func (a *ArtsciApi) InterpretImage(c *gin.Context) {
+	var in interpretReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	rec, err := service.ArtsciApp.InterpretImage(in.AssetId, in.Subject, in.ModelId)
+	if err != nil {
+		if rec != nil {
+			response.OkWithDetailed(rec, "解读失败（已留痕）: "+err.Error(), c)
+			return
+		}
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(rec, "解读完成", c)
+}
+
+// GetInterpretations 解读记录列表
+// @Tags Artsci
+// @Summary 图像解读记录列表（资产过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param assetId query int false "资产ID"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /artsci/interpretation/list [get]
+func (a *ArtsciApi) GetInterpretations(c *gin.Context) {
+	assetId, _ := strconv.ParseUint(c.Query("assetId"), 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ArtsciApp.GetInterpretations(uint(assetId), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
