@@ -34,6 +34,7 @@ func Gorm(ctx context.Context) {
 		new(model.FanhuaConflictCase),
 		new(model.FanhuaGovIndicator),
 		new(model.FanhuaGovDataPoint),
+		new(model.FanhuaPromptTemplate),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "fanhua 注册表失败!")
@@ -92,6 +93,10 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/govData", Description: "写入指标数据点", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/govData/list", Description: "指标数据点列表", ApiGroup: "繁花文科大模型", Method: "GET"},
 		{Path: "/fanhua/govProfile", Description: "社区画像", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/prompt/list", Description: "提示词模板列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/prompt/render", Description: "提示词渲染", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/prompt", Description: "保存提示词模板", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/prompt", Description: "删除提示词模板", ApiGroup: "繁花文科大模型", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -159,6 +164,10 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/govData", "POST"},
 		{"/fanhua/govData/list", "GET"},
 		{"/fanhua/govProfile", "GET"},
+		{"/fanhua/prompt/list", "GET"},
+		{"/fanhua/prompt/render", "POST"},
+		{"/fanhua/prompt", "POST"},
+		{"/fanhua/prompt", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

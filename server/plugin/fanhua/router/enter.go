@@ -86,4 +86,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	Router.Group("fanhua/govData").GET("list", v1.Api.GetDataPoints)
 	Router.Group("fanhua/govData").POST("", middleware.OperationRecord(), v1.Api.SaveDataPoint)
 	Router.Group("fanhua/govProfile").GET("", v1.Api.GetRegionProfile)
+	prompt := Router.Group("fanhua/prompt")
+	{
+		prompt.GET("list", v1.Api.GetPromptTemplates)
+		prompt.POST("render", v1.Api.RenderPrompt)
+		prompt.POST("", middleware.OperationRecord(), v1.Api.SavePromptTemplate)
+		prompt.DELETE("", middleware.OperationRecord(), v1.Api.DeletePromptTemplate)
+	}
 }

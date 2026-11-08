@@ -30,6 +30,7 @@ func (p *plugin) Register(group *gin.Engine) {
 	initialize.SeedVoiceEntries(ctx)
 	initialize.SeedValues(ctx)
 	initialize.SeedGovIndicators(ctx)
+	initialize.SeedPrompts(ctx)
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
 	initialize.Casbin(ctx)

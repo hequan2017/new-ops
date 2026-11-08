@@ -949,3 +949,93 @@ func (a *FanhuaApi) GetRegionProfile(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "获取成功", c)
 }
+
+// renderPromptReq 渲染请求
+type renderPromptReq struct {
+	Name string            `json:"name" binding:"required"`
+	Vars map[string]string `json:"vars"`
+}
+
+// SavePromptTemplate 保存提示词模板
+// @Tags Fanhua
+// @Summary 新建/更新提示词模板（vars 自动解析）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaPromptTemplate true "模板"
+// @Success 200 {object} response.Response{data=model.FanhuaPromptTemplate} "保存成功"
+// @Router /fanhua/prompt [post]
+func (a *FanhuaApi) SavePromptTemplate(c *gin.Context) {
+	var in model.FanhuaPromptTemplate
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SavePromptTemplate(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeletePromptTemplate 删除提示词模板
+// @Tags Fanhua
+// @Summary 删除提示词模板（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "模板ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /fanhua/prompt [delete]
+func (a *FanhuaApi) DeletePromptTemplate(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.FanhuaApp.DeletePromptTemplate(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetPromptTemplates 模板列表
+// @Tags Fanhua
+// @Summary 提示词模板列表（场景过滤）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param scene query string false "沪语场景/价值观审核/通用"
+// @Success 200 {object} response.Response{data=[]model.FanhuaPromptTemplate} "获取成功"
+// @Router /fanhua/prompt/list [get]
+func (a *FanhuaApi) GetPromptTemplates(c *gin.Context) {
+	list, err := service.FanhuaApp.GetPromptTemplates(c.Query("scene"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// RenderPrompt 模板渲染
+// @Tags Fanhua
+// @Summary 按模板名渲染（{{var}} 填充，缺失报错）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.renderPromptReq true "渲染请求"
+// @Success 200 {object} response.Response{data=map[string]any} "渲染成功"
+// @Router /fanhua/prompt/render [post]
+func (a *FanhuaApi) RenderPrompt(c *gin.Context) {
+	var in renderPromptReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.RenderPromptByName(in.Name, in.Vars)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "渲染成功", c)
+}
