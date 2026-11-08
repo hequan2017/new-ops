@@ -32,4 +32,14 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		grading.POST("", middleware.OperationRecord(), v1.Api.GradeEssay)
 		grading.GET("list", v1.Api.GetGradings)
 	}
+	question := Router.Group("artsci/question")
+	{
+		question.POST("generate", middleware.OperationRecord(), v1.Api.GenerateQuestion)
+		question.GET("list", v1.Api.GetQuestions)
+	}
+	paper := Router.Group("artsci/paper")
+	{
+		paper.POST("", middleware.OperationRecord(), v1.Api.BuildPaper)
+		paper.GET("list", v1.Api.GetPapers)
+	}
 }

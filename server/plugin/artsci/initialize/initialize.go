@@ -24,6 +24,8 @@ func Gorm(ctx context.Context) {
 		new(model.ArtsciTool),
 		new(model.ArtsciRunLog),
 		new(model.ArtsciGrading),
+		new(model.ArtsciQuestion),
+		new(model.ArtsciPaper),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "artsci 注册表失败!")
@@ -49,6 +51,10 @@ func Api(ctx context.Context) {
 		{Path: "/artsci/tool", Description: "删除学科工具", ApiGroup: "学科工具集", Method: "DELETE"},
 		{Path: "/artsci/grading", Description: "提交作业批改", ApiGroup: "学科工具集", Method: "POST"},
 		{Path: "/artsci/grading/list", Description: "批改记录列表", ApiGroup: "学科工具集", Method: "GET"},
+		{Path: "/artsci/question/generate", Description: "自动出题", ApiGroup: "学科工具集", Method: "POST"},
+		{Path: "/artsci/question/list", Description: "题目列表", ApiGroup: "学科工具集", Method: "GET"},
+		{Path: "/artsci/paper", Description: "规则组卷", ApiGroup: "学科工具集", Method: "POST"},
+		{Path: "/artsci/paper/list", Description: "试卷列表", ApiGroup: "学科工具集", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -83,6 +89,10 @@ func Casbin(ctx context.Context) {
 		{"/artsci/tool", "DELETE"},
 		{"/artsci/grading", "POST"},
 		{"/artsci/grading/list", "GET"},
+		{"/artsci/question/generate", "POST"},
+		{"/artsci/question/list", "GET"},
+		{"/artsci/paper", "POST"},
+		{"/artsci/paper/list", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

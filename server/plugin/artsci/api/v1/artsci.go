@@ -191,3 +191,106 @@ func (a *ArtsciApi) GetGradings(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// genQuestionReq 出题请求
+type genQuestionReq struct {
+	KnowledgePoint string  `json:"knowledgePoint" binding:"required"`
+	QType          string  `json:"qType" binding:"required"`
+	Difficulty     string  `json:"difficulty"`
+	ModelId        uint    `json:"modelId"`
+	Score          float64 `json:"score"`
+}
+
+// buildPaperReq 组卷请求
+type buildPaperReq struct {
+	Name      string `json:"name" binding:"required"`
+	RulesJSON string `json:"rulesJSON" binding:"required"`
+}
+
+// GenerateQuestion 自动出题
+// @Tags Artsci
+// @Summary 生成题目（模板规则+chat 可选增强，失败回落模板）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.genQuestionReq true "出题请求"
+// @Success 200 {object} response.Response{data=model.ArtsciQuestion} "生成成功"
+// @Router /artsci/question/generate [post]
+func (a *ArtsciApi) GenerateQuestion(c *gin.Context) {
+	var in genQuestionReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	q, err := service.ArtsciApp.GenerateQuestion(in.KnowledgePoint, in.QType, in.Difficulty, in.ModelId, in.Score)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(q, "生成成功", c)
+}
+
+// GetQuestions 题目列表
+// @Tags Artsci
+// @Summary 生成题目列表（知识点/题型过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param knowledgePoint query string false "知识点"
+// @Param qType query string false "题型"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /artsci/question/list [get]
+func (a *ArtsciApi) GetQuestions(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ArtsciApp.GetQuestions(c.Query("knowledgePoint"), c.Query("qType"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// BuildPaper 规则组卷
+// @Tags Artsci
+// @Summary 按规则抽题组卷（知识点×题型×题量×单题分，分值合计服务端计算）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.buildPaperReq true "组卷请求"
+// @Success 200 {object} response.Response{data=model.ArtsciPaper} "组卷成功"
+// @Router /artsci/paper [post]
+func (a *ArtsciApi) BuildPaper(c *gin.Context) {
+	var in buildPaperReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	paper, err := service.ArtsciApp.BuildPaper(in.Name, in.RulesJSON)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(paper, "组卷成功", c)
+}
+
+// GetPapers 试卷列表
+// @Tags Artsci
+// @Summary 试卷列表（倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /artsci/paper/list [get]
+func (a *ArtsciApi) GetPapers(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ArtsciApp.GetPapers(page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
