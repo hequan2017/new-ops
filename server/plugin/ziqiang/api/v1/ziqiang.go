@@ -2,6 +2,7 @@
 package v1
 
 import (
+	"math/rand"
 	"strconv"
 	"time"
 
@@ -253,4 +254,63 @@ func (a *ZiqiangApi) CompareImageHash(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(out, "比对成功", c)
+}
+
+// termCheckReq 术语校验请求
+type termCheckReq struct {
+	Text string `json:"text" binding:"required"`
+}
+
+// dpMaskReq 差分隐私脱敏请求
+type dpMaskReq struct {
+	Text        string  `json:"text" binding:"required"`
+	Sensitivity float64 `json:"sensitivity"`
+	Epsilon     float64 `json:"epsilon"`
+}
+
+// CheckTerms 法律术语校验
+// @Tags Ziqiang
+// @Summary 法律术语混淆校验（11 条规则含上下文条件，输出修正建议）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.termCheckReq true "校验请求"
+// @Success 200 {object} response.Response{data=[]service.TermIssue} "校验完成"
+// @Router /ziqiang/termCheck [post]
+func (a *ZiqiangApi) CheckTerms(c *gin.Context) {
+	var in termCheckReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(service.CheckTerms(in.Text), "校验完成", c)
+}
+
+// DpMaskNumbers 数值差分隐私脱敏
+// @Tags Ziqiang
+// @Summary 数值 Laplace 噪声脱敏（商业秘密口径，sensitivity/epsilon 可配）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.dpMaskReq true "脱敏请求"
+// @Success 200 {object} response.Response{data=map[string]any} "脱敏完成"
+// @Router /ziqiang/dpMask [post]
+func (a *ZiqiangApi) DpMaskNumbers(c *gin.Context) {
+	var in dpMaskReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	if in.Sensitivity <= 0 {
+		in.Sensitivity = 1
+	}
+	if in.Epsilon <= 0 {
+		in.Epsilon = 1
+	}
+	masked, err := service.DpMaskNumbers(in.Text, in.Sensitivity, in.Epsilon, rand.New(rand.NewSource(time.Now().UnixNano())))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"masked": masked}, "脱敏完成", c)
 }

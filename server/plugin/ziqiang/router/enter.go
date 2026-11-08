@@ -37,4 +37,6 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ic.GET("compare", v1.Api.CompareImageHash)
 		ic.POST("", middleware.OperationRecord(), v1.Api.SaveImageCorpus)
 	}
+	Router.Group("ziqiang/termCheck").POST("", v1.Api.CheckTerms)
+	Router.Group("ziqiang/dpMask").POST("", v1.Api.DpMaskNumbers)
 }
