@@ -700,3 +700,129 @@ func (a *FanhuaApi) SearchCulture(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "检索成功", c)
 }
+
+// healthReq 健康度评估请求
+type healthReq struct {
+	Text string `json:"text" binding:"required"`
+}
+
+// GetWords 敏感词列表
+// @Tags Fanhua
+// @Summary 敏感词列表（动作过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param action query string false "block/replace"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/word/list [get]
+func (a *FanhuaApi) GetWords(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetWords(c.Query("action"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// SaveWord 保存敏感词
+// @Tags Fanhua
+// @Summary 新建/更新敏感词（block/replace+权重）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaSensitiveWord true "敏感词"
+// @Success 200 {object} response.Response{data=model.FanhuaSensitiveWord} "保存成功"
+// @Router /fanhua/word [post]
+func (a *FanhuaApi) SaveWord(c *gin.Context) {
+	var in model.FanhuaSensitiveWord
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SaveWord(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeleteWord 删除敏感词
+// @Tags Fanhua
+// @Summary 删除敏感词（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "词ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /fanhua/word [delete]
+func (a *FanhuaApi) DeleteWord(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.FanhuaApp.DeleteWord(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetHealth 健康度评估
+// @Tags Fanhua
+// @Summary 文本价值观健康度评估（加权扣减+情感三分类+替换输出）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.healthReq true "评估请求"
+// @Success 200 {object} response.Response{data=service.healthResult} "评估成功"
+// @Router /fanhua/values/health [post]
+func (a *FanhuaApi) GetHealth(c *gin.Context) {
+	var in healthReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.GetHealth(in.Text)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "评估成功", c)
+}
+
+// GetTemplates 合规模板列表
+// @Tags Fanhua
+// @Summary 合规表达模板列表
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]model.FanhuaComplianceTemplate} "获取成功"
+// @Router /fanhua/template/list [get]
+func (a *FanhuaApi) GetTemplates(c *gin.Context) {
+	list, err := service.FanhuaApp.GetTemplates()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// GetConflictCases 冲突案例列表
+// @Tags Fanhua
+// @Summary 多语言价值观冲突案例列表
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param lang query string false "中/英/多语"
+// @Success 200 {object} response.Response{data=[]model.FanhuaConflictCase} "获取成功"
+// @Router /fanhua/conflict/list [get]
+func (a *FanhuaApi) GetConflictCases(c *gin.Context) {
+	list, err := service.FanhuaApp.GetConflictCases(c.Query("lang"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}

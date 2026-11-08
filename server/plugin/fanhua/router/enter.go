@@ -68,4 +68,13 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		voice.POST("", middleware.OperationRecord(), v1.Api.SaveVoiceEntry)
 		voice.DELETE("", middleware.OperationRecord(), v1.Api.DeleteVoiceEntry)
 	}
+	word := Router.Group("fanhua/word")
+	{
+		word.GET("list", v1.Api.GetWords)
+		word.POST("", middleware.OperationRecord(), v1.Api.SaveWord)
+		word.DELETE("", middleware.OperationRecord(), v1.Api.DeleteWord)
+	}
+	Router.Group("fanhua/values").POST("health", v1.Api.GetHealth)
+	Router.Group("fanhua/template").GET("list", v1.Api.GetTemplates)
+	Router.Group("fanhua/conflict").GET("list", v1.Api.GetConflictCases)
 }
