@@ -22,6 +22,7 @@ import (
 func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.FanhuaCorpus),
+		new(model.FanhuaParallel),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "fanhua 注册表失败!")
@@ -44,6 +45,10 @@ func Api(ctx context.Context) {
 		{Path: "/fanhua/corpus", Description: "保存沪语语料", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/corpus/import", Description: "批量导入语料", ApiGroup: "繁花文科大模型", Method: "POST"},
 		{Path: "/fanhua/corpus", Description: "删除沪语语料", ApiGroup: "繁花文科大模型", Method: "DELETE"},
+		{Path: "/fanhua/parallel/list", Description: "平行语料列表", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/parallel/search", Description: "普通话对照检索", ApiGroup: "繁花文科大模型", Method: "GET"},
+		{Path: "/fanhua/parallel", Description: "保存平行语料", ApiGroup: "繁花文科大模型", Method: "POST"},
+		{Path: "/fanhua/parallel", Description: "删除平行语料", ApiGroup: "繁花文科大模型", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -75,6 +80,10 @@ func Casbin(ctx context.Context) {
 		{"/fanhua/corpus", "POST"},
 		{"/fanhua/corpus/import", "POST"},
 		{"/fanhua/corpus", "DELETE"},
+		{"/fanhua/parallel/list", "GET"},
+		{"/fanhua/parallel/search", "GET"},
+		{"/fanhua/parallel", "POST"},
+		{"/fanhua/parallel", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

@@ -127,3 +127,87 @@ func (a *FanhuaApi) ImportCorpora(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "导入完成", c)
 }
+
+// SaveParallel 保存平行语料
+// @Tags Fanhua
+// @Summary 新建/更新沪-普-英平行语料
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.FanhuaParallel true "平行语料"
+// @Success 200 {object} response.Response{data=model.FanhuaParallel} "保存成功"
+// @Router /fanhua/parallel [post]
+func (a *FanhuaApi) SaveParallel(c *gin.Context) {
+	var in model.FanhuaParallel
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.FanhuaApp.SaveParallel(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeleteParallel 删除平行语料
+// @Tags Fanhua
+// @Summary 删除平行语料（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "语料ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /fanhua/parallel [delete]
+func (a *FanhuaApi) DeleteParallel(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.FanhuaApp.DeleteParallel(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetParallels 平行语料列表
+// @Tags Fanhua
+// @Summary 沪-普-英平行语料列表（关键字过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param keyword query string false "关键字"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /fanhua/parallel/list [get]
+func (a *FanhuaApi) GetParallels(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.FanhuaApp.GetParallels(c.Query("keyword"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// SearchParallel 对照检索
+// @Tags Fanhua
+// @Summary 普通话→沪语对照检索（编辑相似度 top-k）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param query query string true "检索语句"
+// @Param topK query int false "返回条数(默认5)"
+// @Success 200 {object} response.Response{data=[]service.paraHit} "检索成功"
+// @Router /fanhua/parallel/search [get]
+func (a *FanhuaApi) SearchParallel(c *gin.Context) {
+	topK, _ := strconv.Atoi(c.DefaultQuery("topK", "5"))
+	hits, err := service.FanhuaApp.SearchParallel(c.Query("query"), topK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(hits, "检索成功", c)
+}

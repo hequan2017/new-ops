@@ -26,4 +26,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		corpus.POST("import", middleware.OperationRecord(), v1.Api.ImportCorpora)
 		corpus.DELETE("", middleware.OperationRecord(), v1.Api.DeleteCorpus)
 	}
+	para := Router.Group("fanhua/parallel")
+	{
+		para.GET("list", v1.Api.GetParallels)
+		para.GET("search", v1.Api.SearchParallel)
+		para.POST("", middleware.OperationRecord(), v1.Api.SaveParallel)
+		para.DELETE("", middleware.OperationRecord(), v1.Api.DeleteParallel)
+	}
 }
