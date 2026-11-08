@@ -515,3 +515,133 @@ func (a *ZiqiangApi) GraphBFS(c *gin.Context) {
 	}
 	response.OkWithDetailed(paths, "推理成功", c)
 }
+
+// SaveRegulation 保存法规
+// @Tags Ziqiang
+// @Summary 新建/更新法规条目（中美欧三地）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.ZqRegulation true "法规"
+// @Success 200 {object} response.Response{data=model.ZqRegulation} "保存成功"
+// @Router /ziqiang/regulation [post]
+func (a *ZiqiangApi) SaveRegulation(c *gin.Context) {
+	var in model.ZqRegulation
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ZiqiangApp.SaveRegulation(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeleteRegulation 删除法规
+// @Tags Ziqiang
+// @Summary 删除法规条目（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "法规ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /ziqiang/regulation [delete]
+func (a *ZiqiangApi) DeleteRegulation(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.ZiqiangApp.DeleteRegulation(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetRegulations 法规列表
+// @Tags Ziqiang
+// @Summary 法规条目列表（辖区/分类过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param jurisdiction query string false "中国/美国/欧盟"
+// @Param category query string false "分类"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /ziqiang/regulation/list [get]
+func (a *ZiqiangApi) GetRegulations(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ZiqiangApp.GetRegulations(c.Query("jurisdiction"), c.Query("category"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// SearchRegulations 法规检索
+// @Tags Ziqiang
+// @Summary 法规 bigram 检索（辖区过滤，命中降序 top-k）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param query query string true "检索词"
+// @Param jurisdiction query string false "中国/美国/欧盟"
+// @Param topK query int false "返回条数"
+// @Success 200 {object} response.Response{data=[]service.regHit} "检索成功"
+// @Router /ziqiang/regulation/search [get]
+func (a *ZiqiangApi) SearchRegulations(c *gin.Context) {
+	topK, _ := strconv.Atoi(c.DefaultQuery("topK", "5"))
+	hits, err := service.ZiqiangApp.SearchRegulations(c.Query("query"), c.Query("jurisdiction"), topK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(hits, "检索成功", c)
+}
+
+// SaveCase 保存判例
+// @Tags Ziqiang
+// @Summary 新建判例条目
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.ZqCase true "判例"
+// @Success 200 {object} response.Response{data=model.ZqCase} "保存成功"
+// @Router /ziqiang/case [post]
+func (a *ZiqiangApi) SaveCase(c *gin.Context) {
+	var in model.ZqCase
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ZiqiangApp.SaveCase(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// GetCases 判例列表
+// @Tags Ziqiang
+// @Summary 判例条目列表（辖区过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param jurisdiction query string false "中国/美国/欧盟"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /ziqiang/case/list [get]
+func (a *ZiqiangApi) GetCases(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ZiqiangApp.GetCases(c.Query("jurisdiction"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}

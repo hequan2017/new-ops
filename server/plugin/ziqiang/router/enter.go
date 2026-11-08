@@ -54,4 +54,16 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	}
 	Router.Group("ziqiang/graph").GET("", v1.Api.GetGraph)
 	Router.Group("ziqiang/graph").GET("bfs", v1.Api.GraphBFS)
+	reg := Router.Group("ziqiang/regulation")
+	{
+		reg.GET("list", v1.Api.GetRegulations)
+		reg.GET("search", v1.Api.SearchRegulations)
+		reg.POST("", middleware.OperationRecord(), v1.Api.SaveRegulation)
+		reg.DELETE("", middleware.OperationRecord(), v1.Api.DeleteRegulation)
+	}
+	caseGrp := Router.Group("ziqiang/case")
+	{
+		caseGrp.GET("list", v1.Api.GetCases)
+		caseGrp.POST("", middleware.OperationRecord(), v1.Api.SaveCase)
+	}
 }

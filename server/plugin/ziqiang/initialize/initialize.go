@@ -26,6 +26,8 @@ func Gorm(ctx context.Context) {
 		new(model.ZqImageCorpus),
 		new(model.ZqEntity),
 		new(model.ZqEdge),
+		new(model.ZqRegulation),
+		new(model.ZqCase),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "ziqiang 注册表失败!")
@@ -64,6 +66,12 @@ func Api(ctx context.Context) {
 		{Path: "/ziqiang/edge", Description: "删除关系边", ApiGroup: "自强理工科大模型", Method: "DELETE"},
 		{Path: "/ziqiang/graph", Description: "图谱全图", ApiGroup: "自强理工科大模型", Method: "GET"},
 		{Path: "/ziqiang/graph/bfs", Description: "图谱多跳推理", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/regulation/list", Description: "法规列表", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/regulation/search", Description: "法规检索", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/regulation", Description: "保存法规", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/regulation", Description: "删除法规", ApiGroup: "自强理工科大模型", Method: "DELETE"},
+		{Path: "/ziqiang/case/list", Description: "判例列表", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/case", Description: "保存判例", ApiGroup: "自强理工科大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -111,6 +119,12 @@ func Casbin(ctx context.Context) {
 		{"/ziqiang/edge", "DELETE"},
 		{"/ziqiang/graph", "GET"},
 		{"/ziqiang/graph/bfs", "GET"},
+		{"/ziqiang/regulation/list", "GET"},
+		{"/ziqiang/regulation/search", "GET"},
+		{"/ziqiang/regulation", "POST"},
+		{"/ziqiang/regulation", "DELETE"},
+		{"/ziqiang/case/list", "GET"},
+		{"/ziqiang/case", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
