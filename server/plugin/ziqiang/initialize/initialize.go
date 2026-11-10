@@ -87,7 +87,7 @@ func Api(ctx context.Context) {
 	pluginUtils.RegisterApis(entities...)
 }
 
-// Menu 注册 ziqiang 菜单（自强理工科大模型父级，子页面随 O11 挂其下）
+// Menu 注册 ziqiang 菜单（自强理工科大模型父级 + 自强工作台子页）
 func Menu(ctx context.Context) {
 	entities := []sysModel.SysBaseMenu{
 		{
@@ -97,6 +97,14 @@ func Menu(ctx context.Context) {
 			Component: "view/routerHolder.vue",
 			Sort:      8,
 			Meta:      sysModel.Meta{Title: "自强理工科大模型", Icon: "cpu"},
+		},
+		{
+			Path:      "ziqiangLab",
+			Name:      "ziqiangLab",
+			Hidden:    false,
+			Component: "plugin/ziqiang/view/lab/index.vue",
+			Sort:      1,
+			Meta:      sysModel.Meta{Title: "自强工作台", Icon: "search"},
 		},
 	}
 	pluginUtils.RegisterMenus(entities...)
