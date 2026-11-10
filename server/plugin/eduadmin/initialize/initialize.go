@@ -23,6 +23,8 @@ func Gorm(ctx context.Context) {
 	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
 		new(model.EduRecord),
 		new(model.EduPolicy),
+		new(model.EduResume),
+		new(model.EduPosition),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -52,6 +54,11 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/policy/search", Description: "知识库检索", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/policy", Description: "保存知识库条目", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/policy", Description: "删除知识库条目", ApiGroup: "教育管理一模通管", Method: "DELETE"},
+		{Path: "/eduadmin/resume/list", Description: "简历列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/resume", Description: "保存简历", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/position/list", Description: "岗位列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/position", Description: "保存岗位", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/screen", Description: "候选人筛选", ApiGroup: "教育管理一模通管", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -90,6 +97,11 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/policy/search", "GET"},
 		{"/eduadmin/policy", "POST"},
 		{"/eduadmin/policy", "DELETE"},
+		{"/eduadmin/resume/list", "GET"},
+		{"/eduadmin/resume", "POST"},
+		{"/eduadmin/position/list", "GET"},
+		{"/eduadmin/position", "POST"},
+		{"/eduadmin/screen", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

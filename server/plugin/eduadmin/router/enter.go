@@ -36,4 +36,15 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		pol.POST("", middleware.OperationRecord(), v1.Api.SaveEduPolicy)
 		pol.DELETE("", middleware.OperationRecord(), v1.Api.DeleteEduPolicy)
 	}
+	res := Router.Group("eduadmin/resume")
+	{
+		res.GET("list", v1.Api.GetEduResumes)
+		res.POST("", middleware.OperationRecord(), v1.Api.SaveEduResume)
+	}
+	pos := Router.Group("eduadmin/position")
+	{
+		pos.GET("list", v1.Api.GetEduPositions)
+		pos.POST("", middleware.OperationRecord(), v1.Api.SaveEduPosition)
+	}
+	Router.Group("eduadmin/screen").GET("", v1.Api.ScreenCandidates)
 }
