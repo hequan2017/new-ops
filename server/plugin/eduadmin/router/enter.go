@@ -107,4 +107,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		meal.GET("forecast", v1.Api.ForecastEduMeals)
 		meal.POST("", middleware.OperationRecord(), v1.Api.SaveEduMealRecord)
 	}
+	repair := Router.Group("eduadmin/repair")
+	{
+		repair.GET("list", v1.Api.GetEduRepairOrders)
+		repair.POST("", middleware.OperationRecord(), v1.Api.CreateEduRepairOrder)
+		repair.POST("assign", middleware.OperationRecord(), v1.Api.AssignEduRepairOrder)
+		repair.POST("close", middleware.OperationRecord(), v1.Api.CloseEduRepairOrder)
+	}
 }
