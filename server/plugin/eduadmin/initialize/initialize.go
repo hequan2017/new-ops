@@ -31,6 +31,9 @@ func Gorm(ctx context.Context) {
 		new(model.EduBudget),
 		new(model.EduInvoice),
 		new(model.EduRiskAlert),
+		new(model.EduAsset),
+		new(model.EduSensorReading),
+		new(model.EduMaintPlan),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -84,6 +87,11 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/risk/list", Description: "财务预警列表", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/risk/scan", Description: "财务风险扫描", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/risk/handle", Description: "预警标记处理", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/asset/list", Description: "设备列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/asset/maintenance", Description: "资产故障预测", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/asset/maintenance/list", Description: "维护计划列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/asset", Description: "保存设备", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/asset/reading", Description: "新增传感器读数", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -146,6 +154,11 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/risk/list", "GET"},
 		{"/eduadmin/risk/scan", "POST"},
 		{"/eduadmin/risk/handle", "POST"},
+		{"/eduadmin/asset/list", "GET"},
+		{"/eduadmin/asset/maintenance", "GET"},
+		{"/eduadmin/asset/maintenance/list", "GET"},
+		{"/eduadmin/asset", "POST"},
+		{"/eduadmin/asset/reading", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

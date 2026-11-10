@@ -81,4 +81,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		risk.POST("scan", middleware.OperationRecord(), v1.Api.ScanEduRisk)
 		risk.POST("handle", middleware.OperationRecord(), v1.Api.HandleEduRiskAlert)
 	}
+	asset := Router.Group("eduadmin/asset")
+	{
+		asset.GET("list", v1.Api.GetEduAssets)
+		asset.GET("maintenance", v1.Api.PredictAssetFault)
+		asset.GET("maintenance/list", v1.Api.GetEduMaintPlans)
+		asset.POST("", middleware.OperationRecord(), v1.Api.SaveEduAsset)
+		asset.POST("reading", middleware.OperationRecord(), v1.Api.AddEduSensorReading)
+	}
 }
