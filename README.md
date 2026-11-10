@@ -361,7 +361,7 @@ make build-agent          # 产物 agent/baize-agent，scp 到目标机即可（
 
 - REST 资源 `/api/<插件>/<资源>`，动作类 POST 子资源；WebSocket `/ws/<插件>/*`（query token 握手自验），SSE `/sse/<插件>/*`
 - 响应统一 `{code, data, msg}`，列表分页 `pageInfo`
-- **错误码分段**（每插件独占）：asset=1000-1099 · term=1100-1199 · job=1200-1299 · pipeline=1300-1399 · container=1400-1499 · k8s=1500-1599 · gpu=1600-1699 · dbops=1700-1799 · monitor=1800-1899 · workflow=1900-1999 · agent/org/aiops=2000-2199 · llmops=2200-2299 · oplib=2300-2399 · exam=2400-2499 · artsci=2500-2599 · fanhua=2600-2699 · ziqiang=2700-2799；通用错误沿用 GVA 7xxx 段
+- **错误码分段**（每插件独占）：asset=1000-1099 · term=1100-1199 · job=1200-1299 · pipeline=1300-1399 · container=1400-1499 · k8s=1500-1599 · gpu=1600-1699 · dbops=1700-1799 · monitor=1800-1899 · workflow=1900-1999 · agent/org/aiops=2000-2199 · llmops=2200-2299 · oplib=2300-2399 · exam=2400-2499 · artsci=2500-2599 · fanhua=2600-2699 · ziqiang=2700-2799 · eduadmin=2800-2899 · crossauth=2900-2999 · policyreg=3000-3099；通用错误沿用 GVA 7xxx 段
 - Swagger 注释随代码同步（`/swagger/index.html`）
 
 ---
