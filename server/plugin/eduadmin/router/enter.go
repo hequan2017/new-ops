@@ -60,4 +60,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		talent.GET("forecast", v1.Api.ForecastTalent)
 		talent.POST("stat", middleware.OperationRecord(), v1.Api.SaveEduTalentStat)
 	}
+	budget := Router.Group("eduadmin/budget")
+	{
+		budget.GET("list", v1.Api.GetEduBudgets)
+		budget.GET("analysis", v1.Api.AnalyzeEduBudget)
+		budget.GET("suggest", v1.Api.SuggestEduBudget)
+		budget.POST("", middleware.OperationRecord(), v1.Api.SaveEduBudget)
+		budget.POST("compare", v1.Api.CompareEduBudgetPlans)
+	}
 }

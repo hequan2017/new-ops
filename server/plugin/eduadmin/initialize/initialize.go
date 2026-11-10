@@ -28,6 +28,7 @@ func Gorm(ctx context.Context) {
 		new(model.EduPerfRecord),
 		new(model.EduPerfReport),
 		new(model.EduTalentStat),
+		new(model.EduBudget),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -69,6 +70,11 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/talent/stat/list", Description: "年度人才统计列表", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/talent/stat", Description: "保存年度人才统计", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/talent/forecast", Description: "人才需求预测", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/budget/list", Description: "预算列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/budget/analysis", Description: "预算同比分析", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/budget/suggest", Description: "预算分配建议", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/budget", Description: "保存预算", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/budget/compare", Description: "预算方案对比", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -119,6 +125,11 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/talent/stat/list", "GET"},
 		{"/eduadmin/talent/stat", "POST"},
 		{"/eduadmin/talent/forecast", "GET"},
+		{"/eduadmin/budget/list", "GET"},
+		{"/eduadmin/budget/analysis", "GET"},
+		{"/eduadmin/budget/suggest", "GET"},
+		{"/eduadmin/budget", "POST"},
+		{"/eduadmin/budget/compare", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

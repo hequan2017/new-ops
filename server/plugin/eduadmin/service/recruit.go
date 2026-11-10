@@ -5,6 +5,7 @@ package service
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -75,7 +76,7 @@ func matchResume(resume model.EduResume, position model.EduPosition) recruitMatc
 }
 
 func round2(v float64) float64 {
-	return float64(int(v*100+0.5)) / 100
+	return math.Round(v*100) / 100
 }
 
 // ScreenCandidates 候选人筛选（按融合分降序）
