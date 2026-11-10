@@ -1,0 +1,144 @@
+// Package service ziqiang：区块链存证（需求 3.5-8）
+// 口径：存证表 dataHash/prevHash/height/timestamp；SHA256 链式追加
+// （BlockHash=f(height|ts|dataHash|prevHash)，创世 prevHash 全 0）；完整性校验
+// API 逐块重算三重断言（块哈希/前链指针/原文哈希）定位首个篡改块，纯函数可测。
+package service
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/ziqiang/model"
+)
+
+// 错误码（ziqiang 段 2700-2799）
+const (
+	ErrCodeEvidenceParam   = 2714
+	ErrCodeEvidenceNotFound = 2715
+)
+
+// GenesisPrevHash 创世块前链指针（64 个 0）
+var GenesisPrevHash = strings.Repeat("0", 64)
+
+// DataFingerprint 原文 SHA256（hex）
+func DataFingerprint(payload string) string {
+	sum := sha256.Sum256([]byte(payload))
+	return hex.EncodeToString(sum[:])
+}
+
+// EvidenceFingerprint 块哈希=f(height|ts|dataHash|prevHash)（纯函数，测试锚点）
+func EvidenceFingerprint(dataHash, prevHash string, height, ts int64) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%d|%d|%s|%s", height, ts, dataHash, prevHash)))
+	return hex.EncodeToString(sum[:])
+}
+
+// chainAppend 链式追加（纯函数，测试锚点）：height=prev+1，创世块 prevHash 全 0
+func chainAppend(prev *model.ZqEvidence, payload string, ts int64) model.ZqEvidence {
+	dataHash := DataFingerprint(payload)
+	var height int64
+	prevHash := GenesisPrevHash
+	if prev != nil {
+		height = prev.Height + 1
+		prevHash = prev.BlockHash
+	}
+	return model.ZqEvidence{
+		Payload: payload, DataHash: dataHash, PrevHash: prevHash,
+		BlockHash: EvidenceFingerprint(dataHash, prevHash, height, ts),
+		Height:    height, Timestamp: ts,
+	}
+}
+
+// chainIssue 完整性校验问题项
+type chainIssue struct {
+	Height int64  `json:"height"`
+	ID     uint   `json:"id"`
+	Reason string `json:"reason"`
+}
+
+// verifyChain 链完整性校验（纯函数，测试锚点）：按块高顺序逐块重算——
+// ①块哈希可复算 ②前链指针衔接（创世全 0）③dataHash 与原文一致。
+func verifyChain(blocks []model.ZqEvidence) []chainIssue {
+	issues := make([]chainIssue, 0)
+	for i := range blocks {
+		b := blocks[i]
+		if b.PrevHash != GenesisPrevHash && (i == 0 || b.PrevHash != blocks[i-1].BlockHash) {
+			issues = append(issues, chainIssue{Height: b.Height, ID: b.ID, Reason: "前链指针断裂"})
+		}
+		if b.PrevHash == GenesisPrevHash && i != 0 {
+			issues = append(issues, chainIssue{Height: b.Height, ID: b.ID, Reason: "非创世块出现全 0 前链指针"})
+		}
+		if want := EvidenceFingerprint(b.DataHash, b.PrevHash, b.Height, b.Timestamp); b.BlockHash != want {
+			issues = append(issues, chainIssue{Height: b.Height, ID: b.ID, Reason: "块哈希重算不符"})
+		}
+		if want := DataFingerprint(b.Payload); b.DataHash != want {
+			issues = append(issues, chainIssue{Height: b.Height, ID: b.ID, Reason: "原文哈希不符（原文被篡改）"})
+		}
+	}
+	return issues
+}
+
+// AppendEvidence 追加存证块（链式：取当前最高块，height+1，prevHash 接其 BlockHash）
+func (s *ZiqiangService) AppendEvidence(payload, bizKey string) (*model.ZqEvidence, error) {
+	if strings.TrimSpace(payload) == "" {
+		return nil, fmt.Errorf("[%d]存证原文必填", ErrCodeEvidenceParam)
+	}
+	var prev model.ZqEvidence
+	_ = global.GVA_DB.Model(&model.ZqEvidence{}).Order("height DESC").First(&prev).Error // 空链时 prev 为零值→创世块
+	block := chainAppend(&prev, payload, time.Now().Unix())
+	block.BizKey = bizKey
+	if err := global.GVA_DB.Create(&block).Error; err != nil {
+		return nil, err
+	}
+	return &block, nil
+}
+
+// chainReport 完整性校验报告
+type chainReport struct {
+	OK     bool         `json:"ok"`
+	Blocks int          `json:"blocks"`
+	Issues []chainIssue `json:"issues"`
+}
+
+// VerifyChain 链完整性校验（篡改检测报告）
+func (s *ZiqiangService) VerifyChain() (*chainReport, error) {
+	var blocks []model.ZqEvidence
+	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Order("height ASC").Limit(10000).Find(&blocks).Error; err != nil {
+		return nil, err
+	}
+	issues := verifyChain(blocks)
+	return &chainReport{OK: len(issues) == 0, Blocks: len(blocks), Issues: issues}, nil
+}
+
+// GetEvidenceList 存证列表（业务号过滤，块高升序分页）
+func (s *ZiqiangService) GetEvidenceList(bizKey string, page, pageSize int) ([]model.ZqEvidence, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 20
+	}
+	db := global.GVA_DB.Model(&model.ZqEvidence{})
+	if bizKey != "" {
+		db = db.Where("biz_key = ?", bizKey)
+	}
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var list []model.ZqEvidence
+	err := db.Order("height ASC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
+	return list, total, err
+}
+
+// GetEvidence 存证详情
+func (s *ZiqiangService) GetEvidence(id uint) (*model.ZqEvidence, error) {
+	var b model.ZqEvidence
+	if err := global.GVA_DB.First(&b, id).Error; err != nil {
+		return nil, fmt.Errorf("[%d]存证不存在", ErrCodeEvidenceNotFound)
+	}
+	return &b, nil
+}

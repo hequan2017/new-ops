@@ -645,3 +645,91 @@ func (a *ZiqiangApi) GetCases(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// evidenceReq 存证追加请求
+type evidenceReq struct {
+	Payload string `json:"payload" binding:"required"`
+	BizKey  string `json:"bizKey"`
+}
+
+// AppendEvidence 追加存证
+// @Tags Ziqiang
+// @Summary 区块链存证追加（SHA256 链式：dataHash/prevHash/height/timestamp）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.evidenceReq true "存证请求"
+// @Success 200 {object} response.Response{data=model.ZqEvidence} "存证成功"
+// @Router /ziqiang/evidence [post]
+func (a *ZiqiangApi) AppendEvidence(c *gin.Context) {
+	var in evidenceReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ZiqiangApp.AppendEvidence(in.Payload, in.BizKey)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "存证成功", c)
+}
+
+// VerifyEvidenceChain 链完整性校验
+// @Tags Ziqiang
+// @Summary 区块链完整性校验（块哈希/前链指针/原文哈希三重重算，定位首个篡改块）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=service.chainReport} "校验完成"
+// @Router /ziqiang/evidence/verify [get]
+func (a *ZiqiangApi) VerifyEvidenceChain(c *gin.Context) {
+	out, err := service.ZiqiangApp.VerifyChain()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "校验完成", c)
+}
+
+// GetEvidenceList 存证列表
+// @Tags Ziqiang
+// @Summary 存证块列表（业务号过滤，块高升序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param bizKey query string false "业务关联号"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /ziqiang/evidence/list [get]
+func (a *ZiqiangApi) GetEvidenceList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.ZiqiangApp.GetEvidenceList(c.Query("bizKey"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
+}
+
+// GetEvidence 存证详情
+// @Tags Ziqiang
+// @Summary 存证块详情（按 ID）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "存证ID"
+// @Success 200 {object} response.Response{data=model.ZqEvidence} "获取成功"
+// @Router /ziqiang/evidence [get]
+func (a *ZiqiangApi) GetEvidence(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	out, err := service.ZiqiangApp.GetEvidence(uint(id))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "获取成功", c)
+}

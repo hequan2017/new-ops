@@ -66,4 +66,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		caseGrp.GET("list", v1.Api.GetCases)
 		caseGrp.POST("", middleware.OperationRecord(), v1.Api.SaveCase)
 	}
+	ev := Router.Group("ziqiang/evidence")
+	{
+		ev.GET("list", v1.Api.GetEvidenceList)
+		ev.GET("verify", v1.Api.VerifyEvidenceChain)
+		ev.GET("", v1.Api.GetEvidence)
+		ev.POST("", middleware.OperationRecord(), v1.Api.AppendEvidence)
+	}
 }
