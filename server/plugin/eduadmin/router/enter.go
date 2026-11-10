@@ -101,4 +101,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		energy.GET("analyze", v1.Api.AnalyzeEduEnergy)
 		energy.POST("", middleware.OperationRecord(), v1.Api.SaveEduEnergyRecord)
 	}
+	meal := Router.Group("eduadmin/meal")
+	{
+		meal.GET("list", v1.Api.GetEduMealRecords)
+		meal.GET("forecast", v1.Api.ForecastEduMeals)
+		meal.POST("", middleware.OperationRecord(), v1.Api.SaveEduMealRecord)
+	}
 }
