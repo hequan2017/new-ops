@@ -75,4 +75,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		exp.POST("pay", middleware.OperationRecord(), v1.Api.PayEduExpense)
 		exp.POST("reject", middleware.OperationRecord(), v1.Api.RejectEduExpense)
 	}
+	risk := Router.Group("eduadmin/risk")
+	{
+		risk.GET("list", v1.Api.GetEduRiskAlerts)
+		risk.POST("scan", middleware.OperationRecord(), v1.Api.ScanEduRisk)
+		risk.POST("handle", middleware.OperationRecord(), v1.Api.HandleEduRiskAlert)
+	}
 }
