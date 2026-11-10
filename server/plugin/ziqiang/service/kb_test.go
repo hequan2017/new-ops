@@ -21,9 +21,10 @@ func TestRankRegulations(t *testing.T) {
 	if hits[0].Title != "中华人民共和国著作权法" || hits[0].Score <= hits[1].Score {
 		t.Fatalf("著作权法应以更高分居首: %+v", hits)
 	}
+	// 「保护期」bigram 同命中著作权法，专利法应凭更高分居首
 	hits2 := rankRegulations(list, "专利保护期限")
-	if len(hits2) != 1 || hits2[0].Title != "中华人民共和国专利法" {
-		t.Fatalf("专利法应命中: %+v", hits2)
+	if len(hits2) != 2 || hits2[0].Title != "中华人民共和国专利法" || hits2[0].Score <= hits2[1].Score {
+		t.Fatalf("专利法应以更高分居首: %+v", hits2)
 	}
 	if hits3 := rankRegulations(list, "量子纠缠"); len(hits3) != 0 {
 		t.Fatalf("无关查询应零命中: %+v", hits3)
