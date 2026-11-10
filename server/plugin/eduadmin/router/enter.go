@@ -68,4 +68,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		budget.POST("", middleware.OperationRecord(), v1.Api.SaveEduBudget)
 		budget.POST("compare", v1.Api.CompareEduBudgetPlans)
 	}
+	exp := Router.Group("eduadmin/expense")
+	{
+		exp.GET("list", v1.Api.GetEduInvoices)
+		exp.POST("", middleware.OperationRecord(), v1.Api.SubmitEduExpense)
+		exp.POST("pay", middleware.OperationRecord(), v1.Api.PayEduExpense)
+		exp.POST("reject", middleware.OperationRecord(), v1.Api.RejectEduExpense)
+	}
 }
