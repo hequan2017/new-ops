@@ -35,6 +35,7 @@ func Gorm(ctx context.Context) {
 		new(model.EduSensorReading),
 		new(model.EduMaintPlan),
 		new(model.EduPurchase),
+		new(model.EduEnergyRecord),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -96,6 +97,9 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/purchase/list", Description: "采购记录列表", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/purchase/suggest", Description: "智能采购建议", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/purchase", Description: "保存采购记录", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/energy/list", Description: "能耗记录列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/energy/analyze", Description: "能耗聚合分析", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/energy", Description: "保存能耗记录", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -166,6 +170,9 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/purchase/list", "GET"},
 		{"/eduadmin/purchase/suggest", "GET"},
 		{"/eduadmin/purchase", "POST"},
+		{"/eduadmin/energy/list", "GET"},
+		{"/eduadmin/energy/analyze", "GET"},
+		{"/eduadmin/energy", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
