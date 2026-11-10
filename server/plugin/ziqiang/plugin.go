@@ -26,6 +26,7 @@ func (p *plugin) Register(group *gin.Engine) {
 	ctx := context.Background()
 	initialize.Gorm(ctx)
 	initialize.SeedKb(ctx)
+	initialize.SeedPrompts(ctx)
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
 	initialize.Casbin(ctx)

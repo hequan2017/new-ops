@@ -73,4 +73,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ev.GET("", v1.Api.GetEvidence)
 		ev.POST("", middleware.OperationRecord(), v1.Api.AppendEvidence)
 	}
+	prompt := Router.Group("ziqiang/prompt")
+	{
+		prompt.GET("list", v1.Api.GetPrompts)
+		prompt.POST("render", v1.Api.RenderPrompt)
+		prompt.POST("", middleware.OperationRecord(), v1.Api.SavePrompt)
+		prompt.DELETE("", middleware.OperationRecord(), v1.Api.DeletePrompt)
+	}
 }

@@ -733,3 +733,93 @@ func (a *ZiqiangApi) GetEvidence(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "获取成功", c)
 }
+
+// SavePrompt 保存提示词模板
+// @Tags Ziqiang
+// @Summary 新建/更新侵权检测提示词模板（vars 自动解析，场景白名单）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body model.ZqPromptTemplate true "模板"
+// @Success 200 {object} response.Response{data=model.ZqPromptTemplate} "保存成功"
+// @Router /ziqiang/prompt [post]
+func (a *ZiqiangApi) SavePrompt(c *gin.Context) {
+	var in model.ZqPromptTemplate
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ZiqiangApp.SavePromptTemplate(&in)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "保存成功", c)
+}
+
+// DeletePrompt 删除提示词模板
+// @Tags Ziqiang
+// @Summary 删除提示词模板（软删除）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param id query int true "模板ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Router /ziqiang/prompt [delete]
+func (a *ZiqiangApi) DeletePrompt(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || id == 0 {
+		response.FailWithMessage("id 不能为空", c)
+		return
+	}
+	if err := service.ZiqiangApp.DeletePromptTemplate(uint(id)); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+// GetPrompts 提示词模板列表
+// @Tags Ziqiang
+// @Summary 提示词模板列表（场景过滤，场景+步号升序）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param scene query string false "多模态双验证/引导式对话"
+// @Success 200 {object} response.Response{data=[]model.ZqPromptTemplate} "获取成功"
+// @Router /ziqiang/prompt/list [get]
+func (a *ZiqiangApi) GetPrompts(c *gin.Context) {
+	list, err := service.ZiqiangApp.GetPromptTemplates(c.Query("scene"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// renderPromptReq 渲染请求
+type renderPromptReq struct {
+	Name string            `json:"name" binding:"required"`
+	Vars map[string]string `json:"vars"`
+}
+
+// RenderPrompt 渲染提示词
+// @Tags Ziqiang
+// @Summary 按模板名渲染（缺失占位变量报错）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.renderPromptReq true "渲染请求"
+// @Success 200 {object} response.Response{data=map[string]any} "渲染成功"
+// @Router /ziqiang/prompt/render [post]
+func (a *ZiqiangApi) RenderPrompt(c *gin.Context) {
+	var in renderPromptReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ZiqiangApp.RenderPromptByName(in.Name, in.Vars)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "渲染成功", c)
+}

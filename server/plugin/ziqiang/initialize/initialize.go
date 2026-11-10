@@ -29,6 +29,7 @@ func Gorm(ctx context.Context) {
 		new(model.ZqRegulation),
 		new(model.ZqCase),
 		new(model.ZqEvidence),
+		new(model.ZqPromptTemplate),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "ziqiang 注册表失败!")
@@ -77,6 +78,10 @@ func Api(ctx context.Context) {
 		{Path: "/ziqiang/evidence/verify", Description: "链完整性校验", ApiGroup: "自强理工科大模型", Method: "GET"},
 		{Path: "/ziqiang/evidence", Description: "存证详情", ApiGroup: "自强理工科大模型", Method: "GET"},
 		{Path: "/ziqiang/evidence", Description: "追加存证", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/prompt/list", Description: "提示词模板列表", ApiGroup: "自强理工科大模型", Method: "GET"},
+		{Path: "/ziqiang/prompt/render", Description: "渲染提示词", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/prompt", Description: "保存提示词模板", ApiGroup: "自强理工科大模型", Method: "POST"},
+		{Path: "/ziqiang/prompt", Description: "删除提示词模板", ApiGroup: "自强理工科大模型", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -134,6 +139,10 @@ func Casbin(ctx context.Context) {
 		{"/ziqiang/evidence/verify", "GET"},
 		{"/ziqiang/evidence", "GET"},
 		{"/ziqiang/evidence", "POST"},
+		{"/ziqiang/prompt/list", "GET"},
+		{"/ziqiang/prompt/render", "POST"},
+		{"/ziqiang/prompt", "POST"},
+		{"/ziqiang/prompt", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
