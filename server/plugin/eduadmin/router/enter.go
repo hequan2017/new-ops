@@ -27,4 +27,6 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		rec.DELETE("", middleware.OperationRecord(), v1.Api.DeleteEduRecord)
 	}
 	Router.Group("eduadmin/clean").POST("", middleware.OperationRecord(), v1.Api.CleanEduRecords)
+	Router.Group("eduadmin/mask").POST("", v1.Api.MaskPayload)
+	Router.Group("eduadmin/mask").GET("batch", v1.Api.MaskBatch)
 }
