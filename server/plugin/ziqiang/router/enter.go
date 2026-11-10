@@ -80,4 +80,5 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		prompt.POST("", middleware.OperationRecord(), v1.Api.SavePrompt)
 		prompt.DELETE("", middleware.OperationRecord(), v1.Api.DeletePrompt)
 	}
+	Router.Group("ziqiang/qa").POST("patent", v1.Api.QaPatentSearch)
 }

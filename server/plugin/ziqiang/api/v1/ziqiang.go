@@ -823,3 +823,33 @@ func (a *ZiqiangApi) RenderPrompt(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "渲染成功", c)
 }
+
+// qaPatentReq 知识产权问答请求
+type qaPatentReq struct {
+	Text      string `json:"text" binding:"required"`
+	ImageHash string `json:"imageHash"`
+	TopK      int    `json:"topK"`
+}
+
+// QaPatentSearch 知识产权问答
+// @Tags Ziqiang
+// @Summary 知识产权问答（文本+图像混合输入 → 相似专利检索 bigram+aHash 融合排序 → 风险评估报告 JSON）
+// @Security ApiKeyAuth
+// @Accept application/json
+// @Produce application/json
+// @Param data body v1.qaPatentReq true "问答请求"
+// @Success 200 {object} response.Response{data=service.qaReport} "评估完成"
+// @Router /ziqiang/qa/patent [post]
+func (a *ZiqiangApi) QaPatentSearch(c *gin.Context) {
+	var in qaPatentReq
+	if err := c.ShouldBindJSON(&in); err != nil {
+		response.FailWithMessage("参数错误: "+err.Error(), c)
+		return
+	}
+	out, err := service.ZiqiangApp.QaPatentSearch(in.Text, in.ImageHash, in.TopK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "评估完成", c)
+}

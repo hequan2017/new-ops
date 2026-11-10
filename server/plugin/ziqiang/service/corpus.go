@@ -133,10 +133,13 @@ func (s *ZiqiangService) ImportTextCorpora(format, content string) (map[string]a
 	return map[string]any{"inserted": len(list), "failedRows": rowErrs}, nil
 }
 
-// SaveTextCorpus 新建/更新语料
+// SaveTextCorpus 新建/更新语料（法律状态白名单，缺省有效）
 func (s *ZiqiangService) SaveTextCorpus(in *model.ZqTextCorpus) (*model.ZqTextCorpus, error) {
 	if _, reason := corpusFromRow(in.Type, in.Title, fmt.Sprintf("%v", in.AigcFlag), in.Content); reason != "" {
 		return nil, fmt.Errorf("[%d]%s", ErrCodeZqType, reason)
+	}
+	if !ValidLegalStatus(in.LegalStatus) {
+		in.LegalStatus = "有效"
 	}
 	if in.ID > 0 {
 		var exist model.ZqTextCorpus
@@ -144,8 +147,13 @@ func (s *ZiqiangService) SaveTextCorpus(in *model.ZqTextCorpus) (*model.ZqTextCo
 			return nil, fmt.Errorf("[%d]语料不存在", ErrCodeZqNotFound)
 		}
 		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
-			"type": in.Type, "title": in.Title, "content": in.Content, "aigc_flag": in.AigcFlag, "source": in.Source,
+			"type": in.Type, "title": in.Title, "content": in.Content, "aigc_flag": in.AigcFlag,
+			"source": in.Source, "legal_status": in.LegalStatus, "image_corpus_id": in.ImageCorpusId,
 		}).Error
+		if err == nil {
+			exist.LegalStatus = in.LegalStatus
+			exist.ImageCorpusId = in.ImageCorpusId
+		}
 		return &exist, err
 	}
 	if err := global.GVA_DB.Create(in).Error; err != nil {

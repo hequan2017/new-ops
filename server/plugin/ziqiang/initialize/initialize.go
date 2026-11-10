@@ -82,6 +82,7 @@ func Api(ctx context.Context) {
 		{Path: "/ziqiang/prompt/render", Description: "渲染提示词", ApiGroup: "自强理工科大模型", Method: "POST"},
 		{Path: "/ziqiang/prompt", Description: "保存提示词模板", ApiGroup: "自强理工科大模型", Method: "POST"},
 		{Path: "/ziqiang/prompt", Description: "删除提示词模板", ApiGroup: "自强理工科大模型", Method: "DELETE"},
+		{Path: "/ziqiang/qa/patent", Description: "知识产权问答", ApiGroup: "自强理工科大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -143,6 +144,7 @@ func Casbin(ctx context.Context) {
 		{"/ziqiang/prompt/render", "POST"},
 		{"/ziqiang/prompt", "POST"},
 		{"/ziqiang/prompt", "DELETE"},
+		{"/ziqiang/qa/patent", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
