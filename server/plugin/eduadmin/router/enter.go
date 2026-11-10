@@ -29,4 +29,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	Router.Group("eduadmin/clean").POST("", middleware.OperationRecord(), v1.Api.CleanEduRecords)
 	Router.Group("eduadmin/mask").POST("", v1.Api.MaskPayload)
 	Router.Group("eduadmin/mask").GET("batch", v1.Api.MaskBatch)
+	pol := Router.Group("eduadmin/policy")
+	{
+		pol.GET("list", v1.Api.GetEduPolicies)
+		pol.GET("search", v1.Api.SearchEduPolicies)
+		pol.POST("", middleware.OperationRecord(), v1.Api.SaveEduPolicy)
+		pol.DELETE("", middleware.OperationRecord(), v1.Api.DeleteEduPolicy)
+	}
 }
