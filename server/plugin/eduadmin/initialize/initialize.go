@@ -3,8 +3,10 @@ package initialize
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/middleware"
@@ -12,12 +14,19 @@ import (
 	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 	srvUtils "github.com/hequan2017/new-ops/server/utils"
 
+	"github.com/hequan2017/new-ops/server/plugin/eduadmin/model"
 	"github.com/hequan2017/new-ops/server/plugin/eduadmin/router"
 )
 
-// Gorm 注册 eduadmin 数据表（幂等）。M0 骨架暂无业务表，P02 数据接入起在此追加 AutoMigrate。
+// Gorm 注册 eduadmin 数据表（幂等）
 func Gorm(ctx context.Context) {
-	_ = ctx
+	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
+		new(model.EduRecord),
+	)
+	if err != nil {
+		err = errors.Wrap(err, "eduadmin 注册表失败!")
+		global.GVA_LOG.Error(fmt.Sprintf("%+v", err))
+	}
 }
 
 // Router 注册 eduadmin 路由（private 组显式挂 JWT+casbin）
@@ -31,6 +40,10 @@ func Router(engine *gin.Engine) {
 func Api(ctx context.Context) {
 	entities := []sysModel.SysApi{
 		{Path: "/eduadmin/ping", Description: "教育管理一模通管连通性探测", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/record/list", Description: "数据记录列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/record/import", Description: "批量导入数据记录", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/record", Description: "保存数据记录", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/record", Description: "删除数据记录", ApiGroup: "教育管理一模通管", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -58,6 +71,10 @@ func Casbin(ctx context.Context) {
 	}
 	for _, p := range []struct{ Path, Method string }{
 		{"/eduadmin/ping", "GET"},
+		{"/eduadmin/record/list", "GET"},
+		{"/eduadmin/record/import", "POST"},
+		{"/eduadmin/record", "POST"},
+		{"/eduadmin/record", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
