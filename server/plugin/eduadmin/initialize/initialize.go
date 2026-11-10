@@ -44,6 +44,7 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/record/import", Description: "批量导入数据记录", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/record", Description: "保存数据记录", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/record", Description: "删除数据记录", ApiGroup: "教育管理一模通管", Method: "DELETE"},
+		{Path: "/eduadmin/clean", Description: "数据批量清洗", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -75,6 +76,7 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/record/import", "POST"},
 		{"/eduadmin/record", "POST"},
 		{"/eduadmin/record", "DELETE"},
+		{"/eduadmin/clean", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

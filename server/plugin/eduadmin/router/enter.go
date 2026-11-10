@@ -26,4 +26,5 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		rec.POST("", middleware.OperationRecord(), v1.Api.SaveEduRecord)
 		rec.DELETE("", middleware.OperationRecord(), v1.Api.DeleteEduRecord)
 	}
+	Router.Group("eduadmin/clean").POST("", middleware.OperationRecord(), v1.Api.CleanEduRecords)
 }
