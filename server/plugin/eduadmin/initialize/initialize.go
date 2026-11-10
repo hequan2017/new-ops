@@ -114,6 +114,7 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/env/list", Description: "环境读数列表", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/env/alerts", Description: "环境告警列表", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/env", Description: "登记环境读数", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/dashboard", Description: "数据驾驶舱", ApiGroup: "教育管理一模通管", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -197,6 +198,7 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/env/list", "GET"},
 		{"/eduadmin/env/alerts", "GET"},
 		{"/eduadmin/env", "POST"},
+		{"/eduadmin/dashboard", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

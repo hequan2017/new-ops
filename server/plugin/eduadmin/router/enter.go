@@ -120,4 +120,5 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		env.GET("alerts", v1.Api.GetEduEnvAlerts)
 		env.POST("", v1.Api.SaveEduEnvReading)
 	}
+	Router.Group("eduadmin/dashboard").GET("", v1.Api.GetEduDashboard)
 }
