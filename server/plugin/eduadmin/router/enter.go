@@ -89,4 +89,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		asset.POST("", middleware.OperationRecord(), v1.Api.SaveEduAsset)
 		asset.POST("reading", middleware.OperationRecord(), v1.Api.AddEduSensorReading)
 	}
+	pur := Router.Group("eduadmin/purchase")
+	{
+		pur.GET("list", v1.Api.GetEduPurchases)
+		pur.GET("suggest", v1.Api.SuggestEduPurchase)
+		pur.POST("", middleware.OperationRecord(), v1.Api.SaveEduPurchase)
+	}
 }
