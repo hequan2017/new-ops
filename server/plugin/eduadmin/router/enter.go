@@ -54,4 +54,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		perf.POST("report", middleware.OperationRecord(), v1.Api.GeneratePerfReport)
 		perf.GET("report/list", v1.Api.GetEduPerfReports)
 	}
+	talent := Router.Group("eduadmin/talent")
+	{
+		talent.GET("stat/list", v1.Api.GetEduTalentStats)
+		talent.GET("forecast", v1.Api.ForecastTalent)
+		talent.POST("stat", middleware.OperationRecord(), v1.Api.SaveEduTalentStat)
+	}
 }
