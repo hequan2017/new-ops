@@ -114,4 +114,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		repair.POST("assign", middleware.OperationRecord(), v1.Api.AssignEduRepairOrder)
 		repair.POST("close", middleware.OperationRecord(), v1.Api.CloseEduRepairOrder)
 	}
+	env := Router.Group("eduadmin/env")
+	{
+		env.GET("list", v1.Api.GetEduEnvReadings)
+		env.GET("alerts", v1.Api.GetEduEnvAlerts)
+		env.POST("", v1.Api.SaveEduEnvReading)
+	}
 }
