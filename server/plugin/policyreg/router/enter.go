@@ -36,4 +36,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ent.POST("extract", v1.Api.ExtractPolicyEntities)
 		ent.GET("list", v1.Api.GetPolicyEntities)
 	}
+	lb := Router.Group("policyreg/label")
+	{
+		lb.POST("pre", v1.Api.BuildPolicyLabels)
+		lb.POST("token", v1.Api.UpdatePolicyTokenLabel)
+		lb.GET("list", v1.Api.GetPolicyTokenLabels)
+		lb.GET("relations", v1.Api.GetPolicyRelationLabels)
+	}
 }

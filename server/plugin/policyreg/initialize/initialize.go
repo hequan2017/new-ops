@@ -24,6 +24,8 @@ func Gorm(ctx context.Context) {
 		new(model.PolicyDoc),
 		new(model.PolicyTermTag),
 		new(model.PolicyEntity),
+		new(model.PolicyTokenLabel),
+		new(model.PolicyRelationLabel),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "policyreg 注册表失败!")
@@ -50,6 +52,10 @@ func Api(ctx context.Context) {
 		{Path: "/policyreg/term/tag/list", Description: "分词标注列表", ApiGroup: "高校制度大模型", Method: "GET"},
 		{Path: "/policyreg/entity/extract", Description: "实体抽取", ApiGroup: "高校制度大模型", Method: "POST"},
 		{Path: "/policyreg/entity/list", Description: "实体列表", ApiGroup: "高校制度大模型", Method: "GET"},
+		{Path: "/policyreg/label/pre", Description: "规则预标", ApiGroup: "高校制度大模型", Method: "POST"},
+		{Path: "/policyreg/label/token", Description: "人工改标", ApiGroup: "高校制度大模型", Method: "POST"},
+		{Path: "/policyreg/label/list", Description: "分词标注列表", ApiGroup: "高校制度大模型", Method: "GET"},
+		{Path: "/policyreg/label/relations", Description: "关系标注列表", ApiGroup: "高校制度大模型", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -85,6 +91,10 @@ func Casbin(ctx context.Context) {
 		{"/policyreg/term/tag/list", "GET"},
 		{"/policyreg/entity/extract", "POST"},
 		{"/policyreg/entity/list", "GET"},
+		{"/policyreg/label/pre", "POST"},
+		{"/policyreg/label/token", "POST"},
+		{"/policyreg/label/list", "GET"},
+		{"/policyreg/label/relations", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
