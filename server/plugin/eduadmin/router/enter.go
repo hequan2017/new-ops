@@ -182,4 +182,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		prog.POST("", v1.Api.AddEduTicketTimeline)
 		prog.POST("scan", middleware.OperationRecord(), v1.Api.ScanEduTicketOverdue)
 	}
+	review := Router.Group("eduadmin/review")
+	{
+		review.GET("list", v1.Api.GetEduTicketReviews)
+		review.POST("", middleware.OperationRecord(), v1.Api.ReviewEduTicket)
+		review.POST("archive", middleware.OperationRecord(), v1.Api.ArchiveEduTicket)
+	}
 }

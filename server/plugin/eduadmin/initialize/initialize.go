@@ -55,6 +55,7 @@ func Gorm(ctx context.Context) {
 		new(model.EduDispatchLog),
 		new(model.EduTicketTimeline),
 		new(model.EduTicketUrge),
+		new(model.EduTicketReview),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -164,6 +165,9 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/progress/urges", Description: "督办记录", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/progress", Description: "新增时间线", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/progress/scan", Description: "超时扫描督办", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/review/list", Description: "工单评价列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/review", Description: "工单评价", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/review/archive", Description: "工单归档", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -282,6 +286,9 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/progress/urges", "GET"},
 		{"/eduadmin/progress", "POST"},
 		{"/eduadmin/progress/scan", "POST"},
+		{"/eduadmin/review/list", "GET"},
+		{"/eduadmin/review", "POST"},
+		{"/eduadmin/review/archive", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
