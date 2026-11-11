@@ -34,4 +34,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		trust.POST("", middleware.OperationRecord(), v1.Api.SaveCaTrustRule)
 		trust.DELETE("", middleware.OperationRecord(), v1.Api.DeleteCaTrustRule)
 	}
+	mfa := Router.Group("crossauth/mfa")
+	{
+		mfa.GET("list", v1.Api.GetCaMfaConfigs)
+		mfa.GET("policy/list", v1.Api.GetCaMfaPolicies)
+		mfa.POST("", v1.Api.EnrollCaMfa)
+		mfa.POST("verify", v1.Api.VerifyCaMfa)
+		mfa.POST("policy", middleware.OperationRecord(), v1.Api.SaveCaMfaPolicy)
+	}
 }
