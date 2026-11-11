@@ -64,4 +64,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		grant.POST("approve", middleware.OperationRecord(), v1.Api.ApproveCaGrantRequest)
 		grant.POST("reject", middleware.OperationRecord(), v1.Api.RejectCaGrantRequest)
 	}
+	mtx := Router.Group("crossauth/matrix")
+	{
+		mtx.GET("list", v1.Api.GetCaPermGrants)
+		mtx.POST("check", v1.Api.CheckCaMatrix)
+		mtx.POST("", middleware.OperationRecord(), v1.Api.SaveCaPermGrant)
+		mtx.DELETE("", middleware.OperationRecord(), v1.Api.DeleteCaPermGrant)
+	}
 }
