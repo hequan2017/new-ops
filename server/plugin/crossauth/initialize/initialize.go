@@ -29,6 +29,7 @@ func Gorm(ctx context.Context) {
 		new(model.CaMfaPolicy),
 		new(model.CaSsoApp),
 		new(model.CaSsoTicket),
+		new(model.CaRoleTemplate),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "crossauth 注册表失败!")
@@ -65,6 +66,8 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/sso/ticket", Description: "SSO 票据签发", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/sso/redeem", Description: "SSO 票据换取", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/sso/app", Description: "注册 SSO 应用", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/roleTemplate/list", Description: "角色模板列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/roleTemplate", Description: "保存角色模板", ApiGroup: "跨校认证与安全", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -110,6 +113,8 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/sso/ticket", "POST"},
 		{"/crossauth/sso/redeem", "POST"},
 		{"/crossauth/sso/app", "POST"},
+		{"/crossauth/roleTemplate/list", "GET"},
+		{"/crossauth/roleTemplate", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

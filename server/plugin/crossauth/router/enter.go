@@ -49,4 +49,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		sso.POST("redeem", v1.Api.RedeemCaSsoTicket)
 		sso.POST("app", middleware.OperationRecord(), v1.Api.SaveCaSsoApp)
 	}
+	role := Router.Group("crossauth/roleTemplate")
+	{
+		role.GET("list", v1.Api.GetCaRoleTemplates)
+		role.POST("", middleware.OperationRecord(), v1.Api.SaveCaRoleTemplate)
+	}
 }
