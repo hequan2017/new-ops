@@ -42,6 +42,9 @@ func Gorm(ctx context.Context) {
 		new(model.EduEnvAlert),
 		new(model.EduRunIndex),
 		new(model.EduRunAlert),
+		new(model.EduShareResource),
+		new(model.EduJointBudget),
+		new(model.EduBestPractice),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -123,6 +126,11 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/run/scan", Description: "办学预警扫描", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/policy/simulate", Description: "政策财务模拟", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/policy/compare", Description: "政策方案对比", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/share/resource/list", Description: "共享资源列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/share/practices", Description: "培训材料与最佳实践", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/share/resource", Description: "保存共享资源", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/share/schedule", Description: "资源调度申请", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/jointBudget", Description: "联合预算分析", ApiGroup: "教育管理一模通管", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -213,6 +221,11 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/run/scan", "POST"},
 		{"/eduadmin/policy/simulate", "POST"},
 		{"/eduadmin/policy/compare", "POST"},
+		{"/eduadmin/share/resource/list", "GET"},
+		{"/eduadmin/share/practices", "GET"},
+		{"/eduadmin/share/resource", "POST"},
+		{"/eduadmin/share/schedule", "POST"},
+		{"/eduadmin/jointBudget", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

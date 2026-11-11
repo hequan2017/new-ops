@@ -133,4 +133,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		policy.POST("simulate", v1.Api.SimulateEduPolicy)
 		policy.POST("compare", v1.Api.CompareEduPolicySims)
 	}
+	share := Router.Group("eduadmin/share")
+	{
+		share.GET("resource/list", v1.Api.GetEduShareResources)
+		share.GET("practices", v1.Api.GetEduBestPractices)
+		share.POST("resource", middleware.OperationRecord(), v1.Api.SaveEduShareResource)
+		share.POST("schedule", middleware.OperationRecord(), v1.Api.ScheduleEduShareResource)
+	}
+	Router.Group("eduadmin/jointBudget").GET("", v1.Api.AnalyzeEduJointBudget)
 }
