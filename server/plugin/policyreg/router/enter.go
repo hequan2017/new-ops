@@ -31,4 +31,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		term.POST("tag", v1.Api.TagPolicyTerms)
 		term.GET("tag/list", v1.Api.GetPolicyTermTags)
 	}
+	ent := Router.Group("policyreg/entity")
+	{
+		ent.POST("extract", v1.Api.ExtractPolicyEntities)
+		ent.GET("list", v1.Api.GetPolicyEntities)
+	}
 }
