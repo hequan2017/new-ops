@@ -1206,3 +1206,20 @@ func (a *FanhuaApi) ExportCorpora(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "导出成功", c)
 }
+
+// ExportParallels 平行语料导出
+// @Tags Fanhua
+// @Summary 平行语料 CSV 导出（来源过滤，复用 I07 口径）
+// @Security ApiKeyAuth
+// @Produce text/plain
+// @Param source query string false "来源"
+// @Success 200 {object} response.Response{data=string} "导出成功"
+// @Router /fanhua/parallel/export [get]
+func (a *FanhuaApi) ExportParallels(c *gin.Context) {
+	out, err := service.FanhuaApp.ExportParallels(c.Query("source"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "导出成功", c)
+}

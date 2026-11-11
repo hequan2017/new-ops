@@ -166,3 +166,30 @@ func (s *FanhuaService) GetParallels(keyword string, page, pageSize int) ([]mode
 	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
 	return list, total, err
 }
+
+// parallelsToCSV 平行语料 CSV（纯函数，测试锚点，I07 口径：半角逗号转全角防串列）
+func parallelsToCSV(list []model.FanhuaParallel) string {
+	var sb strings.Builder
+	sb.WriteString("沪语,普通话,英语,来源\n")
+	for _, r := range list {
+		clean := func(v string) string {
+			v = strings.ReplaceAll(v, "\n", " ")
+			return strings.ReplaceAll(v, ",", "，")
+		}
+		sb.WriteString(fmt.Sprintf("%s,%s,%s,%s\n", clean(r.Sh), clean(r.Pu), clean(r.En), clean(r.Source)))
+	}
+	return sb.String()
+}
+
+// ExportParallels 平行语料 CSV 导出（来源过滤，倒序 ≤5000 行）
+func (s *FanhuaService) ExportParallels(source string) (string, error) {
+	db := global.GVA_DB.Model(&model.FanhuaParallel{})
+	if source != "" {
+		db = db.Where("source = ?", source)
+	}
+	var list []model.FanhuaParallel
+	if err := db.Order("id DESC").Limit(5000).Find(&list).Error; err != nil {
+		return "", err
+	}
+	return parallelsToCSV(list), nil
+}

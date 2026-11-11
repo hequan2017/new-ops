@@ -10,6 +10,7 @@ export const deleteCorpus = (params) => service({ url: '/fanhua/corpus', method:
 // 平行语料
 export const getParallels = (params) => service({ url: '/fanhua/parallel/list', method: 'get', params })
 export const searchParallel = (params) => service({ url: '/fanhua/parallel/search', method: 'get', params })
+export const exportParallels = (params) => service({ url: '/fanhua/parallel/export', method: 'get', params })
 
 // 标注
 export const buildLabels = (data) => service({ url: '/fanhua/label/build', method: 'post', data })

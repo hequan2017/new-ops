@@ -2,6 +2,7 @@
 package service
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
@@ -67,5 +68,19 @@ func TestValidateParallel(t *testing.T) {
 	}
 	if err := validateParallel(&model.FanhuaParallel{Sh: "", Pu: "你好"}); err == nil {
 		t.Fatal("沪语空应报错")
+	}
+}
+
+// TestParallelsToCSV CSV 导出（I07 口径）
+func TestParallelsToCSV(t *testing.T) {
+	list := []model.FanhuaParallel{
+		{Sh: "落雨喽，打烊喽", Pu: "下雨啦,打烊啦", En: "Raining, closing", Source: "对照本"},
+	}
+	csv := parallelsToCSV(list)
+	if !strings.HasPrefix(csv, "沪语,普通话,英语,来源\n") {
+		t.Fatalf("应有表头: %s", csv)
+	}
+	if !strings.Contains(csv, "下雨啦，打烊啦") || !strings.Contains(csv, "Raining， closing") {
+		t.Fatalf("半角逗号应转全角: %s", csv)
 	}
 }
