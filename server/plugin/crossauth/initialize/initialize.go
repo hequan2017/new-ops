@@ -138,7 +138,7 @@ func Api(ctx context.Context) {
 	pluginUtils.RegisterApis(entities...)
 }
 
-// Menu 注册 crossauth 菜单（跨校认证与安全父级，子页面随 Q19 挂其下）
+// Menu 注册 crossauth 菜单（跨校认证与安全父级 + 跨校安全工作台子页）
 func Menu(ctx context.Context) {
 	entities := []sysModel.SysBaseMenu{
 		{
@@ -148,6 +148,14 @@ func Menu(ctx context.Context) {
 			Component: "view/routerHolder.vue",
 			Sort:      10,
 			Meta:      sysModel.Meta{Title: "跨校认证与安全", Icon: "lock"},
+		},
+		{
+			Path:      "crossauthLab",
+			Name:      "crossauthLab",
+			Hidden:    false,
+			Component: "plugin/crossauth/view/lab/index.vue",
+			Sort:      1,
+			Meta:      sysModel.Meta{Title: "跨校安全工作台", Icon: "shield"},
 		},
 	}
 	pluginUtils.RegisterMenus(entities...)
