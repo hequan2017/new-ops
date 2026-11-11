@@ -2,6 +2,7 @@
 package service
 
 import (
+	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 	"strings"
 	"testing"
 )
@@ -47,5 +48,22 @@ func TestClassifyPolicyLabel(t *testing.T) {
 	}
 	if l := ClassifyPolicyLabel("管理办法"); l != "综合" {
 		t.Fatalf("无关键词应综合: %s", l)
+	}
+}
+
+// TestTermLabelStats 标签聚合固定序
+func TestTermLabelStats(t *testing.T) {
+	tags := []model.PolicyTermTag{
+		{CategoryLabel: "教学"}, {CategoryLabel: "教学"}, {CategoryLabel: "科研"}, {CategoryLabel: "综合"},
+	}
+	stats := termLabelStats(tags)
+	if len(stats) != 6 {
+		t.Fatalf("应六类固定序: %d", len(stats))
+	}
+	if stats[0].Label != "教学" || stats[0].Count != 2 || stats[1].Count != 1 {
+		t.Fatalf("教学 2 科研 1: %+v", stats)
+	}
+	if stats[5].Label != "综合" || stats[5].Count != 1 {
+		t.Fatalf("综合应单列: %+v", stats[5])
 	}
 }

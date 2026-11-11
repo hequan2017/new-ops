@@ -46,3 +46,19 @@ func (a *PolicyregApi) GetPolicyTermTags(c *gin.Context) {
 	}
 	response.OkWithDetailed(list, "获取成功", c)
 }
+
+// GetPolicyTermStats 分类统计
+// @Tags Policyreg
+// @Summary 制度分类标签统计（六类固定序含零计数）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]service.LabelCount} "获取成功"
+// @Router /policyreg/term/stats [get]
+func (a *PolicyregApi) GetPolicyTermStats(c *gin.Context) {
+	out, err := service.PolicyApp.GetPolicyTermStats()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "获取成功", c)
+}

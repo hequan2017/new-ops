@@ -173,3 +173,33 @@ func (s *PolicyService) GetPolicyTermTags(docId uint) ([]model.PolicyTermTag, er
 	err := global.GVA_DB.Where("doc_id = ?", docId).Order("id ASC").Limit(100).Find(&list).Error
 	return list, err
 }
+
+// labelCount 分类计数
+type labelCount struct {
+	Label string `json:"label"`
+	Count int64  `json:"count"`
+}
+
+// termLabelStats 标签聚合（纯函数，测试锚点）：六类固定序，零计数保留
+func termLabelStats(tags []model.PolicyTermTag) []labelCount {
+	counts := map[string]int64{}
+	for _, t := range tags {
+		if t.CategoryLabel != "" {
+			counts[t.CategoryLabel]++
+		}
+	}
+	out := make([]labelCount, 0, len(PolicyCategories))
+	for _, label := range PolicyCategories {
+		out = append(out, labelCount{Label: label, Count: counts[label]})
+	}
+	return out
+}
+
+// GetPolicyTermStats 分类标签统计
+func (s *PolicyService) GetPolicyTermStats() ([]labelCount, error) {
+	var tags []model.PolicyTermTag
+	if err := global.GVA_DB.Order("id ASC").Limit(5000).Find(&tags).Error; err != nil {
+		return nil, err
+	}
+	return termLabelStats(tags), nil
+}
