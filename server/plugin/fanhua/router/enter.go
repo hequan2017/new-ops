@@ -31,10 +31,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		para.GET("list", v1.Api.GetParallels)
 		para.GET("search", v1.Api.SearchParallel)
 		para.GET("export", v1.Api.ExportParallels)
-		para.GET("export", v1.Api.ExportParallels)
 		para.POST("", middleware.OperationRecord(), v1.Api.SaveParallel)
 		para.DELETE("", middleware.OperationRecord(), v1.Api.DeleteParallel)
-		para.GET("export", v1.Api.ExportParallels)
 	}
 	clean := Router.Group("fanhua/clean")
 	{
