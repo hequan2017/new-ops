@@ -193,4 +193,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		stats.GET("", v1.Api.GetEduTicketStats)
 		stats.GET("export", v1.Api.ExportEduTicketStats)
 	}
+	audit := Router.Group("eduadmin/audit")
+	{
+		audit.GET("list", v1.Api.GetEduAuditItems)
+		audit.GET("search", v1.Api.SearchEduAudit)
+		audit.POST("", middleware.OperationRecord(), v1.Api.SaveEduAuditItem)
+	}
 }
