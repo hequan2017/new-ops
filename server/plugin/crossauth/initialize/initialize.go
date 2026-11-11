@@ -43,6 +43,9 @@ func Gorm(ctx context.Context) {
 		new(model.CaComputeUsage),
 		new(model.CaComputeAlert),
 		new(model.CaAuditEvent),
+		new(model.CaOpsTicket),
+		new(model.CaOpsMessage),
+		new(model.CaRemoteAssist),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "crossauth 注册表失败!")
@@ -116,6 +119,14 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/monitor/fiveDim", Description: "五维监控看板", ApiGroup: "跨校认证与安全", Method: "GET"},
 		{Path: "/crossauth/auditEvent/list", Description: "三级审计查询", ApiGroup: "跨校认证与安全", Method: "GET"},
 		{Path: "/crossauth/auditEvent", Description: "登记审计事件", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/opsTicket/list", Description: "运维工单列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/opsTicket/advance", Description: "工单推进", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/opsTicket/message", Description: "协同消息", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/opsTicket/messages", Description: "消息列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/opsTicket", Description: "创建运维工单", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/remoteAssist", Description: "远程协助授权", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/remoteAssist/revoke", Description: "撤销授权", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/remoteAssist/list", Description: "授权记录", ApiGroup: "跨校认证与安全", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -198,6 +209,14 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/monitor/fiveDim", "GET"},
 		{"/crossauth/auditEvent/list", "GET"},
 		{"/crossauth/auditEvent", "POST"},
+		{"/crossauth/opsTicket/list", "GET"},
+		{"/crossauth/opsTicket/advance", "POST"},
+		{"/crossauth/opsTicket/message", "POST"},
+		{"/crossauth/opsTicket/messages", "GET"},
+		{"/crossauth/opsTicket", "POST"},
+		{"/crossauth/remoteAssist", "POST"},
+		{"/crossauth/remoteAssist/revoke", "POST"},
+		{"/crossauth/remoteAssist/list", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

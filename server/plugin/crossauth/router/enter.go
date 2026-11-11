@@ -116,4 +116,18 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ae.GET("list", v1.Api.GetCaAuditEvents)
 		ae.POST("", v1.Api.RecordCaAuditEvent)
 	}
+	ops := Router.Group("crossauth/opsTicket")
+	{
+		ops.GET("list", v1.Api.GetCaOpsTickets)
+		ops.POST("", middleware.OperationRecord(), v1.Api.CreateCaOpsTicket)
+		ops.POST("advance", middleware.OperationRecord(), v1.Api.AdvanceCaOpsTicket)
+		ops.POST("message", v1.Api.PostCaOpsMessage)
+		ops.GET("messages", v1.Api.GetCaOpsMessages)
+	}
+	ra := Router.Group("crossauth/remoteAssist")
+	{
+		ra.POST("", middleware.OperationRecord(), v1.Api.GrantCaRemoteAssist)
+		ra.POST("revoke", middleware.OperationRecord(), v1.Api.RevokeCaRemoteAssist)
+		ra.GET("list", v1.Api.GetCaRemoteAssists)
+	}
 }
