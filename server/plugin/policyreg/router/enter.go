@@ -26,4 +26,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		doc.POST("", middleware.OperationRecord(), v1.Api.SavePolicyDoc)
 	}
 	Router.Group("policyreg/clean").POST("", middleware.OperationRecord(), v1.Api.CleanPolicyDoc)
+	term := Router.Group("policyreg/term")
+	{
+		term.POST("tag", v1.Api.TagPolicyTerms)
+		term.GET("tag/list", v1.Api.GetPolicyTermTags)
+	}
 }
