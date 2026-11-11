@@ -112,6 +112,7 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/compute/usage/list", Description: "算力用量列表", ApiGroup: "跨校认证与安全", Method: "GET"},
 		{Path: "/crossauth/compute/alerts", Description: "算力告警列表", ApiGroup: "跨校认证与安全", Method: "GET"},
 		{Path: "/crossauth/compute/handle", Description: "算力告警处置", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/monitor/fiveDim", Description: "五维监控看板", ApiGroup: "跨校认证与安全", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -191,6 +192,7 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/compute/usage/list", "GET"},
 		{"/crossauth/compute/alerts", "GET"},
 		{"/crossauth/compute/handle", "POST"},
+		{"/crossauth/monitor/fiveDim", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

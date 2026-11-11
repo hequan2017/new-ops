@@ -110,4 +110,5 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		comp.GET("alerts", v1.Api.GetCaComputeAlerts)
 		comp.POST("handle", middleware.OperationRecord(), v1.Api.HandleCaComputeAlert)
 	}
+	Router.Group("crossauth/monitor").GET("fiveDim", v1.Api.GetCaFiveDim)
 }
