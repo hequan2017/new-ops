@@ -121,4 +121,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		env.POST("", v1.Api.SaveEduEnvReading)
 	}
 	Router.Group("eduadmin/dashboard").GET("", v1.Api.GetEduDashboard)
+	run := Router.Group("eduadmin/run")
+	{
+		run.GET("index/list", v1.Api.GetEduRunIndexes)
+		run.GET("alerts", v1.Api.GetEduRunAlerts)
+		run.POST("index", middleware.OperationRecord(), v1.Api.SaveEduRunIndex)
+		run.POST("scan", middleware.OperationRecord(), v1.Api.ScanEduRunWarning)
+	}
 }

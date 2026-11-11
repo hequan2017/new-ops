@@ -40,6 +40,8 @@ func Gorm(ctx context.Context) {
 		new(model.EduRepairOrder),
 		new(model.EduEnvReading),
 		new(model.EduEnvAlert),
+		new(model.EduRunIndex),
+		new(model.EduRunAlert),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -115,6 +117,10 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/env/alerts", Description: "环境告警列表", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/env", Description: "登记环境读数", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/dashboard", Description: "数据驾驶舱", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/run/index/list", Description: "办学指标列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/run/alerts", Description: "办学预警列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/run/index", Description: "保存办学指标", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/run/scan", Description: "办学预警扫描", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -199,6 +205,10 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/env/alerts", "GET"},
 		{"/eduadmin/env", "POST"},
 		{"/eduadmin/dashboard", "GET"},
+		{"/eduadmin/run/index/list", "GET"},
+		{"/eduadmin/run/alerts", "GET"},
+		{"/eduadmin/run/index", "POST"},
+		{"/eduadmin/run/scan", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
