@@ -43,6 +43,7 @@ func Api(ctx context.Context) {
 		{Path: "/policyreg/doc/list", Description: "制度列表", ApiGroup: "高校制度大模型", Method: "GET"},
 		{Path: "/policyreg/doc", Description: "制度详情", ApiGroup: "高校制度大模型", Method: "GET"},
 		{Path: "/policyreg/doc", Description: "导入制度", ApiGroup: "高校制度大模型", Method: "POST"},
+		{Path: "/policyreg/clean", Description: "制度清洗", ApiGroup: "高校制度大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -73,6 +74,7 @@ func Casbin(ctx context.Context) {
 		{"/policyreg/doc/list", "GET"},
 		{"/policyreg/doc", "GET"},
 		{"/policyreg/doc", "POST"},
+		{"/policyreg/clean", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
