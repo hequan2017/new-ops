@@ -42,4 +42,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		mfa.POST("verify", v1.Api.VerifyCaMfa)
 		mfa.POST("policy", middleware.OperationRecord(), v1.Api.SaveCaMfaPolicy)
 	}
+	sso := Router.Group("crossauth/sso")
+	{
+		sso.GET("apps", v1.Api.GetCaSsoApps)
+		sso.POST("ticket", v1.Api.IssueCaSsoTicket)
+		sso.POST("redeem", v1.Api.RedeemCaSsoTicket)
+		sso.POST("app", middleware.OperationRecord(), v1.Api.SaveCaSsoApp)
+	}
 }
