@@ -75,28 +75,48 @@ func (s *CaService) CheckCaAccess(in AccessCheckReq) (map[string]any, error) {
 	return out, nil
 }
 
-// GetCaAccessLogs 访问日志（用户过滤，倒序）
-func (s *CaService) GetCaAccessLogs(userName string) ([]model.CaAccessLog, error) {
+// GetCaAccessLogs 访问日志（用户过滤，倒序分页）
+func (s *CaService) GetCaAccessLogs(userName string, page, pageSize int) ([]model.CaAccessLog, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 20
+	}
 	db := global.GVA_DB.Model(&model.CaAccessLog{})
 	if userName != "" {
 		db = db.Where("user_name = ?", userName)
 	}
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var list []model.CaAccessLog
-	err := db.Order("id DESC").Limit(500).Find(&list).Error
-	return list, err
+	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
+	return list, total, err
 }
 
-// GetCaAlerts 告警列表（处置状态过滤）
-func (s *CaService) GetCaAlerts(handled string) ([]model.CaAlert, error) {
+// GetCaAlerts 告警列表（处置状态过滤，倒序分页）
+func (s *CaService) GetCaAlerts(handled string, page, pageSize int) ([]model.CaAlert, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 20
+	}
 	db := global.GVA_DB.Model(&model.CaAlert{})
 	if handled == "yes" || handled == "true" {
 		db = db.Where("handled = ?", true)
 	} else if handled == "no" || handled == "false" {
 		db = db.Where("handled = ?", false)
 	}
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var list []model.CaAlert
-	err := db.Order("id DESC").Limit(500).Find(&list).Error
-	return list, err
+	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
+	return list, total, err
 }
 
 // HandleCaAlert 处置告警

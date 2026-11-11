@@ -4,6 +4,8 @@
 package service
 
 import (
+	"time"
+
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/crossauth/model"
 )
@@ -46,7 +48,9 @@ func (s *CaService) GetCaFiveDim() (*CaFiveDim, error) {
 	if err := db.Model(&model.CaSyncUser{}).Count(&out.IdentityAuth.SyncUsers).Error; err != nil {
 		return nil, err
 	}
-	if err := db.Model(&model.CaSyncTask{}).Count(&out.IdentityAuth.SyncTasks24).Error; err != nil {
+	// 24h 窗口语义：仅统计近 24 小时内执行的任务（修正此前名不符实的全量计数）
+	if err := db.Model(&model.CaSyncTask{}).Where("created_at > ?", time.Now().Add(-24*time.Hour)).
+		Count(&out.IdentityAuth.SyncTasks24).Error; err != nil {
 		return nil, err
 	}
 	if err := db.Model(&model.CaGrantAssignment{}).Count(&out.PermChange.Assignments).Error; err != nil {

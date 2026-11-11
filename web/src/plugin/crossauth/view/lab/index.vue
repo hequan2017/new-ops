@@ -303,7 +303,7 @@
   const loadFiveDim = async () => {
     fiveLoading.value = true
     try {
-      const [f, a] = await Promise.all([getFiveDim(), getAccessAlerts({})])
+      const [f, a] = await Promise.all([getFiveDim(), getAccessAlerts({ pageSize: 20 })])
       fiveDim.value = f.data
       alerts.value = a.data || []
     } finally {

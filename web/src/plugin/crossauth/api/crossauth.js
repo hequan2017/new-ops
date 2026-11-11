@@ -19,6 +19,7 @@ export const getClassifyResults = (params) => service({ url: '/crossauth/classif
 // 监控与告警
 export const getFiveDim = () => service({ url: '/crossauth/monitor/fiveDim', method: 'get' })
 export const getAccessAlerts = (params) => service({ url: '/crossauth/access/alerts', method: 'get', params })
+export const getAccessLogs = (params) => service({ url: '/crossauth/access/logs', method: 'get', params })
 
 // 运维工单
 export const getOpsTickets = (params) => service({ url: '/crossauth/opsTicket/list', method: 'get', params })

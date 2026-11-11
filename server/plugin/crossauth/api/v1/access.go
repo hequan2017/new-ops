@@ -36,36 +36,44 @@ func (a *CrossauthApi) CheckCaAccess(c *gin.Context) {
 
 // GetCaAccessLogs 访问日志
 // @Tags Crossauth
-// @Summary 访问日志列表（用户过滤）
+// @Summary 访问日志列表（用户过滤，倒序分页）
 // @Security ApiKeyAuth
 // @Produce application/json
 // @Param userName query string false "用户"
-// @Success 200 {object} response.Response{data=[]model.CaAccessLog} "获取成功"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
 // @Router /crossauth/access/logs [get]
 func (a *CrossauthApi) GetCaAccessLogs(c *gin.Context) {
-	list, err := service.CaApp.GetCaAccessLogs(c.Query("userName"))
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.CaApp.GetCaAccessLogs(c.Query("userName"), page, pageSize)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	response.OkWithDetailed(list, "获取成功", c)
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
 
 // GetCaAlerts 告警列表
 // @Tags Crossauth
-// @Summary 阻断告警列表（处置状态过滤）
+// @Summary 阻断告警列表（处置状态过滤，倒序分页）
 // @Security ApiKeyAuth
 // @Produce application/json
 // @Param handled query string false "yes/no"
-// @Success 200 {object} response.Response{data=[]model.CaAlert} "获取成功"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
 // @Router /crossauth/access/alerts [get]
 func (a *CrossauthApi) GetCaAlerts(c *gin.Context) {
-	list, err := service.CaApp.GetCaAlerts(c.Query("handled"))
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.CaApp.GetCaAlerts(c.Query("handled"), page, pageSize)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	response.OkWithDetailed(list, "获取成功", c)
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
 
 // HandleCaAlert 处置告警
