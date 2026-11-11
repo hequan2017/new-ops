@@ -90,4 +90,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		sm4.POST("encrypt", v1.Api.EncryptCaData)
 		sm4.POST("decrypt", v1.Api.DecryptCaData)
 	}
+	fc := Router.Group("crossauth/fieldCrypt")
+	{
+		fc.POST("encrypt", v1.Api.EncryptCaField)
+		fc.POST("decrypt", v1.Api.DecryptCaField)
+		fc.POST("watermark", v1.Api.WatermarkCaData)
+	}
 }

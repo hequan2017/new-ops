@@ -97,6 +97,9 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/sm4/rotate", Description: "密钥轮换", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/sm4/encrypt", Description: "SM4 加密", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/sm4/decrypt", Description: "SM4 解密", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/fieldCrypt/encrypt", Description: "字段加密", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/fieldCrypt/decrypt", Description: "字段解密", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/fieldCrypt/watermark", Description: "访问水印", ApiGroup: "跨校认证与安全", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -165,6 +168,9 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/sm4/rotate", "POST"},
 		{"/crossauth/sm4/encrypt", "POST"},
 		{"/crossauth/sm4/decrypt", "POST"},
+		{"/crossauth/fieldCrypt/encrypt", "POST"},
+		{"/crossauth/fieldCrypt/decrypt", "POST"},
+		{"/crossauth/fieldCrypt/watermark", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
