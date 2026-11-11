@@ -188,4 +188,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		review.POST("", middleware.OperationRecord(), v1.Api.ReviewEduTicket)
 		review.POST("archive", middleware.OperationRecord(), v1.Api.ArchiveEduTicket)
 	}
+	stats := Router.Group("eduadmin/ticketStats")
+	{
+		stats.GET("", v1.Api.GetEduTicketStats)
+		stats.GET("export", v1.Api.ExportEduTicketStats)
+	}
 }
