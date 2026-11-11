@@ -70,7 +70,7 @@ func Api(ctx context.Context) {
 	pluginUtils.RegisterApis(entities...)
 }
 
-// Menu 注册 policyreg 菜单（高校制度大模型父级，子页面随 R09 挂其下）
+// Menu 注册 policyreg 菜单（高校制度大模型父级 + 制度工作台子页）
 func Menu(ctx context.Context) {
 	entities := []sysModel.SysBaseMenu{
 		{
@@ -80,6 +80,14 @@ func Menu(ctx context.Context) {
 			Component: "view/routerHolder.vue",
 			Sort:      11,
 			Meta:      sysModel.Meta{Title: "高校制度大模型", Icon: "document"},
+		},
+		{
+			Path:      "policyregLab",
+			Name:      "policyregLab",
+			Hidden:    false,
+			Component: "plugin/policyreg/view/lab/index.vue",
+			Sort:      1,
+			Meta:      sysModel.Meta{Title: "制度工作台", Icon: "document-checked"},
 		},
 	}
 	pluginUtils.RegisterMenus(entities...)
