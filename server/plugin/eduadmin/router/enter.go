@@ -155,4 +155,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		idp.POST("redirect", v1.Api.BuildEduIdpRedirect)
 		idp.POST("userSync", middleware.OperationRecord(), v1.Api.EduIdpUserSync)
 	}
+	gov := Router.Group("eduadmin/govPolicy")
+	{
+		gov.GET("list", v1.Api.GetEduGovPolicies)
+		gov.POST("pull", middleware.OperationRecord(), v1.Api.PullEduGovPolicy)
+	}
 }

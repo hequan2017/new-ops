@@ -49,6 +49,7 @@ func Gorm(ctx context.Context) {
 		new(model.EduSyncTask),
 		new(model.EduIdpAdapter),
 		new(model.EduIdpUserSync),
+		new(model.EduGovPolicy),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -143,6 +144,8 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/idp", Description: "保存身份适配器", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/idp/redirect", Description: "认证跳转组装", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/idp/userSync", Description: "用户同步任务", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/govPolicy/list", Description: "上级政策列表", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/govPolicy/pull", Description: "拉取上级政策", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -246,6 +249,8 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/idp", "POST"},
 		{"/eduadmin/idp/redirect", "POST"},
 		{"/eduadmin/idp/userSync", "POST"},
+		{"/eduadmin/govPolicy/list", "GET"},
+		{"/eduadmin/govPolicy/pull", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
