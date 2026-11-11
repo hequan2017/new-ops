@@ -37,6 +37,7 @@ func Gorm(ctx context.Context) {
 		new(model.CaGrantExpiry),
 		new(model.CaExpiryReminder),
 		new(model.CaDataClassify),
+		new(model.CaKeyRotation),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "crossauth 注册表失败!")
@@ -92,6 +93,10 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/lifecycle/scan", Description: "到期扫描", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/classify/scan", Description: "分级批量扫描", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/classify/list", Description: "分级结果列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/sm4/keys", Description: "密钥轮换表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/sm4/rotate", Description: "密钥轮换", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/sm4/encrypt", Description: "SM4 加密", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/sm4/decrypt", Description: "SM4 解密", ApiGroup: "跨校认证与安全", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -156,6 +161,10 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/lifecycle/scan", "POST"},
 		{"/crossauth/classify/scan", "POST"},
 		{"/crossauth/classify/list", "GET"},
+		{"/crossauth/sm4/keys", "GET"},
+		{"/crossauth/sm4/rotate", "POST"},
+		{"/crossauth/sm4/encrypt", "POST"},
+		{"/crossauth/sm4/decrypt", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

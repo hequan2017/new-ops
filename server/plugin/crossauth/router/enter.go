@@ -83,4 +83,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		cls.GET("list", v1.Api.GetCaClassifyResults)
 		cls.POST("scan", v1.Api.ScanCaClassify)
 	}
+	sm4 := Router.Group("crossauth/sm4")
+	{
+		sm4.GET("keys", v1.Api.GetCaKeyRotations)
+		sm4.POST("rotate", middleware.OperationRecord(), v1.Api.RotateCaKey)
+		sm4.POST("encrypt", v1.Api.EncryptCaData)
+		sm4.POST("decrypt", v1.Api.DecryptCaData)
+	}
 }
