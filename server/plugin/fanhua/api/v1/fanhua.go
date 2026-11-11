@@ -1188,3 +1188,21 @@ func (a *FanhuaApi) FusionQuery(c *gin.Context) {
 	}
 	response.OkWithDetailed(out, "查询成功", c)
 }
+
+// ExportCorpora 语料导出
+// @Tags Fanhua
+// @Summary 语料 CSV 导出（来源/语种过滤，复用 I07 口径）
+// @Security ApiKeyAuth
+// @Produce text/plain
+// @Param source query string false "来源"
+// @Param lang query string false "语种"
+// @Success 200 {object} response.Response{data=string} "导出成功"
+// @Router /fanhua/corpus/export [get]
+func (a *FanhuaApi) ExportCorpora(c *gin.Context) {
+	out, err := service.FanhuaApp.ExportCorpora(c.Query("source"), c.Query("lang"))
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "导出成功", c)
+}

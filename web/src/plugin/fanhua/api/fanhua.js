@@ -4,6 +4,7 @@ import service from '@/utils/request'
 export const getCorpora = (params) => service({ url: '/fanhua/corpus/list', method: 'get', params })
 export const saveCorpus = (data) => service({ url: '/fanhua/corpus', method: 'post', data })
 export const importCorpora = (data) => service({ url: '/fanhua/corpus/import', method: 'post', data, timeout: 120000 })
+export const exportCorpora = (params) => service({ url: '/fanhua/corpus/export', method: 'get', params })
 export const deleteCorpus = (params) => service({ url: '/fanhua/corpus', method: 'delete', params })
 
 // 平行语料

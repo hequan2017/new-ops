@@ -4,6 +4,8 @@ package service
 import (
 	"strings"
 	"testing"
+
+	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
 )
 
 // TestParseCorpusJSONL JSONL：合法/坏 JSON/来源白名单外/缺正文
@@ -61,5 +63,22 @@ func TestValidSourceLang(t *testing.T) {
 	}
 	if !ValidLang("") {
 		t.Fatal("空语种应放行（默认沪语）")
+	}
+}
+
+// TestCorporaToCSV CSV 导出（I07 口径）：表头+逗号替换
+func TestCorporaToCSV(t *testing.T) {
+	list := []model.FanhuaCorpus{
+		{Source: "新闻", Title: "侬好,上海", Lang: "沪语", Content: "第一行\n第二行,含逗号"},
+	}
+	csv := corporaToCSV(list)
+	if !strings.HasPrefix(csv, "来源,标题,语种,内容\n") {
+		t.Fatalf("应有表头: %s", csv)
+	}
+	if !strings.Contains(csv, "侬好，上海") {
+		t.Fatalf("标题逗号应转全角: %s", csv)
+	}
+	if strings.Contains(csv, "\n第二行,") {
+		t.Fatalf("内容换行应替换且逗号转全角: %s", csv)
 	}
 }

@@ -206,3 +206,32 @@ func (s *FanhuaService) GetCorpora(source, lang, keyword string, page, pageSize 
 	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
 	return list, total, err
 }
+
+// corporaToCSV 语料 CSV（纯函数，测试锚点，对齐 exam I07 口径）
+func corporaToCSV(list []model.FanhuaCorpus) string {
+	var sb strings.Builder
+	sb.WriteString("来源,标题,语种,内容\n")
+	for _, c := range list {
+		content := strings.ReplaceAll(c.Content, "\n", " ")
+		content = strings.ReplaceAll(content, ",", "，")
+		title := strings.ReplaceAll(c.Title, ",", "，")
+		sb.WriteString(fmt.Sprintf("%s,%s,%s,%s\n", c.Source, title, c.Lang, content))
+	}
+	return sb.String()
+}
+
+// ExportCorpora 语料 CSV 导出（来源/语种过滤，倒序）
+func (s *FanhuaService) ExportCorpora(source, lang string) (string, error) {
+	db := global.GVA_DB.Model(&model.FanhuaCorpus{})
+	if source != "" {
+		db = db.Where("source = ?", source)
+	}
+	if lang != "" {
+		db = db.Where("lang = ?", lang)
+	}
+	var list []model.FanhuaCorpus
+	if err := db.Order("id DESC").Limit(5000).Find(&list).Error; err != nil {
+		return "", err
+	}
+	return corporaToCSV(list), nil
+}
