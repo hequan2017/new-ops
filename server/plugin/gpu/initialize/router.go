@@ -94,6 +94,7 @@ func Casbin(ctx context.Context) {
 		{"/gpu/instance", "POST"},
 		{"/gpu/instance/release", "POST"},
 		{"/gpu/instance/list", "GET"},
+		{"/gpu/instance/export", "GET"},
 	} {
 		roles := []string{"888"}
 		if p.Method == "GET" {

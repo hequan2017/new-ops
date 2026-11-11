@@ -16,6 +16,12 @@ func Api(ctx context.Context) {
 		{Path: "/term/session/list", Description: "会话分页列表", ApiGroup: "终端作业", Method: "POST"},
 		{Path: "/term/session/streams", Description: "会话流镜像（回放）", ApiGroup: "终端作业", Method: "GET"},
 		{Path: "/term/session/commands", Description: "会话命令列表", ApiGroup: "终端作业", Method: "GET"},
+		{Path: "/term/sftp/list", Description: "SFTP 文件列表", ApiGroup: "终端作业", Method: "GET"},
+		{Path: "/term/sftp/mkdir", Description: "SFTP 新建目录", ApiGroup: "终端作业", Method: "POST"},
+		{Path: "/term/sftp/delete", Description: "SFTP 删除", ApiGroup: "终端作业", Method: "POST"},
+		{Path: "/term/sftp/rename", Description: "SFTP 重命名", ApiGroup: "终端作业", Method: "POST"},
+		{Path: "/term/sftp/upload", Description: "SFTP 上传", ApiGroup: "终端作业", Method: "POST"},
+		{Path: "/term/sftp/download", Description: "SFTP 下载", ApiGroup: "终端作业", Method: "GET"},
 	}
 	utils.RegisterApis(entities...)
 }

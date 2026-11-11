@@ -48,6 +48,7 @@ func Api(ctx context.Context) {
 		{Path: "/monitor/alert/rule", Description: "删除告警规则", ApiGroup: "监控告警", Method: "DELETE"},
 		{Path: "/monitor/alert/rule/list", Description: "告警规则列表", ApiGroup: "监控告警", Method: "GET"},
 		{Path: "/monitor/alert/event/list", Description: "告警事件列表", ApiGroup: "监控告警", Method: "POST"},
+		{Path: "/monitor/alert/event/export", Description: "告警事件 CSV 导出", ApiGroup: "监控告警", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
