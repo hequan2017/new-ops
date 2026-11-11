@@ -78,4 +78,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		lc.POST("", middleware.OperationRecord(), v1.Api.SaveCaGrantExpiry)
 		lc.POST("scan", middleware.OperationRecord(), v1.Api.ScanCaGrantExpiry)
 	}
+	cls := Router.Group("crossauth/classify")
+	{
+		cls.GET("list", v1.Api.GetCaClassifyResults)
+		cls.POST("scan", v1.Api.ScanCaClassify)
+	}
 }
