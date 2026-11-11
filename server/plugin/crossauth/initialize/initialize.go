@@ -3,8 +3,10 @@ package initialize
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/middleware"
@@ -12,12 +14,21 @@ import (
 	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 	srvUtils "github.com/hequan2017/new-ops/server/utils"
 
+	"github.com/hequan2017/new-ops/server/plugin/crossauth/model"
 	"github.com/hequan2017/new-ops/server/plugin/crossauth/router"
 )
 
-// Gorm 注册 crossauth 数据表（幂等）。M0 骨架暂无业务表，Q02 联邦身份起在此追加 AutoMigrate。
+// Gorm 注册 crossauth 数据表（幂等）
 func Gorm(ctx context.Context) {
-	_ = ctx
+	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
+		new(model.CaFederation),
+		new(model.CaSyncUser),
+		new(model.CaSyncTask),
+	)
+	if err != nil {
+		err = errors.Wrap(err, "crossauth 注册表失败!")
+		global.GVA_LOG.Error(fmt.Sprintf("%+v", err))
+	}
 }
 
 // Router 注册 crossauth 路由（private 组显式挂 JWT+casbin）
@@ -31,6 +42,11 @@ func Router(engine *gin.Engine) {
 func Api(ctx context.Context) {
 	entities := []sysModel.SysApi{
 		{Path: "/crossauth/ping", Description: "跨校认证与安全连通性探测", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/federation/list", Description: "高校对接列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/federation/tasks", Description: "同步任务记录", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/syncUser/list", Description: "同步用户列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/federation", Description: "保存对接配置", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/federation/sync", Description: "执行用户同步", ApiGroup: "跨校认证与安全", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -58,6 +74,11 @@ func Casbin(ctx context.Context) {
 	}
 	for _, p := range []struct{ Path, Method string }{
 		{"/crossauth/ping", "GET"},
+		{"/crossauth/federation/list", "GET"},
+		{"/crossauth/federation/tasks", "GET"},
+		{"/crossauth/syncUser/list", "GET"},
+		{"/crossauth/federation", "POST"},
+		{"/crossauth/federation/sync", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
