@@ -175,4 +175,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		disp.POST("auto", middleware.OperationRecord(), v1.Api.AutoDispatchEduTicket)
 		disp.POST("manual", middleware.OperationRecord(), v1.Api.ManualDispatchEduTicket)
 	}
+	prog := Router.Group("eduadmin/progress")
+	{
+		prog.GET("list", v1.Api.GetEduTicketTimelines)
+		prog.GET("urges", v1.Api.GetEduTicketUrges)
+		prog.POST("", v1.Api.AddEduTicketTimeline)
+		prog.POST("scan", middleware.OperationRecord(), v1.Api.ScanEduTicketOverdue)
+	}
 }
