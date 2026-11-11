@@ -111,4 +111,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		comp.POST("handle", middleware.OperationRecord(), v1.Api.HandleCaComputeAlert)
 	}
 	Router.Group("crossauth/monitor").GET("fiveDim", v1.Api.GetCaFiveDim)
+	ae := Router.Group("crossauth/auditEvent")
+	{
+		ae.GET("list", v1.Api.GetCaAuditEvents)
+		ae.POST("", v1.Api.RecordCaAuditEvent)
+	}
 }
