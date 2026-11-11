@@ -11,11 +11,11 @@ import (
 // TestTicketStats 统计聚合
 func TestTicketStats(t *testing.T) {
 	tickets := []model.EduTicket{
-		{Status: "办结", DemandType: "教务"},
-		{Status: "评价", DemandType: "教务"},
-		{Status: "归档", DemandType: "后勤"},
-		{Status: "受理", DemandType: "后勤"},
-		{Status: "办理", DemandType: "信息化"},
+		{Status: "办结", DemandType: "教务", Channel: "网页"},
+		{Status: "评价", DemandType: "教务", Channel: "网页"},
+		{Status: "归档", DemandType: "后勤", Channel: "企微"},
+		{Status: "受理", DemandType: "后勤", Channel: "小程序"},
+		{Status: "办理", DemandType: "信息化", Channel: "网页"},
 	}
 	urges := []model.EduTicketUrge{{Level: "临近"}, {Level: "超时"}}
 	reviews := []model.EduTicketReview{{Score: "好评"}, {Score: "好评"}, {Score: "差评"}}
@@ -39,6 +39,10 @@ func TestTicketStats(t *testing.T) {
 	}
 	if rateOf(1, 0) != 0 {
 		t.Fatal("零分母应 0")
+	}
+	// 渠道维度
+	if st.ChannelCounts["网页"] != 3 || st.ChannelCounts["企微"] != 1 || st.ChannelCounts["小程序"] != 1 {
+		t.Fatalf("渠道计数不符: %+v", st.ChannelCounts)
 	}
 }
 

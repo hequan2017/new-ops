@@ -38,25 +38,32 @@ type deptEff struct {
 
 // TicketStats 工单统计
 type TicketStats struct {
-	Total        int         `json:"total"`
-	Closed       int         `json:"closed"`
-	CloseRate    float64     `json:"closeRate"`
-	UrgedNear    int         `json:"urgedNear"`
-	UrgedOver    int         `json:"urgedOver"`
-	OverdueRate  float64     `json:"overdueRate"`
-	Reviews      int         `json:"reviews"`
-	GoodRate     float64     `json:"goodRate"`
-	TopTypes     []typeCount `json:"topTypes"`
-	DeptEffList  []deptEff   `json:"deptEfficiency"`
+	Total         int         `json:"total"`
+	Closed        int         `json:"closed"`
+	CloseRate     float64     `json:"closeRate"`
+	UrgedNear     int         `json:"urgedNear"`
+	UrgedOver     int         `json:"urgedOver"`
+	OverdueRate   float64     `json:"overdueRate"`
+	Reviews       int         `json:"reviews"`
+	GoodRate      float64     `json:"goodRate"`
+	TopTypes      []typeCount `json:"topTypes"`
+	DeptEffList   []deptEff   `json:"deptEfficiency"`
+	ChannelCounts map[string]int `json:"channelCounts"` // 渠道维度（网页/企微/小程序）
 }
 
 // ticketStats 统计聚合（纯函数，测试锚点）
 func ticketStats(tickets []model.EduTicket, urges []model.EduTicketUrge, reviews []model.EduTicketReview, logs []model.EduDispatchLog) *TicketStats {
-	st := &TicketStats{Total: len(tickets), TopTypes: []typeCount{}, DeptEffList: []deptEff{}}
+	st := &TicketStats{
+		Total: len(tickets), TopTypes: []typeCount{}, DeptEffList: []deptEff{},
+		ChannelCounts: map[string]int{},
+	}
 	for _, t := range tickets {
 		switch t.Status {
 		case "办结", "评价", "归档":
 			st.Closed++
+		}
+		if t.Channel != "" {
+			st.ChannelCounts[t.Channel]++
 		}
 	}
 	for _, u := range urges {
@@ -133,6 +140,14 @@ func ticketStatsCSV(st *TicketStats) string {
 	}
 	for _, d := range st.DeptEffList {
 		sb.WriteString(fmt.Sprintf("部门分派 %s,%d\n", d.Dept, d.Dispatch))
+	}
+	channels := make([]string, 0, len(st.ChannelCounts))
+	for c := range st.ChannelCounts {
+		channels = append(channels, c)
+	}
+	sort.Strings(channels)
+	for _, c := range channels {
+		sb.WriteString(fmt.Sprintf("渠道 %s,%d\n", c, st.ChannelCounts[c]))
 	}
 	return sb.String()
 }
