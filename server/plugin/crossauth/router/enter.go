@@ -27,4 +27,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		fed.POST("sync", middleware.OperationRecord(), v1.Api.RunCaSyncTask)
 	}
 	Router.Group("crossauth/syncUser").GET("list", v1.Api.GetCaSyncUsers)
+	trust := Router.Group("crossauth/trust")
+	{
+		trust.GET("list", v1.Api.GetCaTrustRules)
+		trust.POST("check", v1.Api.CheckCaTrust)
+		trust.POST("", middleware.OperationRecord(), v1.Api.SaveCaTrustRule)
+		trust.DELETE("", middleware.OperationRecord(), v1.Api.DeleteCaTrustRule)
+	}
 }

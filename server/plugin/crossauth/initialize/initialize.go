@@ -24,6 +24,7 @@ func Gorm(ctx context.Context) {
 		new(model.CaFederation),
 		new(model.CaSyncUser),
 		new(model.CaSyncTask),
+		new(model.CaTrustRule),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "crossauth 注册表失败!")
@@ -47,6 +48,10 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/syncUser/list", Description: "同步用户列表", ApiGroup: "跨校认证与安全", Method: "GET"},
 		{Path: "/crossauth/federation", Description: "保存对接配置", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/federation/sync", Description: "执行用户同步", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/trust/list", Description: "互认规则列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/trust/check", Description: "互认校验", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/trust", Description: "保存互认规则", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/trust", Description: "删除互认规则", ApiGroup: "跨校认证与安全", Method: "DELETE"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -79,6 +84,10 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/syncUser/list", "GET"},
 		{"/crossauth/federation", "POST"},
 		{"/crossauth/federation/sync", "POST"},
+		{"/crossauth/trust/list", "GET"},
+		{"/crossauth/trust/check", "POST"},
+		{"/crossauth/trust", "POST"},
+		{"/crossauth/trust", "DELETE"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
