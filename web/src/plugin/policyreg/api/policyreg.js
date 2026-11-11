@@ -21,3 +21,4 @@ export const searchByRole = (params) => service({ url: '/policyreg/acl/search', 
 export const getPolicyPrompts = () => service({ url: '/policyreg/prompt/list', method: 'get' })
 export const renderPolicyPrompt = (data) => service({ url: '/policyreg/prompt/render', method: 'post', data })
 export const policyQa = (data) => service({ url: '/policyreg/qa', method: 'post', data, timeout: 60000 })
+export const getPolicyQaLogs = (params) => service({ url: '/policyreg/qa/logs', method: 'get', params })

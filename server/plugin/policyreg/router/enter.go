@@ -55,5 +55,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		prompt.POST("render", v1.Api.RenderPolicyPromptByName)
 		prompt.POST("", middleware.OperationRecord(), v1.Api.SavePolicyPrompt)
 	}
-	Router.Group("policyreg/qa").POST("", v1.Api.PolicyQa)
+	qa := Router.Group("policyreg/qa")
+	{
+		qa.POST("", v1.Api.PolicyQa)
+		qa.GET("logs", v1.Api.GetPolicyQaLogs)
+	}
 }

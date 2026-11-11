@@ -160,3 +160,24 @@ func (s *PolicyService) GetPolicyPrompts() ([]model.PolicyPromptTemplate, error)
 	err := global.GVA_DB.Order("id ASC").Limit(100).Find(&list).Error
 	return list, err
 }
+
+// GetPolicyQaLogs 问答日志列表（角色过滤，倒序分页）
+func (s *PolicyService) GetPolicyQaLogs(roleName string, page, pageSize int) ([]model.PolicyQaLog, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 20
+	}
+	db := global.GVA_DB.Model(&model.PolicyQaLog{})
+	if strings.TrimSpace(roleName) != "" {
+		db = db.Where("role_name = ?", roleName)
+	}
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var list []model.PolicyQaLog
+	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
+	return list, total, err
+}

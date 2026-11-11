@@ -2,6 +2,7 @@
 package v1
 
 import (
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -104,4 +105,25 @@ func (a *PolicyregApi) RenderPolicyPromptByName(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(out, "渲染成功", c)
+}
+
+// GetPolicyQaLogs 问答日志
+// @Tags Policyreg
+// @Summary 制度问答日志列表（角色过滤，倒序分页）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param roleName query string false "角色"
+// @Param page query int false "页码"
+// @Param pageSize query int false "每页条数"
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /policyreg/qa/logs [get]
+func (a *PolicyregApi) GetPolicyQaLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := service.PolicyApp.GetPolicyQaLogs(c.Query("roleName"), page, pageSize)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
