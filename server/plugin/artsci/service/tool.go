@@ -187,3 +187,65 @@ func truncateRunText(s string) string {
 	}
 	return s
 }
+
+// toolStat 工具执行统计
+type toolStat struct {
+	ToolId      uint    `json:"toolId"`
+	Name        string  `json:"name"`
+	Total       int64   `json:"total"`
+	Success     int64   `json:"success"`
+	Fail        int64   `json:"fail"`
+	SuccessRate float64 `json:"successRate"` // 两位小数 0-1
+	AvgLatencyMs int64  `json:"avgLatencyMs"`
+}
+
+// ToolRunStats 执行留痕统计（按工具聚合成功率与均耗时，纯函数聚合可测）
+func ToolRunStats(logs []model.ArtsciRunLog) []toolStat {
+	type agg struct {
+		name        string
+		total       int64
+		success     int64
+		latencySum  int64
+	}
+	order := make([]uint, 0)
+	byTool := map[uint]*agg{}
+	for _, l := range logs {
+		a, ok := byTool[l.ToolId]
+		if !ok {
+			a = &agg{name: l.Name}
+			byTool[l.ToolId] = a
+			order = append(order, l.ToolId)
+		}
+		a.total++
+		if l.Ok {
+			a.success++
+		}
+		a.latencySum += l.LatencyMs
+	}
+	out := make([]toolStat, 0, len(order))
+	for _, id := range order {
+		a := byTool[id]
+		rate := 0.0
+		if a.total > 0 {
+			rate = float64(int(float64(a.success)/float64(a.total)*100+0.5)) / 100
+		}
+		avg := int64(0)
+		if a.total > 0 {
+			avg = a.latencySum / a.total
+		}
+		out = append(out, toolStat{
+			ToolId: id, Name: a.name, Total: a.total, Success: a.success,
+			Fail: a.total - a.success, SuccessRate: rate, AvgLatencyMs: avg,
+		})
+	}
+	return out
+}
+
+// GetToolRunStats 统计（近 2000 条留痕聚合）
+func (s *ArtsciService) GetToolRunStats() ([]toolStat, error) {
+	var logs []model.ArtsciRunLog
+	if err := global.GVA_DB.Order("id ASC").Limit(2000).Find(&logs).Error; err != nil {
+		return nil, err
+	}
+	return ToolRunStats(logs), nil
+}

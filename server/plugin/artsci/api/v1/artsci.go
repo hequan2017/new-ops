@@ -460,3 +460,19 @@ func (a *ArtsciApi) GetInterpretations(c *gin.Context) {
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
 }
+
+// GetToolRunStats 执行统计
+// @Tags Artsci
+// @Summary 工具执行留痕统计（按工具聚合 成功率/均耗时，近 2000 条）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=[]service.toolStat} "获取成功"
+// @Router /artsci/runLog/stats [get]
+func (a *ArtsciApi) GetToolRunStats(c *gin.Context) {
+	out, err := service.ArtsciApp.GetToolRunStats()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "获取成功", c)
+}

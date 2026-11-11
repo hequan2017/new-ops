@@ -2,6 +2,7 @@
 package service
 
 import (
+	"github.com/hequan2017/new-ops/server/plugin/artsci/model"
 	"strings"
 	"testing"
 )
@@ -88,5 +89,28 @@ func TestTruncateRunText(t *testing.T) {
 	}
 	if got := truncateRunText("ok"); got != "ok" {
 		t.Fatalf("短文本应原样: %v", got)
+	}
+}
+
+// TestToolRunStats 成功率聚合
+func TestToolRunStats(t *testing.T) {
+	logs := []model.ArtsciRunLog{
+		{ToolId: 1, Name: "allen-cahn", Ok: true, LatencyMs: 100},
+		{ToolId: 1, Name: "allen-cahn", Ok: true, LatencyMs: 200},
+		{ToolId: 1, Name: "allen-cahn", Ok: false, LatencyMs: 300},
+		{ToolId: 2, Name: "组卷", Ok: true, LatencyMs: 50},
+	}
+	stats := ToolRunStats(logs)
+	if len(stats) != 2 || stats[0].ToolId != 1 {
+		t.Fatalf("应按首现顺序聚合 2 工具: %+v", stats)
+	}
+	if stats[0].Total != 3 || stats[0].Success != 2 || stats[0].Fail != 1 || stats[0].SuccessRate != 0.67 {
+		t.Fatalf("成功率应 0.67: %+v", stats[0])
+	}
+	if stats[0].AvgLatencyMs != 200 {
+		t.Fatalf("均耗时应 200: %+v", stats[0])
+	}
+	if stats[1].SuccessRate != 1 {
+		t.Fatalf("全成应 1: %+v", stats[1])
 	}
 }

@@ -105,6 +105,7 @@ func Casbin(ctx context.Context) {
 		{"/artsci/tool", "POST"},
 		{"/artsci/tool/run", "POST"},
 		{"/artsci/tool/runLogs", "GET"},
+		{"/artsci/tool/runStats", "GET"},
 		{"/artsci/tool", "DELETE"},
 		{"/artsci/grading", "POST"},
 		{"/artsci/grading/list", "GET"},
