@@ -141,4 +141,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		share.POST("schedule", middleware.OperationRecord(), v1.Api.ScheduleEduShareResource)
 	}
 	Router.Group("eduadmin/jointBudget").GET("", v1.Api.AnalyzeEduJointBudget)
+	sync := Router.Group("eduadmin/sync")
+	{
+		sync.GET("adapter/list", v1.Api.GetEduSyncAdapters)
+		sync.GET("task/list", v1.Api.GetEduSyncTasks)
+		sync.POST("adapter", middleware.OperationRecord(), v1.Api.SaveEduSyncAdapter)
+		sync.POST("run", middleware.OperationRecord(), v1.Api.RunEduSyncTask)
+	}
 }
