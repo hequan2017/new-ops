@@ -27,6 +27,8 @@ func Gorm(ctx context.Context) {
 		new(model.PolicyTokenLabel),
 		new(model.PolicyRelationLabel),
 		new(model.PolicyPermGrant),
+		new(model.PolicyPromptTemplate),
+		new(model.PolicyQaLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "policyreg 注册表失败!")
@@ -60,6 +62,10 @@ func Api(ctx context.Context) {
 		{Path: "/policyreg/acl/list", Description: "权限 grant 列表", ApiGroup: "高校制度大模型", Method: "GET"},
 		{Path: "/policyreg/acl/search", Description: "按角色检索", ApiGroup: "高校制度大模型", Method: "GET"},
 		{Path: "/policyreg/acl", Description: "保存权限 grant", ApiGroup: "高校制度大模型", Method: "POST"},
+		{Path: "/policyreg/prompt/list", Description: "提示词模板列表", ApiGroup: "高校制度大模型", Method: "GET"},
+		{Path: "/policyreg/prompt/render", Description: "渲染提示词", ApiGroup: "高校制度大模型", Method: "POST"},
+		{Path: "/policyreg/prompt", Description: "保存提示词模板", ApiGroup: "高校制度大模型", Method: "POST"},
+		{Path: "/policyreg/qa", Description: "制度问答", ApiGroup: "高校制度大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -102,6 +108,10 @@ func Casbin(ctx context.Context) {
 		{"/policyreg/acl/list", "GET"},
 		{"/policyreg/acl/search", "GET"},
 		{"/policyreg/acl", "POST"},
+		{"/policyreg/prompt/list", "GET"},
+		{"/policyreg/prompt/render", "POST"},
+		{"/policyreg/prompt", "POST"},
+		{"/policyreg/qa", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

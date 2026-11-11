@@ -49,4 +49,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		acl.GET("search", v1.Api.SearchPolicyDocsByRole)
 		acl.POST("", middleware.OperationRecord(), v1.Api.SavePolicyPermGrant)
 	}
+	prompt := Router.Group("policyreg/prompt")
+	{
+		prompt.GET("list", v1.Api.GetPolicyPrompts)
+		prompt.POST("render", v1.Api.RenderPolicyPromptByName)
+		prompt.POST("", middleware.OperationRecord(), v1.Api.SavePolicyPrompt)
+	}
+	Router.Group("policyreg/qa").POST("", v1.Api.PolicyQa)
 }
