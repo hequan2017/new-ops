@@ -28,6 +28,7 @@ func (p *plugin) Register(group *gin.Engine) {
 	initialize.SeedCaTrustRules(ctx)
 	initialize.SeedCaSsoApps(ctx)
 	initialize.SeedCaRoleTemplates(ctx)
+	initialize.SeedCaPlaybooks(ctx)
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
 	initialize.Casbin(ctx)

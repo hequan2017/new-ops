@@ -130,4 +130,15 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ra.POST("revoke", middleware.OperationRecord(), v1.Api.RevokeCaRemoteAssist)
 		ra.GET("list", v1.Api.GetCaRemoteAssists)
 	}
+	pb := Router.Group("crossauth/playbook")
+	{
+		pb.GET("list", v1.Api.GetCaPlaybooks)
+		pb.POST("", middleware.OperationRecord(), v1.Api.SaveCaPlaybook)
+	}
+	drill := Router.Group("crossauth/drill")
+	{
+		drill.GET("list", v1.Api.GetCaDrillPlans)
+		drill.POST("", v1.Api.SaveCaDrillPlan)
+		drill.POST("finish", middleware.OperationRecord(), v1.Api.FinishCaDrillPlan)
+	}
 }

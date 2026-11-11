@@ -46,6 +46,8 @@ func Gorm(ctx context.Context) {
 		new(model.CaOpsTicket),
 		new(model.CaOpsMessage),
 		new(model.CaRemoteAssist),
+		new(model.CaPlaybook),
+		new(model.CaDrillPlan),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "crossauth 注册表失败!")
@@ -127,6 +129,11 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/remoteAssist", Description: "远程协助授权", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/remoteAssist/revoke", Description: "撤销授权", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/remoteAssist/list", Description: "授权记录", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/playbook/list", Description: "应急预案列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/playbook", Description: "保存应急预案", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/drill/list", Description: "演练计划列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/drill/finish", Description: "演练复盘归档", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/drill", Description: "新建演练计划", ApiGroup: "跨校认证与安全", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -217,6 +224,11 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/remoteAssist", "POST"},
 		{"/crossauth/remoteAssist/revoke", "POST"},
 		{"/crossauth/remoteAssist/list", "GET"},
+		{"/crossauth/playbook/list", "GET"},
+		{"/crossauth/playbook", "POST"},
+		{"/crossauth/drill/list", "GET"},
+		{"/crossauth/drill/finish", "POST"},
+		{"/crossauth/drill", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
