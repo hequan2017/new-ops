@@ -43,4 +43,10 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		lb.GET("list", v1.Api.GetPolicyTokenLabels)
 		lb.GET("relations", v1.Api.GetPolicyRelationLabels)
 	}
+	acl := Router.Group("policyreg/acl")
+	{
+		acl.GET("list", v1.Api.GetPolicyPermGrants)
+		acl.GET("search", v1.Api.SearchPolicyDocsByRole)
+		acl.POST("", middleware.OperationRecord(), v1.Api.SavePolicyPermGrant)
+	}
 }
