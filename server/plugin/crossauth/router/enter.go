@@ -103,4 +103,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		acc.GET("alerts", v1.Api.GetCaAlerts)
 		acc.POST("handle", middleware.OperationRecord(), v1.Api.HandleCaAlert)
 	}
+	comp := Router.Group("crossauth/compute")
+	{
+		comp.POST("usage", v1.Api.RecordCaComputeUsage)
+		comp.GET("usage/list", v1.Api.GetCaComputeUsages)
+		comp.GET("alerts", v1.Api.GetCaComputeAlerts)
+		comp.POST("handle", middleware.OperationRecord(), v1.Api.HandleCaComputeAlert)
+	}
 }

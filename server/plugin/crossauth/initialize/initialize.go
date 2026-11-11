@@ -40,6 +40,8 @@ func Gorm(ctx context.Context) {
 		new(model.CaKeyRotation),
 		new(model.CaAccessLog),
 		new(model.CaAlert),
+		new(model.CaComputeUsage),
+		new(model.CaComputeAlert),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "crossauth 注册表失败!")
@@ -106,6 +108,10 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/access/logs", Description: "访问日志", ApiGroup: "跨校认证与安全", Method: "GET"},
 		{Path: "/crossauth/access/alerts", Description: "阻断告警列表", ApiGroup: "跨校认证与安全", Method: "GET"},
 		{Path: "/crossauth/access/handle", Description: "告警处置", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/compute/usage", Description: "记录算力用量", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/compute/usage/list", Description: "算力用量列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/compute/alerts", Description: "算力告警列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/compute/handle", Description: "算力告警处置", ApiGroup: "跨校认证与安全", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -181,6 +187,10 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/access/logs", "GET"},
 		{"/crossauth/access/alerts", "GET"},
 		{"/crossauth/access/handle", "POST"},
+		{"/crossauth/compute/usage", "POST"},
+		{"/crossauth/compute/usage/list", "GET"},
+		{"/crossauth/compute/alerts", "GET"},
+		{"/crossauth/compute/handle", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
