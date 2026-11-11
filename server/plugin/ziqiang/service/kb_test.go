@@ -42,3 +42,19 @@ func TestValidJurisdiction(t *testing.T) {
 		t.Fatal("白名单外应拒绝")
 	}
 }
+
+// TestRankCases 判例 bigram 检索
+func TestRankCases(t *testing.T) {
+	list := []model.ZqCase{
+		{Jurisdiction: "中国", Name: "AI 文生图著作权第一案", Summary: "Stable Diffusion 生成图片", Ruling: "用户智力投入，享有著作权"},
+		{Jurisdiction: "美国", Name: "Thaler v. Perlmutter", Summary: "AI 发明人与作者身份", Ruling: "人类作者为要件"},
+	}
+	// 「AI」bigram 同命中 Thaler 案，文生图案应凭更高分居首（对齐 TestRankRegulations 口径）
+	hits := rankCases(list, "AI 生成图片著作权")
+	if len(hits) != 2 || hits[0].Name != "AI 文生图著作权第一案" || hits[0].Score <= hits[1].Score {
+		t.Fatalf("文生图案应以更高分居首: %+v", hits)
+	}
+	if hits2 := rankCases(list, "量子通信"); len(hits2) != 0 {
+		t.Fatalf("无关查询应零命中: %+v", hits2)
+	}
+}

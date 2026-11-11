@@ -154,6 +154,63 @@ func (s *ZiqiangService) SaveCase(in *model.ZqCase) (*model.ZqCase, error) {
 	return in, nil
 }
 
+// CaseHit 判例命中项
+type CaseHit struct {
+	model.ZqCase
+	Score int `json:"score"`
+}
+
+// rankCases 判例 bigram 命中降序（纯函数，测试锚点）：案名+案情+裁判要点
+func rankCases(list []model.ZqCase, query string) []CaseHit {
+	qSet := bigramSet(query)
+	hits := make([]CaseHit, 0, len(list))
+	for _, c := range list {
+		cSet := bigramSet(c.Name + c.Summary + c.Ruling)
+		score := 0
+		for bg := range qSet {
+			if cSet[bg] {
+				score++
+			}
+		}
+		if score > 0 {
+			hits = append(hits, CaseHit{ZqCase: c, Score: score})
+		}
+	}
+	sort.Slice(hits, func(i, j int) bool {
+		if hits[i].Score != hits[j].Score {
+			return hits[i].Score > hits[j].Score
+		}
+		return hits[i].ID < hits[j].ID
+	})
+	return hits
+}
+
+// SearchCases 判例检索（辖区过滤 + bigram 打分，口径同 SearchRegulations）
+func (s *ZiqiangService) SearchCases(query, jurisdiction string, topK int) ([]CaseHit, error) {
+	if strings.TrimSpace(query) == "" {
+		return nil, fmt.Errorf("[%d]检索词必填", ErrCodeKbParam)
+	}
+	if jurisdiction != "" && !validJurisdiction(jurisdiction) {
+		return nil, fmt.Errorf("[%d]辖区须为 中国/美国/欧盟", ErrCodeKbParam)
+	}
+	if topK < 1 || topK > 50 {
+		topK = 5
+	}
+	db := global.GVA_DB.Model(&model.ZqCase{})
+	if jurisdiction != "" {
+		db = db.Where("jurisdiction = ?", jurisdiction)
+	}
+	var list []model.ZqCase
+	if err := db.Limit(2000).Find(&list).Error; err != nil {
+		return nil, err
+	}
+	hits := rankCases(list, query)
+	if len(hits) > topK {
+		hits = hits[:topK]
+	}
+	return hits, nil
+}
+
 // GetCases 判例列表（辖区过滤，倒序分页）
 func (s *ZiqiangService) GetCases(jurisdiction string, page, pageSize int) ([]model.ZqCase, int64, error) {
 	if page < 1 {

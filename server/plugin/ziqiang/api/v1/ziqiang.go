@@ -625,6 +625,26 @@ func (a *ZiqiangApi) SaveCase(c *gin.Context) {
 	response.OkWithDetailed(out, "保存成功", c)
 }
 
+// SearchCases 判例检索
+// @Tags Ziqiang
+// @Summary 判例 bigram 检索（辖区过滤，命中降序 top-k，口径同法规检索）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param query query string true "检索词"
+// @Param jurisdiction query string false "中国/美国/欧盟"
+// @Param topK query int false "返回条数"
+// @Success 200 {object} response.Response{data=[]service.CaseHit} "检索成功"
+// @Router /ziqiang/case/search [get]
+func (a *ZiqiangApi) SearchCases(c *gin.Context) {
+	topK, _ := strconv.Atoi(c.DefaultQuery("topK", "5"))
+	hits, err := service.ZiqiangApp.SearchCases(c.Query("query"), c.Query("jurisdiction"), topK)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(hits, "检索成功", c)
+}
+
 // GetCases 判例列表
 // @Tags Ziqiang
 // @Summary 判例条目列表（辖区过滤，倒序分页）

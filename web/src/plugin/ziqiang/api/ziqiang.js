@@ -34,6 +34,7 @@ export const graphBfs = (params) => service({ url: '/ziqiang/graph/bfs', method:
 export const getRegulations = (params) => service({ url: '/ziqiang/regulation/list', method: 'get', params })
 export const searchRegulations = (params) => service({ url: '/ziqiang/regulation/search', method: 'get', params })
 export const getCases = (params) => service({ url: '/ziqiang/case/list', method: 'get', params })
+export const searchCases = (params) => service({ url: '/ziqiang/case/search', method: 'get', params })
 
 // 区块链存证
 export const appendEvidence = (data) => service({ url: '/ziqiang/evidence', method: 'post', data })
