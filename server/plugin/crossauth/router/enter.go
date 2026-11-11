@@ -96,4 +96,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		fc.POST("decrypt", v1.Api.DecryptCaField)
 		fc.POST("watermark", v1.Api.WatermarkCaData)
 	}
+	acc := Router.Group("crossauth/access")
+	{
+		acc.POST("check", v1.Api.CheckCaAccess)
+		acc.GET("logs", v1.Api.GetCaAccessLogs)
+		acc.GET("alerts", v1.Api.GetCaAlerts)
+		acc.POST("handle", middleware.OperationRecord(), v1.Api.HandleCaAlert)
+	}
 }
