@@ -43,6 +43,9 @@
               <el-option v-for="s in statuses" :key="s" :label="s" :value="s" />
             </el-select>
           </el-form-item>
+          <el-form-item label="诉求">
+            <el-input v-model="listQuery.demandType" placeholder="类型关键字" style="width: 130px" clearable @keyup.enter="loadTickets" />
+          </el-form-item>
           <el-form-item>
             <el-button size="small" @click="loadTickets">刷 新</el-button>
           </el-form-item>
@@ -151,7 +154,7 @@
   // 工单列表
   const tickets = ref([])
   const ticketLoading = ref(false)
-  const listQuery = reactive({ status: '' })
+  const listQuery = reactive({ status: '', demandType: '' })
 
   const loadTickets = async () => {
     ticketLoading.value = true

@@ -42,6 +42,7 @@ func (a *EduadminApi) CreateEduTicket(c *gin.Context) {
 // @Produce application/json
 // @Param channel query string false "网页/企微/小程序"
 // @Param status query string false "受理/分派/办理/办结/评价/归档"
+// @Param demandType query string false "诉求类型关键字"
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页条数"
 // @Success 200 {object} response.Response{data=map[string]any} "获取成功"
@@ -49,7 +50,7 @@ func (a *EduadminApi) CreateEduTicket(c *gin.Context) {
 func (a *EduadminApi) GetEduTickets(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
-	list, total, err := service.EduadminApp.GetEduTickets(c.Query("channel"), c.Query("status"), page, pageSize)
+	list, total, err := service.EduadminApp.GetEduTickets(c.Query("channel"), c.Query("status"), c.Query("demandType"), page, pageSize)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

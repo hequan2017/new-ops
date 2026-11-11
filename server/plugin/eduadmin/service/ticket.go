@@ -115,7 +115,7 @@ func (s *EduadminService) AdvanceEduTicket(id uint) (*model.EduTicket, error) {
 }
 
 // GetEduTickets 工单列表（渠道/状态过滤，倒序分页）
-func (s *EduadminService) GetEduTickets(channel, status string, page, pageSize int) ([]model.EduTicket, int64, error) {
+func (s *EduadminService) GetEduTickets(channel, status, demandType string, page, pageSize int) ([]model.EduTicket, int64, error) {
 	if channel != "" {
 		valid := false
 		for _, c := range EduTicketChannels {
@@ -142,6 +142,9 @@ func (s *EduadminService) GetEduTickets(channel, status string, page, pageSize i
 	}
 	if status != "" {
 		db = db.Where("status = ?", status)
+	}
+	if demandType != "" {
+		db = db.Where("demand_type LIKE ?", "%"+demandType+"%")
 	}
 	var total int64
 	if err := db.Count(&total).Error; err != nil {
