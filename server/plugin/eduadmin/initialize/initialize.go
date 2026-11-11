@@ -197,6 +197,14 @@ func Menu(ctx context.Context) {
 			Sort:      1,
 			Meta:      sysModel.Meta{Title: "教育管理工作台", Icon: "data-line"},
 		},
+		{
+			Path:      "eduadminTicket",
+			Name:      "eduadminTicket",
+			Hidden:    false,
+			Component: "plugin/eduadmin/view/ticket/index.vue",
+			Sort:      2,
+			Meta:      sysModel.Meta{Title: "AI-12345 工单台", Icon: "headset"},
+		},
 	}
 	pluginUtils.RegisterMenus(entities...)
 }
