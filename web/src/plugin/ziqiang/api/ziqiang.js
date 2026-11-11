@@ -37,7 +37,8 @@ export const getCases = (params) => service({ url: '/ziqiang/case/list', method:
 
 // 区块链存证
 export const appendEvidence = (data) => service({ url: '/ziqiang/evidence', method: 'post', data })
-export const verifyEvidence = () => service({ url: '/ziqiang/evidence/verify', method: 'get' })
+export const verifyEvidence = (params) => service({ url: '/ziqiang/evidence/verify', method: 'get', params })
+export const chainHead = () => service({ url: '/ziqiang/evidence/head', method: 'get' })
 export const getEvidences = (params) => service({ url: '/ziqiang/evidence/list', method: 'get', params })
 
 // 提示词库与渲染

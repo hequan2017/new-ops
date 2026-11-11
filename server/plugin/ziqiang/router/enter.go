@@ -70,6 +70,7 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	{
 		ev.GET("list", v1.Api.GetEvidenceList)
 		ev.GET("verify", v1.Api.VerifyEvidenceChain)
+		ev.GET("head", v1.Api.ChainHead)
 		ev.GET("", v1.Api.GetEvidence)
 		ev.POST("", middleware.OperationRecord(), v1.Api.AppendEvidence)
 	}

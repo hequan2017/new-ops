@@ -96,21 +96,59 @@ func (s *ZiqiangService) AppendEvidence(payload, bizKey string) (*model.ZqEviden
 	return &block, nil
 }
 
-// chainReport 完整性校验报告
-type chainReport struct {
+// ChainReport 完整性校验报告
+type ChainReport struct {
 	OK     bool         `json:"ok"`
 	Blocks int          `json:"blocks"`
 	Issues []chainIssue `json:"issues"`
 }
 
 // VerifyChain 链完整性校验（篡改检测报告）
-func (s *ZiqiangService) VerifyChain() (*chainReport, error) {
+func (s *ZiqiangService) VerifyChain() (*ChainReport, error) {
 	var blocks []model.ZqEvidence
 	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Order("height ASC").Limit(10000).Find(&blocks).Error; err != nil {
 		return nil, err
 	}
 	issues := verifyChain(blocks)
-	return &chainReport{OK: len(issues) == 0, Blocks: len(blocks), Issues: issues}, nil
+	return &ChainReport{OK: len(issues) == 0, Blocks: len(blocks), Issues: issues}, nil
+}
+
+// ChainHead 链头摘要
+type ChainHead struct {
+	Height    int64  `json:"height"`    // 最新块高（空链 -1）
+	BlockHash string `json:"blockHash"` // 最新块哈希（空链为创世前链指针）
+	Total     int64  `json:"total"`
+	LastAt    int64  `json:"lastAt"` // 最新块时间戳
+}
+
+// ChainHead 链头摘要（最新块高/块哈希/总量）
+func (s *ZiqiangService) ChainHead() (*ChainHead, error) {
+	var total int64
+	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	head := &ChainHead{Height: -1, BlockHash: GenesisPrevHash, Total: total}
+	var last model.ZqEvidence
+	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Order("height DESC").First(&last).Error; err == nil {
+		head.Height = last.Height
+		head.BlockHash = last.BlockHash
+		head.LastAt = last.Timestamp
+	}
+	return head, nil
+}
+
+// VerifyBizChain 业务号局部核验（该业务全部块按块高重算，口径同全链校验）
+func (s *ZiqiangService) VerifyBizChain(bizKey string) (*ChainReport, error) {
+	if strings.TrimSpace(bizKey) == "" {
+		return nil, fmt.Errorf("[%d]业务号必填", ErrCodeEvidenceParam)
+	}
+	var blocks []model.ZqEvidence
+	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Where("biz_key = ?", bizKey).
+		Order("height ASC").Limit(10000).Find(&blocks).Error; err != nil {
+		return nil, err
+	}
+	issues := verifyChain(blocks)
+	return &ChainReport{OK: len(issues) == 0, Blocks: len(blocks), Issues: issues}, nil
 }
 
 // GetEvidenceList 存证列表（业务号过滤，块高升序分页）

@@ -680,15 +680,40 @@ func (a *ZiqiangApi) AppendEvidence(c *gin.Context) {
 // @Summary 区块链完整性校验（块哈希/前链指针/原文哈希三重重算，定位首个篡改块）
 // @Security ApiKeyAuth
 // @Produce application/json
-// @Success 200 {object} response.Response{data=service.chainReport} "校验完成"
+// @Param bizKey query string false "业务号（传则局部核验该业务全部块）"
+// @Success 200 {object} response.Response{data=map[string]any} "校验完成"
 // @Router /ziqiang/evidence/verify [get]
 func (a *ZiqiangApi) VerifyEvidenceChain(c *gin.Context) {
-	out, err := service.ZiqiangApp.VerifyChain()
+	var (
+		out *service.ChainReport
+		err error
+	)
+	if bizKey := c.Query("bizKey"); bizKey != "" {
+		out, err = service.ZiqiangApp.VerifyBizChain(bizKey)
+	} else {
+		out, err = service.ZiqiangApp.VerifyChain()
+	}
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
 	response.OkWithDetailed(out, "校验完成", c)
+}
+
+// ChainHead 链头摘要
+// @Tags Ziqiang
+// @Summary 区块链链头（最新块高/块哈希/总量/时间戳，空链为创世口径）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=map[string]any} "获取成功"
+// @Router /ziqiang/evidence/head [get]
+func (a *ZiqiangApi) ChainHead(c *gin.Context) {
+	out, err := service.ZiqiangApp.ChainHead()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "获取成功", c)
 }
 
 // GetEvidenceList 存证列表
