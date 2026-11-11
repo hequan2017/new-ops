@@ -160,4 +160,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		gov.GET("list", v1.Api.GetEduGovPolicies)
 		gov.POST("pull", middleware.OperationRecord(), v1.Api.PullEduGovPolicy)
 	}
+	ticket := Router.Group("eduadmin/ticket")
+	{
+		ticket.GET("list", v1.Api.GetEduTickets)
+		ticket.GET("", v1.Api.GetEduTicket)
+		ticket.POST("", middleware.OperationRecord(), v1.Api.CreateEduTicket)
+		ticket.POST("advance", middleware.OperationRecord(), v1.Api.AdvanceEduTicket)
+	}
 }
