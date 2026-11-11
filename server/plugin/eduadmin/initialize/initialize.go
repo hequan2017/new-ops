@@ -178,7 +178,7 @@ func Api(ctx context.Context) {
 	pluginUtils.RegisterApis(entities...)
 }
 
-// Menu 注册 eduadmin 菜单（教育管理一模通管父级，子页面随 P31/P32 挂其下）
+// Menu 注册 eduadmin 菜单（教育管理一模通管父级 + 教育管理工作台/AI-12345 工单台子页）
 func Menu(ctx context.Context) {
 	entities := []sysModel.SysBaseMenu{
 		{
@@ -188,6 +188,14 @@ func Menu(ctx context.Context) {
 			Component: "view/routerHolder.vue",
 			Sort:      9,
 			Meta:      sysModel.Meta{Title: "教育管理一模通管", Icon: "data-board"},
+		},
+		{
+			Path:      "eduadminAdmin",
+			Name:      "eduadminAdmin",
+			Hidden:    false,
+			Component: "plugin/eduadmin/view/admin/index.vue",
+			Sort:      1,
+			Meta:      sysModel.Meta{Title: "教育管理工作台", Icon: "data-line"},
 		},
 	}
 	pluginUtils.RegisterMenus(entities...)
