@@ -54,4 +54,14 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		role.GET("list", v1.Api.GetCaRoleTemplates)
 		role.POST("", middleware.OperationRecord(), v1.Api.SaveCaRoleTemplate)
 	}
+	grant := Router.Group("crossauth/grant")
+	{
+		grant.GET("requests", v1.Api.GetCaGrantRequests)
+		grant.GET("assignments", v1.Api.GetCaGrantAssignments)
+		grant.POST("rule", middleware.OperationRecord(), v1.Api.SaveCaAutoGrantRule)
+		grant.POST("auto", v1.Api.AutoGrantCa)
+		grant.POST("request", v1.Api.SubmitCaGrantRequest)
+		grant.POST("approve", middleware.OperationRecord(), v1.Api.ApproveCaGrantRequest)
+		grant.POST("reject", middleware.OperationRecord(), v1.Api.RejectCaGrantRequest)
+	}
 }

@@ -30,6 +30,9 @@ func Gorm(ctx context.Context) {
 		new(model.CaSsoApp),
 		new(model.CaSsoTicket),
 		new(model.CaRoleTemplate),
+		new(model.CaAutoGrantRule),
+		new(model.CaGrantRequest),
+		new(model.CaGrantAssignment),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "crossauth 注册表失败!")
@@ -68,6 +71,13 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/sso/app", Description: "注册 SSO 应用", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/roleTemplate/list", Description: "角色模板列表", ApiGroup: "跨校认证与安全", Method: "GET"},
 		{Path: "/crossauth/roleTemplate", Description: "保存角色模板", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/grant/rule", Description: "保存自动匹配规则", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/grant/auto", Description: "自动匹配分配", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/grant/request", Description: "提交审核申请", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/grant/approve", Description: "审核推进", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/grant/reject", Description: "申请驳回", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/grant/requests", Description: "申请列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/grant/assignments", Description: "分配列表", ApiGroup: "跨校认证与安全", Method: "GET"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -115,6 +125,13 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/sso/app", "POST"},
 		{"/crossauth/roleTemplate/list", "GET"},
 		{"/crossauth/roleTemplate", "POST"},
+		{"/crossauth/grant/rule", "POST"},
+		{"/crossauth/grant/auto", "POST"},
+		{"/crossauth/grant/request", "POST"},
+		{"/crossauth/grant/approve", "POST"},
+		{"/crossauth/grant/reject", "POST"},
+		{"/crossauth/grant/requests", "GET"},
+		{"/crossauth/grant/assignments", "GET"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {
