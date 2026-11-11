@@ -34,6 +34,8 @@ func Gorm(ctx context.Context) {
 		new(model.CaGrantRequest),
 		new(model.CaGrantAssignment),
 		new(model.CaPermGrant),
+		new(model.CaGrantExpiry),
+		new(model.CaExpiryReminder),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "crossauth 注册表失败!")
@@ -83,6 +85,10 @@ func Api(ctx context.Context) {
 		{Path: "/crossauth/matrix/check", Description: "四级权限校验", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/matrix", Description: "保存四级授权", ApiGroup: "跨校认证与安全", Method: "POST"},
 		{Path: "/crossauth/matrix", Description: "删除四级授权", ApiGroup: "跨校认证与安全", Method: "DELETE"},
+		{Path: "/crossauth/lifecycle/list", Description: "有效期列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/lifecycle/reminders", Description: "到期提醒列表", ApiGroup: "跨校认证与安全", Method: "GET"},
+		{Path: "/crossauth/lifecycle", Description: "登记有效期", ApiGroup: "跨校认证与安全", Method: "POST"},
+		{Path: "/crossauth/lifecycle/scan", Description: "到期扫描", ApiGroup: "跨校认证与安全", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -141,6 +147,10 @@ func Casbin(ctx context.Context) {
 		{"/crossauth/matrix/check", "POST"},
 		{"/crossauth/matrix", "POST"},
 		{"/crossauth/matrix", "DELETE"},
+		{"/crossauth/lifecycle/list", "GET"},
+		{"/crossauth/lifecycle/reminders", "GET"},
+		{"/crossauth/lifecycle", "POST"},
+		{"/crossauth/lifecycle/scan", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

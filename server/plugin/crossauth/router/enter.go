@@ -71,4 +71,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		mtx.POST("", middleware.OperationRecord(), v1.Api.SaveCaPermGrant)
 		mtx.DELETE("", middleware.OperationRecord(), v1.Api.DeleteCaPermGrant)
 	}
+	lc := Router.Group("crossauth/lifecycle")
+	{
+		lc.GET("list", v1.Api.GetCaGrantExpiries)
+		lc.GET("reminders", v1.Api.GetCaExpiryReminders)
+		lc.POST("", middleware.OperationRecord(), v1.Api.SaveCaGrantExpiry)
+		lc.POST("scan", middleware.OperationRecord(), v1.Api.ScanCaGrantExpiry)
+	}
 }
