@@ -51,6 +51,8 @@ func Gorm(ctx context.Context) {
 		new(model.EduIdpUserSync),
 		new(model.EduGovPolicy),
 		new(model.EduTicket),
+		new(model.EduDispatchRule),
+		new(model.EduDispatchLog),
 	)
 	if err != nil {
 		err = errors.Wrap(err, "eduadmin 注册表失败!")
@@ -151,6 +153,11 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/ticket", Description: "工单详情", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/ticket", Description: "创建工单", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/ticket/advance", Description: "工单状态推进", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/dispatch/pending", Description: "待派池", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/dispatch/logs", Description: "分派记录", ApiGroup: "教育管理一模通管", Method: "GET"},
+		{Path: "/eduadmin/dispatch/rule", Description: "保存分派规则", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/dispatch/auto", Description: "自动分派", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/dispatch/manual", Description: "人工兜底分派", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -260,6 +267,11 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/ticket", "GET"},
 		{"/eduadmin/ticket", "POST"},
 		{"/eduadmin/ticket/advance", "POST"},
+		{"/eduadmin/dispatch/pending", "GET"},
+		{"/eduadmin/dispatch/logs", "GET"},
+		{"/eduadmin/dispatch/rule", "POST"},
+		{"/eduadmin/dispatch/auto", "POST"},
+		{"/eduadmin/dispatch/manual", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

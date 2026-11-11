@@ -167,4 +167,12 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		ticket.POST("", middleware.OperationRecord(), v1.Api.CreateEduTicket)
 		ticket.POST("advance", middleware.OperationRecord(), v1.Api.AdvanceEduTicket)
 	}
+	disp := Router.Group("eduadmin/dispatch")
+	{
+		disp.GET("pending", v1.Api.GetEduPendingTickets)
+		disp.GET("logs", v1.Api.GetEduDispatchLogs)
+		disp.POST("rule", middleware.OperationRecord(), v1.Api.SaveEduDispatchRule)
+		disp.POST("auto", middleware.OperationRecord(), v1.Api.AutoDispatchEduTicket)
+		disp.POST("manual", middleware.OperationRecord(), v1.Api.ManualDispatchEduTicket)
+	}
 }

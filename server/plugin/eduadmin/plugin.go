@@ -29,6 +29,7 @@ func (p *plugin) Register(group *gin.Engine) {
 	initialize.SeedEduPractices(ctx)
 	initialize.SeedEduSyncAdapters(ctx)
 	initialize.SeedEduIdpAdapters(ctx)
+	initialize.SeedEduDispatchRules(ctx)
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
 	initialize.Casbin(ctx)
