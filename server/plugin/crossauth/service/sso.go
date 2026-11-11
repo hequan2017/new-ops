@@ -132,3 +132,52 @@ func (s *CaService) GetCaSsoApps() ([]model.CaSsoApp, error) {
 	err := global.GVA_DB.Order("id ASC").Limit(100).Find(&list).Error
 	return list, err
 }
+
+// CleanupCaSsoTickets 过期票据清理（纯决策复用 ticketExpired，删除 已用或过期 票据）
+func (s *CaService) CleanupCaSsoTickets(keepHours int) (map[string]any, error) {
+	if keepHours < 1 {
+		keepHours = 24 // 已用票据默认保留 24h 供审计
+	}
+	cutoff := time.Now().Unix() - int64(keepHours)*3600
+	var usedCnt, expiredCnt int64
+	global.GVA_DB.Model(&model.CaSsoTicket{}).Where("used = ?", true).Count(&usedCnt)
+	global.GVA_DB.Model(&model.CaSsoTicket{}).Where("used = ? AND expired_at < ?", false, cutoff).Count(&expiredCnt)
+	res := global.GVA_DB.Where("used = ? OR expired_at < ?", true, cutoff).Delete(&model.CaSsoTicket{})
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return map[string]any{
+		"deleted": res.RowsAffected, "usedRemoved": usedCnt, "expiredRemoved": expiredCnt,
+		"keepHours": keepHours,
+	}, nil
+}
+
+// CaSsoTicketStats 票据存量统计
+type CaSsoTicketStats struct {
+	Total  int64 `json:"total"`
+	Active int64 `json:"active"` // 未用未过期
+	Used   int64 `json:"used"`
+	Expired int64 `json:"expired"`
+}
+
+// CaSsoTicketInventory 票据存量（纯函数，测试锚点）
+func CaSsoTicketInventory(total, used, expired int64) CaSsoTicketStats {
+	active := total - used - expired
+	if active < 0 {
+		active = 0
+	}
+	return CaSsoTicketStats{Total: total, Active: active, Used: used, Expired: expired}
+}
+
+// GetCaSsoTicketStats 票据存量统计
+func (s *CaService) GetCaSsoTicketStats() (*CaSsoTicketStats, error) {
+	now := time.Now().Unix()
+	var total, used, expired int64
+	if err := global.GVA_DB.Model(&model.CaSsoTicket{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	global.GVA_DB.Model(&model.CaSsoTicket{}).Where("used = ?", true).Count(&used)
+	global.GVA_DB.Model(&model.CaSsoTicket{}).Where("used = ? AND expired_at < ?", false, now).Count(&expired)
+	out := CaSsoTicketInventory(total, used, expired)
+	return &out, nil
+}

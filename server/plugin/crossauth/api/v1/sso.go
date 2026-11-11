@@ -2,6 +2,8 @@
 package v1
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
@@ -105,4 +107,38 @@ func (a *CrossauthApi) GetCaSsoApps(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
+}
+
+// CleanupCaSsoTickets 票据清理
+// @Tags Crossauth
+// @Summary 过期/已用票据清理（已用默认保留 24h 供审计，参数可调）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Param keepHours query int false "已用票据保留小时数(默认 24)"
+// @Success 200 {object} response.Response{data=map[string]any} "清理完成"
+// @Router /crossauth/sso/cleanup [post]
+func (a *CrossauthApi) CleanupCaSsoTickets(c *gin.Context) {
+	keepHours, _ := strconv.Atoi(c.DefaultQuery("keepHours", "24"))
+	out, err := service.CaApp.CleanupCaSsoTickets(keepHours)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "清理完成", c)
+}
+
+// GetCaSsoTicketStats 票据统计
+// @Tags Crossauth
+// @Summary SSO 票据存量统计（总量/有效/已用/过期）
+// @Security ApiKeyAuth
+// @Produce application/json
+// @Success 200 {object} response.Response{data=service.CaSsoTicketStats} "获取成功"
+// @Router /crossauth/sso/stats [get]
+func (a *CrossauthApi) GetCaSsoTicketStats(c *gin.Context) {
+	out, err := service.CaApp.GetCaSsoTicketStats()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(out, "获取成功", c)
 }

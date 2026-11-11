@@ -37,3 +37,15 @@ func TestBuildSsoRedirect(t *testing.T) {
 		t.Fatal("非法回调应报错")
 	}
 }
+
+// TestCaSsoTicketInventory 存量统计
+func TestCaSsoTicketInventory(t *testing.T) {
+	st := CaSsoTicketInventory(100, 30, 20)
+	if st.Active != 50 || st.Total != 100 || st.Used != 30 || st.Expired != 20 {
+		t.Fatalf("存量统计不符: %+v", st)
+	}
+	// 异常入参防负
+	if st := CaSsoTicketInventory(10, 8, 8); st.Active != 0 {
+		t.Fatalf("负数应钳 0: %+v", st)
+	}
+}

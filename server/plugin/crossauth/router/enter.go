@@ -45,6 +45,8 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	sso := Router.Group("crossauth/sso")
 	{
 		sso.GET("apps", v1.Api.GetCaSsoApps)
+		sso.GET("stats", v1.Api.GetCaSsoTicketStats)
+		sso.POST("cleanup", middleware.OperationRecord(), v1.Api.CleanupCaSsoTickets)
 		sso.POST("ticket", v1.Api.IssueCaSsoTicket)
 		sso.POST("redeem", v1.Api.RedeemCaSsoTicket)
 		sso.POST("app", middleware.OperationRecord(), v1.Api.SaveCaSsoApp)
