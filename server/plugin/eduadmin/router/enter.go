@@ -148,4 +148,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		sync.POST("adapter", middleware.OperationRecord(), v1.Api.SaveEduSyncAdapter)
 		sync.POST("run", middleware.OperationRecord(), v1.Api.RunEduSyncTask)
 	}
+	idp := Router.Group("eduadmin/idp")
+	{
+		idp.GET("list", v1.Api.GetEduIdpAdapters)
+		idp.POST("", middleware.OperationRecord(), v1.Api.SaveEduIdpAdapter)
+		idp.POST("redirect", v1.Api.BuildEduIdpRedirect)
+		idp.POST("userSync", middleware.OperationRecord(), v1.Api.EduIdpUserSync)
+	}
 }
