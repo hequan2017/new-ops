@@ -3,8 +3,10 @@ package initialize
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/middleware"
@@ -12,12 +14,19 @@ import (
 	pluginUtils "github.com/hequan2017/new-ops/server/plugin/plugin-tool/utils"
 	srvUtils "github.com/hequan2017/new-ops/server/utils"
 
+	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/router"
 )
 
-// Gorm 注册 policyreg 数据表（幂等）。M0 骨架暂无业务表，R02 制度导入起在此追加 AutoMigrate。
+// Gorm 注册 policyreg 数据表（幂等）
 func Gorm(ctx context.Context) {
-	_ = ctx
+	err := global.GVA_DB.WithContext(ctx).AutoMigrate(
+		new(model.PolicyDoc),
+	)
+	if err != nil {
+		err = errors.Wrap(err, "policyreg 注册表失败!")
+		global.GVA_LOG.Error(fmt.Sprintf("%+v", err))
+	}
 }
 
 // Router 注册 policyreg 路由（private 组显式挂 JWT+casbin）
@@ -31,6 +40,9 @@ func Router(engine *gin.Engine) {
 func Api(ctx context.Context) {
 	entities := []sysModel.SysApi{
 		{Path: "/policyreg/ping", Description: "高校制度大模型连通性探测", ApiGroup: "高校制度大模型", Method: "GET"},
+		{Path: "/policyreg/doc/list", Description: "制度列表", ApiGroup: "高校制度大模型", Method: "GET"},
+		{Path: "/policyreg/doc", Description: "制度详情", ApiGroup: "高校制度大模型", Method: "GET"},
+		{Path: "/policyreg/doc", Description: "导入制度", ApiGroup: "高校制度大模型", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -58,6 +70,9 @@ func Casbin(ctx context.Context) {
 	}
 	for _, p := range []struct{ Path, Method string }{
 		{"/policyreg/ping", "GET"},
+		{"/policyreg/doc/list", "GET"},
+		{"/policyreg/doc", "GET"},
+		{"/policyreg/doc", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

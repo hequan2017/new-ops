@@ -4,6 +4,8 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 
+	"github.com/hequan2017/new-ops/server/middleware"
+
 	v1 "github.com/hequan2017/new-ops/server/plugin/policyreg/api/v1"
 )
 
@@ -16,5 +18,11 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 	base := Router.Group("policyreg")
 	{
 		base.GET("ping", v1.Api.Ping)
+	}
+	doc := Router.Group("policyreg/doc")
+	{
+		doc.GET("list", v1.Api.GetPolicyDocs)
+		doc.GET("", v1.Api.GetPolicyDoc)
+		doc.POST("", middleware.OperationRecord(), v1.Api.SavePolicyDoc)
 	}
 }
