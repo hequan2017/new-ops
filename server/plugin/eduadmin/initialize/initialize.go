@@ -121,6 +121,8 @@ func Api(ctx context.Context) {
 		{Path: "/eduadmin/run/alerts", Description: "办学预警列表", ApiGroup: "教育管理一模通管", Method: "GET"},
 		{Path: "/eduadmin/run/index", Description: "保存办学指标", ApiGroup: "教育管理一模通管", Method: "POST"},
 		{Path: "/eduadmin/run/scan", Description: "办学预警扫描", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/policy/simulate", Description: "政策财务模拟", ApiGroup: "教育管理一模通管", Method: "POST"},
+		{Path: "/eduadmin/policy/compare", Description: "政策方案对比", ApiGroup: "教育管理一模通管", Method: "POST"},
 	}
 	pluginUtils.RegisterApis(entities...)
 }
@@ -209,6 +211,8 @@ func Casbin(ctx context.Context) {
 		{"/eduadmin/run/alerts", "GET"},
 		{"/eduadmin/run/index", "POST"},
 		{"/eduadmin/run/scan", "POST"},
+		{"/eduadmin/policy/simulate", "POST"},
+		{"/eduadmin/policy/compare", "POST"},
 	} {
 		has, err := e.HasPolicy("888", p.Path, p.Method)
 		if err != nil || has {

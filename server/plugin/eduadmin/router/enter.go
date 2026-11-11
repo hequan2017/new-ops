@@ -128,4 +128,9 @@ func (rg *RouterGroup) Init(Router *gin.RouterGroup) {
 		run.POST("index", middleware.OperationRecord(), v1.Api.SaveEduRunIndex)
 		run.POST("scan", middleware.OperationRecord(), v1.Api.ScanEduRunWarning)
 	}
+	policy := Router.Group("eduadmin/policy")
+	{
+		policy.POST("simulate", v1.Api.SimulateEduPolicy)
+		policy.POST("compare", v1.Api.CompareEduPolicySims)
+	}
 }
