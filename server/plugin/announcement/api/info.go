@@ -6,6 +6,7 @@ import (
 	"github.com/hequan2017/new-ops/server/model/common/response"
 	"github.com/hequan2017/new-ops/server/plugin/announcement/model"
 	"github.com/hequan2017/new-ops/server/plugin/announcement/model/request"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"go.uber.org/zap"
 )
 
@@ -32,7 +33,7 @@ func (a *info) CreateInfo(c *gin.Context) {
 	err = serviceInfo.CreateInfo(&info)
 	if err != nil {
 		global.GVA_LOG.Error("创建失败!", zap.Error(err))
-		response.FailWithMessage("创建失败", c)
+		errx.Respond(c, err, "创建失败")
 		return
 	}
 	response.OkWithMessage("创建成功", c)
@@ -52,7 +53,7 @@ func (a *info) DeleteInfo(c *gin.Context) {
 	err := serviceInfo.DeleteInfo(ID)
 	if err != nil {
 		global.GVA_LOG.Error("删除失败!", zap.Error(err))
-		response.FailWithMessage("删除失败", c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -70,7 +71,7 @@ func (a *info) DeleteInfoByIds(c *gin.Context) {
 	IDs := c.QueryArray("IDs[]")
 	if err := serviceInfo.DeleteInfoByIds(IDs); err != nil {
 		global.GVA_LOG.Error("批量删除失败!", zap.Error(err))
-		response.FailWithMessage("批量删除失败", c)
+		errx.Respond(c, err, "批量删除失败")
 		return
 	}
 	response.OkWithMessage("批量删除成功", c)
@@ -95,7 +96,7 @@ func (a *info) UpdateInfo(c *gin.Context) {
 	err = serviceInfo.UpdateInfo(info)
 	if err != nil {
 		global.GVA_LOG.Error("更新失败!", zap.Error(err))
-		response.FailWithMessage("更新失败", c)
+		errx.Respond(c, err, "更新失败")
 		return
 	}
 	response.OkWithMessage("更新成功", c)
@@ -115,7 +116,7 @@ func (a *info) FindInfo(c *gin.Context) {
 	reinfo, err := serviceInfo.GetInfo(ID)
 	if err != nil {
 		global.GVA_LOG.Error("查询失败!", zap.Error(err))
-		response.FailWithMessage("查询失败", c)
+		errx.Respond(c, err, "查询失败")
 		return
 	}
 	response.OkWithData(reinfo, c)
@@ -140,7 +141,7 @@ func (a *info) GetInfoList(c *gin.Context) {
 	list, total, err := serviceInfo.GetInfoInfoList(pageInfo)
 	if err != nil {
 		global.GVA_LOG.Error("获取失败!", zap.Error(err))
-		response.FailWithMessage("获取失败", c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(response.PageResult{
@@ -163,7 +164,7 @@ func (a *info) GetInfoDataSource(c *gin.Context) {
 	dataSource, err := serviceInfo.GetInfoDataSource()
 	if err != nil {
 		global.GVA_LOG.Error("查询失败!", zap.Error(err))
-		response.FailWithMessage("查询失败", c)
+		errx.Respond(c, err, "查询失败")
 		return
 	}
 	response.OkWithData(dataSource, c)
