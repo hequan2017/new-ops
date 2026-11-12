@@ -8,6 +8,8 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
 
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/service"
 )
@@ -29,7 +31,7 @@ func (a *PolicyregApi) SavePolicyDoc(c *gin.Context) {
 	}
 	out, err := service.PolicyApp.SavePolicyDoc(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "导入成功", c)
@@ -51,7 +53,7 @@ func (a *PolicyregApi) GetPolicyDocs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.PolicyApp.GetPolicyDocs(c.Query("format"), c.Query("securityLevel"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -69,7 +71,7 @@ func (a *PolicyregApi) GetPolicyDoc(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Query("id"), 10, 64)
 	out, err := service.PolicyApp.GetPolicyDoc(uint(id))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "获取成功", c)

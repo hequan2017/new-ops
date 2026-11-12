@@ -8,6 +8,8 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
 
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/service"
 )
@@ -29,7 +31,7 @@ func (a *PolicyregApi) SavePolicyPermGrant(c *gin.Context) {
 	}
 	out, err := service.PolicyApp.SavePolicyPermGrant(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -46,7 +48,7 @@ func (a *PolicyregApi) SavePolicyPermGrant(c *gin.Context) {
 func (a *PolicyregApi) GetPolicyPermGrants(c *gin.Context) {
 	list, err := service.PolicyApp.GetPolicyPermGrants(c.Query("roleName"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -68,7 +70,7 @@ func (a *PolicyregApi) SearchPolicyDocsByRole(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.PolicyApp.SearchPolicyDocsByRole(c.Query("roleName"), c.Query("keyword"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "检索成功", c)

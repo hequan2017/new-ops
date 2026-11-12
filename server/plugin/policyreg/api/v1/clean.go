@@ -8,6 +8,8 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
 
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/service"
 )
 
@@ -23,7 +25,7 @@ func (a *PolicyregApi) CleanPolicyDoc(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Query("id"), 10, 64)
 	out, err := service.PolicyApp.CleanPolicyDoc(uint(id))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "清洗完成", c)

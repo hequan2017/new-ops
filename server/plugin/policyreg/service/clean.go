@@ -10,8 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/hequan2017/new-ops/server/global"
-	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（policyreg 段 3000-3099）
@@ -109,13 +108,13 @@ func checkFormatConflict(text string) []cleanIssue {
 
 // CleanPolicyDoc 制度清洗（按 docId，dry 报告）
 func (s *PolicyService) CleanPolicyDoc(docId uint) (map[string]any, error) {
-	var doc model.PolicyDoc
-	if err := global.GVA_DB.First(&doc, docId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]制度不存在", ErrCodePrCleanParam)
+	doc, err := s.repo.FindDoc(s.dbh(), docId)
+	if err != nil {
+		return nil, errx.New(ErrCodePrCleanParam, "制度不存在")
 	}
 	text := doc.RawText
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("[%d]二进制编目文档无可清洗文本", ErrCodePrCleanParam)
+		return nil, errx.New(ErrCodePrCleanParam, "二进制编目文档无可清洗文本")
 	}
 	issues := make([]cleanIssue, 0)
 	rate := mojibakeRatePr(text)

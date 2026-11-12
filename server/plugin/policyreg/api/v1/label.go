@@ -8,6 +8,8 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
 
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/service"
 )
 
@@ -23,7 +25,7 @@ func (a *PolicyregApi) BuildPolicyLabels(c *gin.Context) {
 	docId, _ := strconv.ParseUint(c.Query("docId"), 10, 64)
 	out, err := service.PolicyApp.BuildPolicyLabels(uint(docId))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "预标完成", c)
@@ -52,7 +54,7 @@ func (a *PolicyregApi) UpdatePolicyTokenLabel(c *gin.Context) {
 	}
 	out, err := service.PolicyApp.UpdatePolicyTokenLabel(in.ID, in.Label)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "改标成功", c)
@@ -70,7 +72,7 @@ func (a *PolicyregApi) GetPolicyTokenLabels(c *gin.Context) {
 	docId, _ := strconv.ParseUint(c.Query("docId"), 10, 64)
 	list, err := service.PolicyApp.GetPolicyTokenLabels(uint(docId))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -89,7 +91,7 @@ func (a *PolicyregApi) GetPolicyRelationLabels(c *gin.Context) {
 	docId, _ := strconv.ParseUint(c.Query("docId"), 10, 64)
 	list, err := service.PolicyApp.GetPolicyRelationLabels(uint(docId))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)

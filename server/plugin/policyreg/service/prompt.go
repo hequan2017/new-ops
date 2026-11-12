@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 )
 
@@ -44,7 +44,7 @@ func renderPrTemplate(tpl string, vars map[string]string) (string, error) {
 		}
 	}
 	if len(missing) > 0 {
-		return "", fmt.Errorf("[%d]缺失占位变量: %s", ErrCodePrPromptParam, strings.Join(missing, ","))
+		return "", errx.New(ErrCodePrPromptParam, "缺失占位变量: "+strings.Join(missing, ","))
 	}
 	return varPatternPr.ReplaceAllStringFunc(tpl, func(m string) string {
 		name := varPatternPr.FindStringSubmatch(m)[1]
@@ -82,16 +82,15 @@ func rulePolicyAnswer(question string, docs []model.PolicyDoc) string {
 func (s *PolicyService) PolicyQa(roleName, question string, modelId uint) (*model.PolicyQaLog, error) {
 	start := time.Now()
 	if strings.TrimSpace(question) == "" {
-		return nil, fmt.Errorf("[%d]问题必填", ErrCodePrPromptParam)
+		return nil, errx.New(ErrCodePrPromptParam, "问题必填")
 	}
 	docs, _, err := s.SearchPolicyDocsByRole(roleName, "", 1, 3)
 	if err != nil {
 		return nil, err
 	}
 	// 模板注入
-	var tpl model.PolicyPromptTemplate
 	prompt := ""
-	if err := global.GVA_DB.Where("name = ? AND enabled = ?", "制度问答-标准", true).First(&tpl).Error; err == nil {
+	if tpl, tErr := s.repo.FindEnabledTemplateByName(s.dbh(), "制度问答-标准"); tErr == nil {
 		docDigest := rulePolicyAnswer(question, docs)
 		rendered, rErr := renderPrTemplate(tpl.Content, map[string]string{
 			"question": question, "role": roleName, "refs": docDigest,
@@ -115,8 +114,8 @@ func (s *PolicyService) PolicyQa(roleName, question string, modelId uint) (*mode
 		Question: question, Answer: answer, Source: source,
 		LatencyMs: time.Since(start).Milliseconds(), RoleName: roleName,
 	}
-	if err := global.GVA_DB.Create(log).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateQaLog(s.dbh(), log); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "落问答日志失败", err)
 	}
 	return log, nil
 }
@@ -124,28 +123,29 @@ func (s *PolicyService) PolicyQa(roleName, question string, modelId uint) (*mode
 // SavePolicyPrompt 新建/更新模板（vars 自动解析）
 func (s *PolicyService) SavePolicyPrompt(in *model.PolicyPromptTemplate) (*model.PolicyPromptTemplate, error) {
 	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.Content) == "" {
-		return nil, fmt.Errorf("[%d]模板名与内容必填", ErrCodePrPromptParam)
+		return nil, errx.New(ErrCodePrPromptParam, "模板名与内容必填")
 	}
 	vars, _ := json.Marshal(parsePrVars(in.Content))
 	in.Vars = string(vars)
-	var exist model.PolicyPromptTemplate
-	if err := global.GVA_DB.Where("name = ?", in.Name).First(&exist).Error; err == nil {
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+	if exist, err := s.repo.FindTemplateByName(s.dbh(), in.Name); err == nil {
+		if err := s.repo.UpdateTemplateColumns(s.dbh(), exist.ID, map[string]any{
 			"content": in.Content, "vars": in.Vars, "enabled": in.Enabled,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodePrStore, "更新模板失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateTemplate(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "创建模板失败", err)
 	}
 	return in, nil
 }
 
 // RenderPolicyPromptByName 按模板名渲染
 func (s *PolicyService) RenderPolicyPromptByName(name string, vars map[string]string) (map[string]any, error) {
-	var tpl model.PolicyPromptTemplate
-	if err := global.GVA_DB.Where("name = ?", name).First(&tpl).Error; err != nil {
-		return nil, fmt.Errorf("[%d]模板不存在: %s", ErrCodePrPromptParam, name)
+	tpl, err := s.repo.FindTemplateByName(s.dbh(), name)
+	if err != nil {
+		return nil, errx.New(ErrCodePrPromptParam, "模板不存在: "+name)
 	}
 	rendered, err := renderPrTemplate(tpl.Content, vars)
 	if err != nil {
@@ -156,9 +156,11 @@ func (s *PolicyService) RenderPolicyPromptByName(name string, vars map[string]st
 
 // GetPolicyPrompts 模板列表
 func (s *PolicyService) GetPolicyPrompts() ([]model.PolicyPromptTemplate, error) {
-	var list []model.PolicyPromptTemplate
-	err := global.GVA_DB.Order("id ASC").Limit(100).Find(&list).Error
-	return list, err
+	list, err := s.repo.TemplateList(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "查询模板列表失败", err)
+	}
+	return list, nil
 }
 
 // GetPolicyQaLogs 问答日志列表（角色过滤，倒序分页）
@@ -169,15 +171,9 @@ func (s *PolicyService) GetPolicyQaLogs(roleName string, page, pageSize int) ([]
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.PolicyQaLog{})
-	if strings.TrimSpace(roleName) != "" {
-		db = db.Where("role_name = ?", roleName)
+	list, total, err := s.repo.QaLogList(s.dbh(), strings.TrimSpace(roleName), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodePrStore, "查询问答日志失败", err)
 	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.PolicyQaLog
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

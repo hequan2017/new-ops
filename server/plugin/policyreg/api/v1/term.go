@@ -8,6 +8,8 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
 
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/service"
 )
 
@@ -23,7 +25,7 @@ func (a *PolicyregApi) TagPolicyTerms(c *gin.Context) {
 	docId, _ := strconv.ParseUint(c.Query("docId"), 10, 64)
 	out, err := service.PolicyApp.TagPolicyTerms(uint(docId))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "标注完成", c)
@@ -41,7 +43,7 @@ func (a *PolicyregApi) GetPolicyTermTags(c *gin.Context) {
 	docId, _ := strconv.ParseUint(c.Query("docId"), 10, 64)
 	list, err := service.PolicyApp.GetPolicyTermTags(uint(docId))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -57,7 +59,7 @@ func (a *PolicyregApi) GetPolicyTermTags(c *gin.Context) {
 func (a *PolicyregApi) GetPolicyTermStats(c *gin.Context) {
 	out, err := service.PolicyApp.GetPolicyTermStats()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "获取成功", c)

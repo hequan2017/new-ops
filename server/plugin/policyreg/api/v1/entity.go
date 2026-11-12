@@ -8,6 +8,8 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
 
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/service"
 )
 
@@ -23,7 +25,7 @@ func (a *PolicyregApi) ExtractPolicyEntities(c *gin.Context) {
 	docId, _ := strconv.ParseUint(c.Query("docId"), 10, 64)
 	out, err := service.PolicyApp.ExtractPolicyEntities(uint(docId))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "抽取完成", c)
@@ -42,7 +44,7 @@ func (a *PolicyregApi) GetPolicyEntities(c *gin.Context) {
 	docId, _ := strconv.ParseUint(c.Query("docId"), 10, 64)
 	list, err := service.PolicyApp.GetPolicyEntities(uint(docId), c.Query("eType"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)

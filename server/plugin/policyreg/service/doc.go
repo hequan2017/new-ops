@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 )
 
@@ -20,6 +20,7 @@ import (
 const (
 	ErrCodePrDocParam    = 3000
 	ErrCodePrDocNotFound = 3001
+	ErrCodePrStore       = 3004
 )
 
 // PolicyFormats 格式白名单
@@ -71,12 +72,12 @@ func docContentHash(name, rawText string) string {
 // SavePolicyDoc 导入制度（txt/md 直读/二进制编目/涉密脱敏/幂等）
 func (s *PolicyService) SavePolicyDoc(in *model.PolicyDoc) (*model.PolicyDoc, error) {
 	if strings.TrimSpace(in.Name) == "" || !ValidPolicyFormat(in.Format) || !ValidPolicyLevel(in.SecurityLevel) {
-		return nil, fmt.Errorf("[%d]名称必填且格式/密级须在白名单内", ErrCodePrDocParam)
+		return nil, errx.New(ErrCodePrDocParam, "名称必填且格式/密级须在白名单内")
 	}
 	// 二进制格式仅编目
 	if in.Format == "TXT" || in.Format == "MD" {
 		if strings.TrimSpace(in.RawText) == "" {
-			return nil, fmt.Errorf("[%d]TXT/MD 须提供原文文本", ErrCodePrDocParam)
+			return nil, errx.New(ErrCodePrDocParam, "TXT/MD 须提供原文文本")
 		}
 	} else {
 		in.RawText = ""
@@ -84,12 +85,11 @@ func (s *PolicyService) SavePolicyDoc(in *model.PolicyDoc) (*model.PolicyDoc, er
 	in.Sm4Mark = in.SecurityLevel == "涉密"
 	in.MaskedText, _ = MaskSecretClauses(in.RawText)
 	in.ContentHash = docContentHash(in.Name, in.RawText)
-	var exist model.PolicyDoc
-	if err := global.GVA_DB.Where("content_hash = ?", in.ContentHash).First(&exist).Error; err == nil {
-		return &exist, nil // 幂等：重复导入跳过
+	if exist, err := s.repo.FindDocByContentHash(s.dbh(), in.ContentHash); err == nil {
+		return exist, nil // 幂等：重复导入跳过
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateDoc(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "导入制度失败", err)
 	}
 	return in, nil
 }
@@ -97,10 +97,10 @@ func (s *PolicyService) SavePolicyDoc(in *model.PolicyDoc) (*model.PolicyDoc, er
 // GetPolicyDocs 制度列表（格式/密级过滤，倒序分页）
 func (s *PolicyService) GetPolicyDocs(format, securityLevel string, page, pageSize int) ([]model.PolicyDoc, int64, error) {
 	if format != "" && !ValidPolicyFormat(format) {
-		return nil, 0, fmt.Errorf("[%d]格式须为 Word/PDF/HTML/TXT/MD", ErrCodePrDocParam)
+		return nil, 0, errx.New(ErrCodePrDocParam, "格式须为 Word/PDF/HTML/TXT/MD")
 	}
 	if securityLevel != "" && !ValidPolicyLevel(securityLevel) {
-		return nil, 0, fmt.Errorf("[%d]密级须为 公开/内部/涉密", ErrCodePrDocParam)
+		return nil, 0, errx.New(ErrCodePrDocParam, "密级须为 公开/内部/涉密")
 	}
 	if page < 1 {
 		page = 1
@@ -108,32 +108,18 @@ func (s *PolicyService) GetPolicyDocs(format, securityLevel string, page, pageSi
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.PolicyDoc{})
-	if format != "" {
-		db = db.Where("format = ?", format)
+	list, total, err := s.repo.DocList(s.dbh(), format, securityLevel, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodePrStore, "查询制度列表失败", err)
 	}
-	if securityLevel != "" {
-		db = db.Where("security_level = ?", securityLevel)
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.PolicyDoc
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // GetPolicyDoc 制度详情
 func (s *PolicyService) GetPolicyDoc(id uint) (*model.PolicyDoc, error) {
-	var doc model.PolicyDoc
-	if err := global.GVA_DB.First(&doc, id).Error; err != nil {
-		return nil, fmt.Errorf("[%d]制度不存在", ErrCodePrDocNotFound)
+	doc, err := s.repo.FindDoc(s.dbh(), id)
+	if err != nil {
+		return nil, errx.New(ErrCodePrDocNotFound, "制度不存在")
 	}
-	return &doc, nil
+	return doc, nil
 }
-
-// PolicyApp 服务单例出口（policyreg 域服务聚合）
-var PolicyApp = new(PolicyService)
-
-type PolicyService struct{}

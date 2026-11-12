@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 )
 
@@ -136,13 +136,13 @@ func ClassifyPolicyLabel(text string) string {
 
 // TagPolicyTerms 分词+属性标注（按 docId 幂等覆盖）
 func (s *PolicyService) TagPolicyTerms(docId uint) (*model.PolicyTermTag, error) {
-	var doc model.PolicyDoc
-	if err := global.GVA_DB.First(&doc, docId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]制度不存在", ErrCodePrTermParam)
+	doc, err := s.repo.FindDoc(s.dbh(), docId)
+	if err != nil {
+		return nil, errx.New(ErrCodePrTermParam, "制度不存在")
 	}
 	text := doc.RawText
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("[%d]二进制编目文档无可标注文本", ErrCodePrTermParam)
+		return nil, errx.New(ErrCodePrTermParam, "二进制编目文档无可标注文本")
 	}
 	tokens := PolicySegment(text)
 	b, _ := json.Marshal(tokens)
@@ -152,26 +152,27 @@ func (s *PolicyService) TagPolicyTerms(docId uint) (*model.PolicyTermTag, error)
 		CategoryLabel: ClassifyPolicyLabel(doc.Name + " " + text),
 		EffectiveDate: ExtractEffectiveDate(text),
 	}
-	var exist model.PolicyTermTag
-	if err := global.GVA_DB.Where("doc_id = ?", docId).First(&exist).Error; err == nil {
-		if err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+	if exist, err := s.repo.FindTermTagByDoc(s.dbh(), docId); err == nil {
+		if err := s.repo.UpdateTermTagColumns(s.dbh(), exist.ID, map[string]any{
 			"tokens": tag.Tokens, "category_label": tag.CategoryLabel, "effective_date": tag.EffectiveDate,
-		}).Error; err != nil {
-			return nil, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodePrStore, "更新标注失败", err)
 		}
-		return &exist, nil
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(tag).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateTermTag(s.dbh(), tag); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "创建标注失败", err)
 	}
 	return tag, nil
 }
 
 // GetPolicyTermTags 标注列表
 func (s *PolicyService) GetPolicyTermTags(docId uint) ([]model.PolicyTermTag, error) {
-	var list []model.PolicyTermTag
-	err := global.GVA_DB.Where("doc_id = ?", docId).Order("id ASC").Limit(100).Find(&list).Error
-	return list, err
+	list, err := s.repo.TermTagListByDoc(s.dbh(), docId)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "查询标注列表失败", err)
+	}
+	return list, nil
 }
 
 // labelCount 分类计数
@@ -197,9 +198,9 @@ func termLabelStats(tags []model.PolicyTermTag) []labelCount {
 
 // GetPolicyTermStats 分类标签统计
 func (s *PolicyService) GetPolicyTermStats() ([]labelCount, error) {
-	var tags []model.PolicyTermTag
-	if err := global.GVA_DB.Order("id ASC").Limit(5000).Find(&tags).Error; err != nil {
-		return nil, err
+	tags, err := s.repo.TermTagsAll(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "查询标注统计失败", err)
 	}
 	return termLabelStats(tags), nil
 }

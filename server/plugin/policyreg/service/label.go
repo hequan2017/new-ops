@@ -4,10 +4,9 @@
 package service
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 )
 
@@ -59,33 +58,33 @@ func PreLabelRelations(entities []model.PolicyEntity) []model.PolicyRelationLabe
 
 // BuildPolicyLabels 预标（按 docId：抽取实体→分词→回标，先清后插幂等）
 func (s *PolicyService) BuildPolicyLabels(docId uint) (map[string]any, error) {
-	var doc model.PolicyDoc
-	if err := global.GVA_DB.First(&doc, docId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]制度不存在", ErrCodePrLabelNotFound)
+	doc, err := s.repo.FindDoc(s.dbh(), docId)
+	if err != nil {
+		return nil, errx.New(ErrCodePrLabelNotFound, "制度不存在")
 	}
 	if strings.TrimSpace(doc.RawText) == "" {
-		return nil, fmt.Errorf("[%d]二进制编目文档无可标注文本", ErrCodePrLabelParam)
+		return nil, errx.New(ErrCodePrLabelParam, "二进制编目文档无可标注文本")
 	}
 	entities := extractPolicyEntities(doc.RawText)
 	tokens := PolicySegment(doc.RawText)
 	tokenLabels := PreLabelTokens(tokens, entities)
 	relations := PreLabelRelations(entities)
-	if err := global.GVA_DB.Where("doc_id = ?", docId).Delete(&model.PolicyTokenLabel{}).Error; err != nil {
-		return nil, err
+	if err := s.repo.DeleteTokenLabelsByDoc(s.dbh(), docId); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "清理分词标注失败", err)
 	}
-	if err := global.GVA_DB.Where("doc_id = ?", docId).Delete(&model.PolicyRelationLabel{}).Error; err != nil {
-		return nil, err
+	if err := s.repo.DeleteRelationLabelsByDoc(s.dbh(), docId); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "清理关系标注失败", err)
 	}
 	for i := range tokenLabels {
 		tokenLabels[i].DocId = docId
-		if err := global.GVA_DB.Create(&tokenLabels[i]).Error; err != nil {
-			return nil, err
+		if err := s.repo.CreateTokenLabel(s.dbh(), &tokenLabels[i]); err != nil {
+			return nil, errx.Wrap(ErrCodePrStore, "创建分词标注失败", err)
 		}
 	}
 	for i := range relations {
 		relations[i].DocId = docId
-		if err := global.GVA_DB.Create(&relations[i]).Error; err != nil {
-			return nil, err
+		if err := s.repo.CreateRelationLabel(s.dbh(), &relations[i]); err != nil {
+			return nil, errx.Wrap(ErrCodePrStore, "创建关系标注失败", err)
 		}
 	}
 	return map[string]any{"docId": docId, "tokens": len(tokenLabels), "relations": len(relations)}, nil
@@ -95,32 +94,36 @@ func (s *PolicyService) BuildPolicyLabels(docId uint) (map[string]any, error) {
 func (s *PolicyService) UpdatePolicyTokenLabel(id uint, label string) (*model.PolicyTokenLabel, error) {
 	valid := map[string]bool{"O": true, "机构": true, "文件号": true, "日期": true, "专有名词": true}
 	if !valid[label] {
-		return nil, fmt.Errorf("[%d]标签须为 O/机构/文件号/日期/专有名词", ErrCodePrLabelParam)
+		return nil, errx.New(ErrCodePrLabelParam, "标签须为 O/机构/文件号/日期/专有名词")
 	}
-	var rec model.PolicyTokenLabel
-	if err := global.GVA_DB.First(&rec, id).Error; err != nil {
-		return nil, fmt.Errorf("[%d]标注不存在", ErrCodePrLabelNotFound)
+	rec, err := s.repo.FindTokenLabel(s.dbh(), id)
+	if err != nil {
+		return nil, errx.New(ErrCodePrLabelNotFound, "标注不存在")
 	}
-	if err := global.GVA_DB.Model(&rec).Updates(map[string]any{
+	if err := s.repo.UpdateTokenLabelColumns(s.dbh(), rec.ID, map[string]any{
 		"label": label, "source": "人工",
-	}).Error; err != nil {
-		return nil, err
+	}); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "更新标注失败", err)
 	}
 	rec.Label = label
 	rec.Source = "人工"
-	return &rec, nil
+	return rec, nil
 }
 
 // GetPolicyTokenLabels 分词标注列表
 func (s *PolicyService) GetPolicyTokenLabels(docId uint) ([]model.PolicyTokenLabel, error) {
-	var list []model.PolicyTokenLabel
-	err := global.GVA_DB.Where("doc_id = ?", docId).Order("seq ASC").Limit(2000).Find(&list).Error
-	return list, err
+	list, err := s.repo.TokenLabelListByDoc(s.dbh(), docId)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "查询分词标注失败", err)
+	}
+	return list, nil
 }
 
 // GetPolicyRelationLabels 关系标注列表
 func (s *PolicyService) GetPolicyRelationLabels(docId uint) ([]model.PolicyRelationLabel, error) {
-	var list []model.PolicyRelationLabel
-	err := global.GVA_DB.Where("doc_id = ?", docId).Order("id ASC").Limit(500).Find(&list).Error
-	return list, err
+	list, err := s.repo.RelationLabelListByDoc(s.dbh(), docId)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "查询关系标注失败", err)
+	}
+	return list, nil
 }

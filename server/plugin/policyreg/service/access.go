@@ -5,10 +5,9 @@
 package service
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 )
 
@@ -57,7 +56,7 @@ func canAccessRole(grants []model.PolicyPermGrant, roleName, docCategory, docLev
 // SavePolicyPermGrant 保存 grant（角色×分类幂等）
 func (s *PolicyService) SavePolicyPermGrant(in *model.PolicyPermGrant) (*model.PolicyPermGrant, error) {
 	if strings.TrimSpace(in.RoleName) == "" {
-		return nil, fmt.Errorf("[%d]角色必填", ErrCodePrAclParam)
+		return nil, errx.New(ErrCodePrAclParam, "角色必填")
 	}
 	validCat := false
 	for _, c := range PolicyCategories {
@@ -66,20 +65,21 @@ func (s *PolicyService) SavePolicyPermGrant(in *model.PolicyPermGrant) (*model.P
 		}
 	}
 	if !validCat {
-		return nil, fmt.Errorf("[%d]分类须为 教学/科研/人事/财务/资产/综合", ErrCodePrAclParam)
+		return nil, errx.New(ErrCodePrAclParam, "分类须为 教学/科研/人事/财务/资产/综合")
 	}
 	if prLevelRank(in.MaxLevel) < 0 {
-		return nil, fmt.Errorf("[%d]最高密级须为 公开/内部/涉密", ErrCodePrAclParam)
+		return nil, errx.New(ErrCodePrAclParam, "最高密级须为 公开/内部/涉密")
 	}
-	var exist model.PolicyPermGrant
-	if err := global.GVA_DB.Where("role_name = ? AND doc_category = ?", in.RoleName, in.DocCategory).First(&exist).Error; err == nil {
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+	if exist, err := s.repo.FindGrantByRoleCat(s.dbh(), in.RoleName, in.DocCategory); err == nil {
+		if err := s.repo.UpdateGrantColumns(s.dbh(), exist.ID, map[string]any{
 			"max_level": in.MaxLevel, "allowed": in.Allowed,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodePrStore, "更新授权失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateGrant(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "创建授权失败", err)
 	}
 	return in, nil
 }
@@ -87,11 +87,11 @@ func (s *PolicyService) SavePolicyPermGrant(in *model.PolicyPermGrant) (*model.P
 // SearchPolicyDocsByRole 按角色过滤检索
 func (s *PolicyService) SearchPolicyDocsByRole(roleName, keyword string, page, pageSize int) ([]model.PolicyDoc, int64, error) {
 	if strings.TrimSpace(roleName) == "" {
-		return nil, 0, fmt.Errorf("[%d]角色必填", ErrCodePrAclParam)
+		return nil, 0, errx.New(ErrCodePrAclParam, "角色必填")
 	}
-	var grants []model.PolicyPermGrant
-	if err := global.GVA_DB.Limit(500).Find(&grants).Error; err != nil {
-		return nil, 0, err
+	grants, err := s.repo.GrantsAll(s.dbh())
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodePrStore, "查询授权失败", err)
 	}
 	if page < 1 {
 		page = 1
@@ -99,13 +99,9 @@ func (s *PolicyService) SearchPolicyDocsByRole(roleName, keyword string, page, p
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.PolicyDoc{})
-	if strings.TrimSpace(keyword) != "" {
-		db = db.Where("name LIKE ?", "%"+keyword+"%")
-	}
-	var all []model.PolicyDoc
-	if err := db.Order("id DESC").Limit(1000).Find(&all).Error; err != nil {
-		return nil, 0, err
+	all, err := s.repo.DocsForSearch(s.dbh(), strings.TrimSpace(keyword))
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodePrStore, "检索制度失败", err)
 	}
 	visible := make([]model.PolicyDoc, 0, len(all))
 	for _, d := range all {
@@ -127,11 +123,9 @@ func (s *PolicyService) SearchPolicyDocsByRole(roleName, keyword string, page, p
 
 // GetPolicyPermGrants grant 列表
 func (s *PolicyService) GetPolicyPermGrants(roleName string) ([]model.PolicyPermGrant, error) {
-	db := global.GVA_DB.Model(&model.PolicyPermGrant{})
-	if roleName != "" {
-		db = db.Where("role_name = ?", roleName)
+	list, err := s.repo.GrantsByRole(s.dbh(), roleName)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "查询授权列表失败", err)
 	}
-	var list []model.PolicyPermGrant
-	err := db.Order("id ASC").Limit(200).Find(&list).Error
-	return list, err
+	return list, nil
 }

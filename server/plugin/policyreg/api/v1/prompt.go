@@ -8,6 +8,8 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
 
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/service"
 )
@@ -29,7 +31,7 @@ func (a *PolicyregApi) SavePolicyPrompt(c *gin.Context) {
 	}
 	out, err := service.PolicyApp.SavePolicyPrompt(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -45,7 +47,7 @@ func (a *PolicyregApi) SavePolicyPrompt(c *gin.Context) {
 func (a *PolicyregApi) GetPolicyPrompts(c *gin.Context) {
 	list, err := service.PolicyApp.GetPolicyPrompts()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -53,9 +55,9 @@ func (a *PolicyregApi) GetPolicyPrompts(c *gin.Context) {
 
 // qaReq 问答请求
 type qaReq struct {
-	RoleName  string `json:"roleName" binding:"required"`
-	Question  string `json:"question" binding:"required"`
-	ModelId   uint   `json:"modelId"`
+	RoleName string `json:"roleName" binding:"required"`
+	Question string `json:"question" binding:"required"`
+	ModelId  uint   `json:"modelId"`
 }
 
 // PolicyQa 制度问答
@@ -75,7 +77,7 @@ func (a *PolicyregApi) PolicyQa(c *gin.Context) {
 	}
 	out, err := service.PolicyApp.PolicyQa(in.RoleName, in.Question, in.ModelId)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "回答完成", c)
@@ -101,7 +103,7 @@ func (a *PolicyregApi) RenderPolicyPromptByName(c *gin.Context) {
 	}
 	out, err := service.PolicyApp.RenderPolicyPromptByName(in.Name, in.Vars)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(out, "渲染成功", c)
@@ -122,7 +124,7 @@ func (a *PolicyregApi) GetPolicyQaLogs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.PolicyApp.GetPolicyQaLogs(c.Query("roleName"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)

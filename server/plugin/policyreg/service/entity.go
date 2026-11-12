@@ -4,11 +4,10 @@
 package service
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/policyreg/model"
 )
 
@@ -62,23 +61,23 @@ func extractPolicyEntities(text string) []model.PolicyEntity {
 
 // ExtractPolicyEntities 实体抽取（按 docId 幂等覆盖）
 func (s *PolicyService) ExtractPolicyEntities(docId uint) ([]model.PolicyEntity, error) {
-	var doc model.PolicyDoc
-	if err := global.GVA_DB.First(&doc, docId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]制度不存在", ErrCodePrEntityParam)
+	doc, err := s.repo.FindDoc(s.dbh(), docId)
+	if err != nil {
+		return nil, errx.New(ErrCodePrEntityParam, "制度不存在")
 	}
 	text := doc.RawText
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("[%d]二进制编目文档无可抽取文本", ErrCodePrEntityParam)
+		return nil, errx.New(ErrCodePrEntityParam, "二进制编目文档无可抽取文本")
 	}
 	entities := extractPolicyEntities(text)
 	// 幂等：先清后插
-	if err := global.GVA_DB.Where("doc_id = ?", docId).Delete(&model.PolicyEntity{}).Error; err != nil {
-		return nil, err
+	if err := s.repo.DeleteEntitiesByDoc(s.dbh(), docId); err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "清理实体失败", err)
 	}
 	for i := range entities {
 		entities[i].DocId = docId
-		if err := global.GVA_DB.Create(&entities[i]).Error; err != nil {
-			return nil, err
+		if err := s.repo.CreateEntity(s.dbh(), &entities[i]); err != nil {
+			return nil, errx.Wrap(ErrCodePrStore, "创建实体失败", err)
 		}
 	}
 	return entities, nil
@@ -86,11 +85,9 @@ func (s *PolicyService) ExtractPolicyEntities(docId uint) ([]model.PolicyEntity,
 
 // GetPolicyEntities 实体列表（类型过滤）
 func (s *PolicyService) GetPolicyEntities(docId uint, eType string) ([]model.PolicyEntity, error) {
-	db := global.GVA_DB.Model(&model.PolicyEntity{}).Where("doc_id = ?", docId)
-	if eType != "" {
-		db = db.Where("e_type = ?", eType)
+	list, err := s.repo.EntityList(s.dbh(), docId, eType)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodePrStore, "查询实体列表失败", err)
 	}
-	var list []model.PolicyEntity
-	err := db.Order("id ASC").Limit(500).Find(&list).Error
-	return list, err
+	return list, nil
 }
