@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/artsci/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（artsci 段 2500-2599）
@@ -50,11 +50,12 @@ func ruleInterpretation(asset *model.ArtsciImageAsset, subject string) (surface,
 // InterpretImage 图像解读（无 DB 部分为 gradeEngine 同构编排；DB：资产加载+记录落库）
 func (s *ArtsciService) InterpretImage(assetId uint, subject string, modelId uint) (*model.ArtsciInterpretation, error) {
 	if strings.TrimSpace(subject) == "" {
-		return nil, fmt.Errorf("[%d]解读视角必填", ErrCodeInterpParam)
+		return nil, artErr(ErrCodeInterpParam, "解读视角必填")
 	}
-	var asset model.ArtsciImageAsset
-	if err := global.GVA_DB.First(&asset, assetId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]图像资产不存在", ErrCodeInterpParam)
+	db := s.dbh()
+	asset, err := s.repo.FindImageAsset(db, assetId)
+	if err != nil {
+		return nil, artErr(ErrCodeInterpParam, "图像资产不存在")
 	}
 	rec := &model.ArtsciInterpretation{AssetId: assetId, Subject: subject, ModelId: modelId}
 	if modelId > 0 {
@@ -66,29 +67,29 @@ func (s *ArtsciService) InterpretImage(assetId uint, subject string, modelId uin
 			content, err := gradingChatFn(ctx, modelId, prompt)
 			cancel()
 			if err != nil {
-				lastErr = fmt.Errorf("[%d]模型调用失败: %w", ErrCodeInterpLLM, err)
+				lastErr = artWrapErr(ErrCodeInterpLLM, "模型调用失败", err)
 				continue
 			}
 			surface, cultural, perr := parseInterpJSON(content)
 			if perr == nil {
 				rec.Engine, rec.Ok, rec.SurfaceDesc, rec.CulturalMeaning = "llm", true, surface, cultural
-				if err := global.GVA_DB.Create(rec).Error; err != nil {
-					return nil, err
+				if err := s.repo.CreateInterpretation(db, rec); err != nil {
+					return nil, errx.Wrap(ErrCodeArtsciStore, "落库解读记录失败", err)
 				}
 				return rec, nil
 			}
-			lastErr = fmt.Errorf("[%d]解读输出解析失败: %w", ErrCodeInterpLLM, perr)
+			lastErr = artWrapErr(ErrCodeInterpLLM, "解读输出解析失败", perr)
 		}
 		rec.Ok, rec.ErrMsg = false, truncateRunText(lastErr.Error())
-		_ = global.GVA_DB.Create(rec).Error
+		_ = s.repo.CreateInterpretation(db, rec).Error
 		return rec, lastErr
 	}
 	// 元数据口径
-	surface, cultural := ruleInterpretation(&asset, subject)
+	surface, cultural := ruleInterpretation(asset, subject)
 	rec.Engine, rec.Ok = "rule", true
 	rec.SurfaceDesc, rec.CulturalMeaning = surface, cultural
-	if err := global.GVA_DB.Create(rec).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateInterpretation(db, rec); err != nil {
+		return nil, errx.Wrap(ErrCodeArtsciStore, "落库解读记录失败", err)
 	}
 	return rec, nil
 }
@@ -96,55 +97,31 @@ func (s *ArtsciService) InterpretImage(assetId uint, subject string, modelId uin
 // RegisterImageAsset 图像资产登记
 func (s *ArtsciService) RegisterImageAsset(in *model.ArtsciImageAsset) (*model.ArtsciImageAsset, error) {
 	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.Path) == "" {
-		return nil, fmt.Errorf("[%d]名称与路径必填", ErrCodeInterpParam)
+		return nil, artErr(ErrCodeInterpParam, "名称与路径必填")
 	}
 	if in.Source != "upload" && in.Source != "url" && in.Source != "generated" {
 		in.Source = "upload"
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateImageAsset(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeArtsciStore, "落库图像资产失败", err)
 	}
 	return in, nil
 }
 
 // GetImageAssets 图像资产列表（关键字过滤，倒序分页）
 func (s *ArtsciService) GetImageAssets(keyword string, page, pageSize int) ([]model.ArtsciImageAsset, int64, error) {
-	if page < 1 {
-		page = 1
+	list, total, err := s.repo.ImageAssetList(s.dbh(), strings.TrimSpace(keyword), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeArtsciStore, "查询图像资产列表失败", err)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
-	db := global.GVA_DB.Model(&model.ArtsciImageAsset{})
-	if kw := strings.TrimSpace(keyword); kw != "" {
-		db = db.Where("name LIKE ?", "%"+kw+"%")
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ArtsciImageAsset
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // GetInterpretations 解读记录列表（资产过滤，倒序分页）
 func (s *ArtsciService) GetInterpretations(assetId uint, page, pageSize int) ([]model.ArtsciInterpretation, int64, error) {
-	if page < 1 {
-		page = 1
+	list, total, err := s.repo.InterpretationList(s.dbh(), assetId, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeArtsciStore, "查询解读记录失败", err)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
-	db := global.GVA_DB.Model(&model.ArtsciInterpretation{})
-	if assetId > 0 {
-		db = db.Where("asset_id = ?", assetId)
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ArtsciInterpretation
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

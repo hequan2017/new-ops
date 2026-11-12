@@ -3,7 +3,6 @@
 package service
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -31,7 +30,7 @@ func (m *polyModel) predict(x float64) float64 {
 func fitPolyLeastSquares(xs, ys []float64, degree int) (*polyModel, error) {
 	n := len(xs)
 	if n < degree+2 {
-		return nil, fmt.Errorf("[%d]样本不足：n=%d 至少 degree+2=%d", lsErrCode, n, degree+2)
+		return nil, artErr(lsErrCode, "样本不足：n=%d 至少 degree+2=%d", n, degree+2)
 	}
 	xmin, xmax := xs[0], xs[0]
 	for _, x := range xs {
@@ -44,7 +43,7 @@ func fitPolyLeastSquares(xs, ys []float64, degree int) (*polyModel, error) {
 	}
 	span := xmax - xmin
 	if span <= 0 {
-		return nil, fmt.Errorf("[%d]x 范围为零，无法归一化", lsErrCode)
+		return nil, artErr(lsErrCode, "x 范围为零，无法归一化")
 	}
 	m := degree + 1
 	ata := make([][]float64, m)
@@ -92,7 +91,7 @@ func solveLinear(a [][]float64, b []float64) ([]float64, error) {
 			}
 		}
 		if math.Abs(ma[piv][col]) < 1e-12 {
-			return nil, fmt.Errorf("[%d]正规方程奇异（degree 过高或数据退化）", lsErrCode)
+			return nil, artErr(lsErrCode, "正规方程奇异（degree 过高或数据退化）")
 		}
 		ma[col], ma[piv] = ma[piv], ma[col]
 		for r := col + 1; r < m; r++ {
@@ -118,19 +117,19 @@ func acFloatSlice(args map[string]any, key string, required bool) ([]float64, er
 	v, ok := args[key]
 	if !ok || v == nil {
 		if required {
-			return nil, fmt.Errorf("[%d]缺少必填数组参数: %s", lsErrCode, key)
+			return nil, artErr(lsErrCode, "缺少必填数组参数: %s", key)
 		}
 		return nil, nil
 	}
 	arr, ok := v.([]any)
 	if !ok {
-		return nil, fmt.Errorf("[%d]参数 %s 须为数组", lsErrCode, key)
+		return nil, artErr(lsErrCode, "参数 %s 须为数组", key)
 	}
 	out := make([]float64, 0, len(arr))
 	for _, e := range arr {
 		n, ok := e.(float64)
 		if !ok {
-			return nil, fmt.Errorf("[%d]参数 %s 须为数字数组", lsErrCode, key)
+			return nil, artErr(lsErrCode, "参数 %s 须为数字数组", key)
 		}
 		out = append(out, n)
 	}

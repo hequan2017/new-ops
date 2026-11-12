@@ -21,28 +21,28 @@ func ValidateArgsAgainstSchema(schemaRaw string, args map[string]any) error {
 	}
 	var schema map[string]fieldSchema
 	if err := json.Unmarshal([]byte(schemaRaw), &schema); err != nil {
-		return fmt.Errorf("[%d]schema 解析失败: %w", ErrCodeToolSchema, err)
+		return artWrapErr(ErrCodeToolSchema, "schema 解析失败", err)
 	}
 	for field, fs := range schema {
 		v, present := args[field]
 		if !present || v == nil {
 			if fs.Required {
-				return fmt.Errorf("[%d]缺少必填参数: %s", ErrCodeToolArgs, field)
+				return artErr(ErrCodeToolArgs, "缺少必填参数: %s", field)
 			}
 			continue
 		}
 		switch fs.Type {
 		case "string":
 			if _, ok := v.(string); !ok {
-				return fmt.Errorf("[%d]参数 %s 须为字符串", ErrCodeToolArgs, field)
+				return artErr(ErrCodeToolArgs, "参数 %s 须为字符串", field)
 			}
 		case "number":
 			if _, ok := v.(float64); !ok {
-				return fmt.Errorf("[%d]参数 %s 须为数字", ErrCodeToolArgs, field)
+				return artErr(ErrCodeToolArgs, "参数 %s 须为数字", field)
 			}
 		case "bool":
 			if _, ok := v.(bool); !ok {
-				return fmt.Errorf("[%d]参数 %s 须为布尔", ErrCodeToolArgs, field)
+				return artErr(ErrCodeToolArgs, "参数 %s 须为布尔", field)
 			}
 		}
 		if len(fs.Enum) > 0 {
@@ -54,7 +54,7 @@ func ValidateArgsAgainstSchema(schemaRaw string, args map[string]any) error {
 				}
 			}
 			if !ok {
-				return fmt.Errorf("[%d]参数 %s 不在枚举内", ErrCodeToolArgs, field)
+				return artErr(ErrCodeToolArgs, "参数 %s 不在枚举内", field)
 			}
 		}
 	}
@@ -68,7 +68,7 @@ func ValidateSchemaObject(raw string) error {
 	}
 	var m map[string]any
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		return fmt.Errorf("[%d]schema 须为 JSON 对象: %w", ErrCodeToolSchema, err)
+		return artWrapErr(ErrCodeToolSchema, "schema 须为 JSON 对象", err)
 	}
 	return nil
 }

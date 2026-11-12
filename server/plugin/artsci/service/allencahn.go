@@ -5,7 +5,6 @@
 package service
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -31,7 +30,7 @@ func acNum(args map[string]any, key string, def float64) (float64, error) {
 	}
 	n, ok := v.(float64)
 	if !ok {
-		return 0, fmt.Errorf("[%d]参数 %s 须为数字", errCodeACParam, key)
+		return 0, artErr(errCodeACParam, "参数 %s 须为数字", key)
 	}
 	return n, nil
 }
@@ -65,7 +64,7 @@ func RunAllenCahn(args map[string]any) (any, error) {
 		return nil, err
 	}
 	if eps <= 0 || eps > 1 {
-		return nil, fmt.Errorf("[%d]epsilon 须在 (0,1] 内", errCodeACParam)
+		return nil, artErr(errCodeACParam, "epsilon 须在 (0,1] 内")
 	}
 	gridNf, err := acNum(args, "gridN", 64)
 	if err != nil {
@@ -73,7 +72,7 @@ func RunAllenCahn(args map[string]any) (any, error) {
 	}
 	gridN := int(math.Round(gridNf))
 	if gridN < 16 || gridN > 512 {
-		return nil, fmt.Errorf("[%d]gridN 须在 [16,512] 内", errCodeACParam)
+		return nil, artErr(errCodeACParam, "gridN 须在 [16,512] 内")
 	}
 	stepsF, err := acNum(args, "steps", 800)
 	if err != nil {
@@ -81,7 +80,7 @@ func RunAllenCahn(args map[string]any) (any, error) {
 	}
 	steps := int(math.Round(stepsF))
 	if steps < 1 || steps > 2000 {
-		return nil, fmt.Errorf("[%d]steps 须在 [1,2000] 内", errCodeACParam)
+		return nil, artErr(errCodeACParam, "steps 须在 [1,2000] 内")
 	}
 	dx := 1.0 / float64(gridN)
 	dtLimit := 0.4 * dx * dx / eps
@@ -90,7 +89,7 @@ func RunAllenCahn(args map[string]any) (any, error) {
 		return nil, err
 	}
 	if dt <= 0 || dt > dtLimit {
-		return nil, fmt.Errorf("[%d]dt 须在 (0,%.6f] 内（扩散稳定性 40%% 收敛）", errCodeACParam, dtLimit)
+		return nil, artErr(errCodeACParam, "dt 须在 (0,%.6f] 内（扩散稳定性 40%% 收敛）", dtLimit)
 	}
 	snapF, err := acNum(args, "snapshotEvery", math.Max(1, float64(steps)/40))
 	if err != nil {
@@ -98,7 +97,7 @@ func RunAllenCahn(args map[string]any) (any, error) {
 	}
 	snapshotEvery := int(math.Round(snapF))
 	if snapshotEvery < 1 || snapshotEvery > steps {
-		return nil, fmt.Errorf("[%d]snapshotEvery 须在 [1,%d] 内", errCodeACParam, steps)
+		return nil, artErr(errCodeACParam, "snapshotEvery 须在 [1,%d] 内", steps)
 	}
 
 	// 初值与推进（双缓冲，周期边界）

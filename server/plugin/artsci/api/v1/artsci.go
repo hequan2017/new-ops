@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 
 	"github.com/hequan2017/new-ops/server/plugin/artsci/model"
 	"github.com/hequan2017/new-ops/server/plugin/artsci/service"
@@ -50,7 +51,7 @@ func (a *ArtsciApi) Ping(c *gin.Context) {
 func (a *ArtsciApi) GetTools(c *gin.Context) {
 	list, err := service.ArtsciApp.GetTools(c.Query("subject"), c.Query("keyword"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取工具列表失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -73,7 +74,7 @@ func (a *ArtsciApi) SaveTool(c *gin.Context) {
 	}
 	out, err := service.ArtsciApp.SaveTool(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "保存工具失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -94,7 +95,7 @@ func (a *ArtsciApi) DeleteTool(c *gin.Context) {
 		return
 	}
 	if err := service.ArtsciApp.DeleteTool(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除工具失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -121,7 +122,7 @@ func (a *ArtsciApi) RunTool(c *gin.Context) {
 			response.OkWithDetailed(log, "执行失败（已留痕）: "+err.Error(), c)
 			return
 		}
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "执行工具失败")
 		return
 	}
 	response.OkWithDetailed(log, "执行成功", c)
@@ -143,7 +144,7 @@ func (a *ArtsciApi) GetRunLogs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.ArtsciApp.GetRunLogs(uint(toolId), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询执行留痕失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -186,7 +187,7 @@ func (a *ArtsciApi) GetGradings(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.ArtsciApp.GetGradings(page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询批改记录失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -224,7 +225,7 @@ func (a *ArtsciApi) GenerateQuestion(c *gin.Context) {
 	}
 	q, err := service.ArtsciApp.GenerateQuestion(in.KnowledgePoint, in.QType, in.Difficulty, in.ModelId, in.Score)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "生成题目失败")
 		return
 	}
 	response.OkWithDetailed(q, "生成成功", c)
@@ -246,7 +247,7 @@ func (a *ArtsciApi) GetQuestions(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.ArtsciApp.GetQuestions(c.Query("knowledgePoint"), c.Query("qType"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询题目列表失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -269,7 +270,7 @@ func (a *ArtsciApi) BuildPaper(c *gin.Context) {
 	}
 	paper, err := service.ArtsciApp.BuildPaper(in.Name, in.RulesJSON)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "组卷失败")
 		return
 	}
 	response.OkWithDetailed(paper, "组卷成功", c)
@@ -289,7 +290,7 @@ func (a *ArtsciApi) GetPapers(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.ArtsciApp.GetPapers(page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询试卷列表失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -305,7 +306,7 @@ func (a *ArtsciApi) GetPapers(c *gin.Context) {
 func (a *ArtsciApi) GetSceneTemplates(c *gin.Context) {
 	list, err := service.ArtsciApp.GetSceneTemplates()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询场景模板失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -334,7 +335,7 @@ func (a *ArtsciApi) SubmitImageTask(c *gin.Context) {
 	}
 	task, err := service.ArtsciApp.SubmitImageTask(in.Scene, in.InputText)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "提交文生图任务失败")
 		return
 	}
 	response.OkWithDetailed(task, "任务完成", c)
@@ -355,7 +356,7 @@ func (a *ArtsciApi) GetImageTasks(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.ArtsciApp.GetImageTasks(c.Query("scene"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询文生图任务列表失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -378,7 +379,7 @@ func (a *ArtsciApi) RegisterImageAsset(c *gin.Context) {
 	}
 	out, err := service.ArtsciApp.RegisterImageAsset(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "登记图像资产失败")
 		return
 	}
 	response.OkWithDetailed(out, "登记成功", c)
@@ -399,7 +400,7 @@ func (a *ArtsciApi) GetImageAssets(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.ArtsciApp.GetImageAssets(c.Query("keyword"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询图像资产列表失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -433,7 +434,7 @@ func (a *ArtsciApi) InterpretImage(c *gin.Context) {
 			response.OkWithDetailed(rec, "解读失败（已留痕）: "+err.Error(), c)
 			return
 		}
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "图像解读失败")
 		return
 	}
 	response.OkWithDetailed(rec, "解读完成", c)
@@ -455,7 +456,7 @@ func (a *ArtsciApi) GetInterpretations(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.ArtsciApp.GetInterpretations(uint(assetId), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询解读记录失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -471,7 +472,7 @@ func (a *ArtsciApi) GetInterpretations(c *gin.Context) {
 func (a *ArtsciApi) GetToolRunStats(c *gin.Context) {
 	out, err := service.ArtsciApp.GetToolRunStats()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询执行统计失败")
 		return
 	}
 	response.OkWithDetailed(out, "获取成功", c)

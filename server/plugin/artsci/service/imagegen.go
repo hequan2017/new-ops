@@ -5,11 +5,10 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/artsci/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（artsci 段 2500-2599）
@@ -27,7 +26,7 @@ type ImageGenAdapter interface {
 type NoopImageGenAdapter struct{}
 
 func (NoopImageGenAdapter) Generate(context.Context, string) (string, error) {
-	return "", fmt.Errorf("[%d]文生图适配器未配置", ErrCodeImgGenNoop)
+	return "", artErr(ErrCodeImgGenNoop, "文生图适配器未配置")
 }
 
 // ImageGen 适配器单例（后续模型服务接入时替换）
@@ -44,26 +43,29 @@ func renderPrompt(tpl, scene, input string) string {
 
 // GetSceneTemplates 场景模板列表
 func (s *ArtsciService) GetSceneTemplates() ([]model.ArtsciSceneTemplate, error) {
-	var list []model.ArtsciSceneTemplate
-	err := global.GVA_DB.Order("id").Find(&list).Error
-	return list, err
+	list, err := s.repo.SceneTemplateList(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeArtsciStore, "查询场景模板失败", err)
+	}
+	return list, nil
 }
 
 // SubmitImageTask 提交文生图任务（渲染→适配器生成→状态机落库）
 func (s *ArtsciService) SubmitImageTask(scene, inputText string) (*model.ArtsciImageTask, error) {
 	if strings.TrimSpace(inputText) == "" {
-		return nil, fmt.Errorf("[%d]教学输入文本必填", ErrCodeImgGenParam)
+		return nil, artErr(ErrCodeImgGenParam, "教学输入文本必填")
 	}
-	var tpl model.ArtsciSceneTemplate
-	if err := global.GVA_DB.Where("scene = ?", scene).First(&tpl).Error; err != nil {
-		return nil, fmt.Errorf("[%d]场景模板不存在: %s", ErrCodeImgGenParam, scene)
+	db := s.dbh()
+	tpl, err := s.repo.FindSceneTemplate(db, scene)
+	if err != nil {
+		return nil, artErr(ErrCodeImgGenParam, "场景模板不存在: %s", scene)
 	}
 	task := &model.ArtsciImageTask{
 		Scene: scene, InputText: inputText,
 		RenderedPrompt: renderPrompt(tpl.PromptTemplate, scene, inputText), Status: "queued",
 	}
-	if err := global.GVA_DB.Create(task).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateImageTask(db, task); err != nil {
+		return nil, errx.Wrap(ErrCodeArtsciStore, "落库文生图任务失败", err)
 	}
 	url, err := ImageGen.Generate(context.Background(), task.RenderedPrompt)
 	if err != nil {
@@ -71,31 +73,19 @@ func (s *ArtsciService) SubmitImageTask(scene, inputText string) (*model.ArtsciI
 	} else {
 		task.Status, task.ImageUrl, task.ErrMsg = "done", url, ""
 	}
-	if err := global.GVA_DB.Model(task).Updates(map[string]any{
+	if err := s.repo.UpdateImageTaskColumns(db, task.ID, map[string]any{
 		"status": task.Status, "image_url": task.ImageUrl, "err_msg": task.ErrMsg,
-	}).Error; err != nil {
-		return nil, err
+	}); err != nil {
+		return nil, errx.Wrap(ErrCodeArtsciStore, "更新文生图任务状态失败", err)
 	}
 	return task, nil
 }
 
 // GetImageTasks 任务列表（场景过滤，倒序分页）
 func (s *ArtsciService) GetImageTasks(scene string, page, pageSize int) ([]model.ArtsciImageTask, int64, error) {
-	if page < 1 {
-		page = 1
+	list, total, err := s.repo.ImageTaskList(s.dbh(), scene, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeArtsciStore, "查询文生图任务列表失败", err)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
-	db := global.GVA_DB.Model(&model.ArtsciImageTask{})
-	if scene != "" {
-		db = db.Where("scene = ?", scene)
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ArtsciImageTask
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

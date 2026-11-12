@@ -5,7 +5,6 @@
 package service
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -18,7 +17,7 @@ func acMatrix(args map[string]any, key string, required bool) ([][]float64, erro
 	v, ok := args[key]
 	if !ok || v == nil {
 		if required {
-			return nil, fmt.Errorf("[%d]缺少必填二维数组参数: %s", lsErrCode, key)
+			return nil, artErr(lsErrCode, "缺少必填二维数组参数: %s", key)
 		}
 		return nil, nil
 	}
@@ -30,19 +29,19 @@ func acMatrix(args map[string]any, key string, required bool) ([][]float64, erro
 			for _, row := range m2 {
 				r, err := acFloatSlice(map[string]any{"k": row}, "k", true)
 				if err != nil {
-					return nil, fmt.Errorf("[%d]参数 %s 须为数字二维数组", lsErrCode, key)
+					return nil, artErr(lsErrCode, "参数 %s 须为数字二维数组", key)
 				}
 				out = append(out, r)
 			}
 			return out, nil
 		}
-		return nil, fmt.Errorf("[%d]参数 %s 须为二维数组", lsErrCode, key)
+		return nil, artErr(lsErrCode, "参数 %s 须为二维数组", key)
 	}
 	out := make([][]float64, 0, len(arr))
 	for _, e := range arr {
 		row, err := acFloatSlice(map[string]any{"k": e}, "k", true)
 		if err != nil {
-			return nil, fmt.Errorf("[%d]参数 %s 须为数字二维数组", lsErrCode, key)
+			return nil, artErr(lsErrCode, "参数 %s 须为数字二维数组", key)
 		}
 		out = append(out, row)
 	}
@@ -71,16 +70,16 @@ func RunDeepONet(args map[string]any) (any, error) {
 	}
 	basisCount := int(math.Round(basisF))
 	if basisCount < 2 || basisCount > 12 {
-		return nil, fmt.Errorf("[%d]basisCount 须在 [2,12] 内", lsErrCode)
+		return nil, artErr(lsErrCode, "basisCount 须在 [2,12] 内")
 	}
 	m := len(trainFunctions)
 	if m == 0 || len(trainTargets) != m || len(trainYs) == 0 {
-		return nil, fmt.Errorf("[%d]训练函数/目标行数一致且查询点非空", lsErrCode)
+		return nil, artErr(lsErrCode, "训练函数/目标行数一致且查询点非空")
 	}
 	sensorN := len(trainFunctions[0])
 	for i := range trainFunctions {
 		if len(trainFunctions[i]) != sensorN || len(trainTargets[i]) != len(trainYs) {
-			return nil, fmt.Errorf("[%d]传感器列数一致且目标与查询点等长", lsErrCode)
+			return nil, artErr(lsErrCode, "传感器列数一致且目标与查询点等长")
 		}
 	}
 
@@ -178,7 +177,7 @@ func RunDeepONet(args map[string]any) (any, error) {
 			cnt := 0
 			for i := range pf {
 				if len(pt[i]) != len(pys) {
-					return nil, fmt.Errorf("[%d]predictTargets 与查询点等长", lsErrCode)
+					return nil, artErr(lsErrCode, "predictTargets 与查询点等长")
 				}
 				for j := range pys {
 					d := all[i][j] - pt[i][j]

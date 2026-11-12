@@ -7,13 +7,12 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/artsci/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（artsci 段 2500-2599）
@@ -62,7 +61,7 @@ type genQuestionOut struct {
 func (s *ArtsciService) GenerateQuestion(kp, qType, difficulty string, modelId uint, score float64) (*model.ArtsciQuestion, error) {
 	kp = strings.TrimSpace(kp)
 	if kp == "" || !ValidQType(qType) {
-		return nil, fmt.Errorf("[%d]知识点必填且题型须在白名单内", ErrCodeQGenParam)
+		return nil, artErr(ErrCodeQGenParam, "知识点必填且题型须在白名单内")
 	}
 	if difficulty != "易" && difficulty != "中" && difficulty != "难" {
 		difficulty = "中"
@@ -95,8 +94,8 @@ func (s *ArtsciService) GenerateQuestion(kp, qType, difficulty string, modelId u
 			q.Options = string(b)
 		}
 	}
-	if err := global.GVA_DB.Create(q).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateQuestion(s.dbh(), q); err != nil {
+		return nil, errx.Wrap(ErrCodeArtsciStore, "落库题目失败", err)
 	}
 	return q, nil
 }
@@ -113,15 +112,15 @@ type paperRule struct {
 func validatePaperRules(raw string) ([]paperRule, float64, error) {
 	var rules []paperRule
 	if err := json.Unmarshal([]byte(raw), &rules); err != nil {
-		return nil, 0, fmt.Errorf("[%d]规则须为 JSON 数组", ErrCodeQGenParam)
+		return nil, 0, artErr(ErrCodeQGenParam, "规则须为 JSON 数组")
 	}
 	if len(rules) == 0 {
-		return nil, 0, fmt.Errorf("[%d]抽题规则不能为空", ErrCodeQGenParam)
+		return nil, 0, artErr(ErrCodeQGenParam, "抽题规则不能为空")
 	}
 	total := 0.0
 	for i := range rules {
 		if rules[i].Count < 1 || rules[i].Count > 100 || rules[i].ScorePer <= 0 || !ValidQType(rules[i].QType) {
-			return nil, 0, fmt.Errorf("[%d]第 %d 条规则参数非法（题量 1-100/单题分>0/题型白名单）", ErrCodeQGenParam, i+1)
+			return nil, 0, artErr(ErrCodeQGenParam, "第 %d 条规则参数非法（题量 1-100/单题分>0/题型白名单）", i+1)
 		}
 		total += float64(rules[i].Count) * rules[i].ScorePer
 	}
@@ -139,78 +138,51 @@ func pickQuestions(candidates []model.ArtsciQuestion, count int) []model.ArtsciQ
 // BuildPaper 规则组卷并入库
 func (s *ArtsciService) BuildPaper(name, rulesJSON string) (*model.ArtsciPaper, error) {
 	if strings.TrimSpace(name) == "" {
-		return nil, fmt.Errorf("[%d]试卷名必填", ErrCodeQGenParam)
+		return nil, artErr(ErrCodeQGenParam, "试卷名必填")
 	}
 	rules, total, err := validatePaperRules(rulesJSON)
 	if err != nil {
 		return nil, err
 	}
+	db := s.dbh()
 	var ids []string
 	for _, r := range rules {
-		db := global.GVA_DB.Model(&model.ArtsciQuestion{}).Where("q_type = ?", r.QType)
-		if strings.TrimSpace(r.KnowledgePoint) != "" {
-			db = db.Where("knowledge_point = ?", r.KnowledgePoint)
-		}
-		var candidates []model.ArtsciQuestion
-		if err := db.Order("id").Limit(r.Count).Find(&candidates).Error; err != nil {
-			return nil, err
+		candidates, err := s.repo.QuestionCandidates(db, strings.TrimSpace(r.KnowledgePoint), r.QType, r.Count)
+		if err != nil {
+			return nil, errx.Wrap(ErrCodeArtsciStore, "查询抽题候选失败", err)
 		}
 		picked := pickQuestions(candidates, r.Count)
 		if len(picked) < r.Count {
-			return nil, fmt.Errorf("[%d]题量不足：%s/%s 仅 %d 题，需 %d 题", ErrCodePaperInsu, r.KnowledgePoint, r.QType, len(picked), r.Count)
+			return nil, artErr(ErrCodePaperInsu, "题量不足：%s/%s 仅 %d 题，需 %d 题", r.KnowledgePoint, r.QType, len(picked), r.Count)
 		}
 		for _, q := range picked {
 			ids = append(ids, strconv.FormatUint(uint64(q.ID), 10))
 		}
 	}
 	paper := &model.ArtsciPaper{Name: name, QuestionIds: strings.Join(ids, ","), TotalScore: total, RulesJSON: rulesJSON}
-	if err := global.GVA_DB.Create(paper).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreatePaper(db, paper); err != nil {
+		return nil, errx.Wrap(ErrCodeArtsciStore, "落库试卷失败", err)
 	}
 	return paper, nil
 }
 
 // GetQuestions 题目列表（知识点/题型过滤，倒序分页）
 func (s *ArtsciService) GetQuestions(kp, qType string, page, pageSize int) ([]model.ArtsciQuestion, int64, error) {
-	if page < 1 {
-		page = 1
+	if qType != "" && !ValidQType(qType) {
+		return nil, 0, artErr(ErrCodeQGenParam, "不支持的题型: %s", qType)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
+	list, total, err := s.repo.QuestionList(s.dbh(), kp, qType, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeArtsciStore, "查询题目列表失败", err)
 	}
-	db := global.GVA_DB.Model(&model.ArtsciQuestion{})
-	if kp != "" {
-		db = db.Where("knowledge_point = ?", kp)
-	}
-	if qType != "" {
-		if !ValidQType(qType) {
-			return nil, 0, fmt.Errorf("[%d]不支持的题型: %s", ErrCodeQGenParam, qType)
-		}
-		db = db.Where("q_type = ?", qType)
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ArtsciQuestion
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // GetPapers 试卷列表（倒序分页）
 func (s *ArtsciService) GetPapers(page, pageSize int) ([]model.ArtsciPaper, int64, error) {
-	if page < 1 {
-		page = 1
+	list, total, err := s.repo.PaperList(s.dbh(), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeArtsciStore, "查询试卷列表失败", err)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
-	db := global.GVA_DB.Model(&model.ArtsciPaper{})
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ArtsciPaper
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

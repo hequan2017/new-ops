@@ -11,9 +11,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/artsci/model"
 	llmopsService "github.com/hequan2017/new-ops/server/plugin/llmops/service"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（artsci 段 2500-2599）
@@ -112,7 +112,7 @@ func ruleGrade(rubric, studentText string) (score float64, comment string, sugge
 // gradeEngine 单条批改（无 DB，测试锚点）：按引擎写回 rec 批改字段
 func gradeEngine(rec *model.ArtsciGrading, chatFn func(ctx context.Context, modelId uint, prompt string) (string, error)) error {
 	if strings.TrimSpace(rec.StudentText) == "" || strings.TrimSpace(rec.Rubric) == "" {
-		return fmt.Errorf("[%d]评分标准与学生作答必填", ErrCodeGradeText)
+		return artErr(ErrCodeGradeText, "评分标准与学生作答必填")
 	}
 	if rec.ModelId == 0 {
 		score, comment, sugg := ruleGrade(rec.Rubric, rec.StudentText)
@@ -133,7 +133,7 @@ func gradeEngine(rec *model.ArtsciGrading, chatFn func(ctx context.Context, mode
 		content, err := chatFn(ctx, rec.ModelId, prompt)
 		cancel()
 		if err != nil {
-			lastErr = fmt.Errorf("[%d]模型调用失败: %w", ErrCodeGradeLLM, err)
+			lastErr = artWrapErr(ErrCodeGradeLLM, "模型调用失败", err)
 			continue
 		}
 		score, comment, sugg, lastErr = func() (float64, string, []string, error) {
@@ -148,7 +148,7 @@ func gradeEngine(rec *model.ArtsciGrading, chatFn func(ctx context.Context, mode
 			rec.Suggestions = string(b)
 			return nil
 		}
-		lastErr = fmt.Errorf("[%d]批改输出解析失败: %w", ErrCodeGradeLLM, lastErr)
+		lastErr = artWrapErr(ErrCodeGradeLLM, "批改输出解析失败", lastErr)
 	}
 	return lastErr
 }
@@ -159,37 +159,33 @@ func (s *ArtsciService) GradeEssay(rec *model.ArtsciGrading) (*model.ArtsciGradi
 		rec.Ok = false
 		rec.ErrMsg = truncateRunText(err.Error())
 		if rec.ID == 0 {
-			_ = global.GVA_DB.Create(rec).Error
+			_ = s.repo.CreateGrading(s.dbh(), rec).Error
 		} else {
-			_ = global.GVA_DB.Model(rec).Updates(map[string]any{"ok": false, "err_msg": rec.ErrMsg}).Error
+			_ = s.repo.UpdateGradingColumns(s.dbh(), rec.ID,
+				map[string]any{"ok": false, "err_msg": rec.ErrMsg}).Error
 		}
 		return rec, err
 	}
 	if rec.ID > 0 {
-		err := global.GVA_DB.Model(rec).Updates(map[string]any{
+		if err := s.repo.UpdateGradingColumns(s.dbh(), rec.ID, map[string]any{
 			"score": rec.Score, "comment": rec.Comment, "suggestions": rec.Suggestions,
 			"engine": rec.Engine, "ok": true, "err_msg": "",
-		}).Error
-		return rec, err
+		}); err != nil {
+			return rec, errx.Wrap(ErrCodeArtsciStore, "更新批改记录失败", err)
+		}
+		return rec, nil
 	}
-	err := global.GVA_DB.Create(rec).Error
-	return rec, err
+	if err := s.repo.CreateGrading(s.dbh(), rec); err != nil {
+		return rec, errx.Wrap(ErrCodeArtsciStore, "落库批改记录失败", err)
+	}
+	return rec, nil
 }
 
 // GetGradings 批改记录列表（倒序分页）
 func (s *ArtsciService) GetGradings(page, pageSize int) ([]model.ArtsciGrading, int64, error) {
-	if page < 1 {
-		page = 1
+	list, total, err := s.repo.GradingList(s.dbh(), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeArtsciStore, "查询批改记录失败", err)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
-	db := global.GVA_DB.Model(&model.ArtsciGrading{})
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ArtsciGrading
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

@@ -5,7 +5,6 @@
 package service
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -35,7 +34,7 @@ func RunDeepHPMs(args map[string]any) (any, error) {
 		return nil, err
 	}
 	if len(xs) != len(ys) || len(xs) == 0 {
-		return nil, fmt.Errorf("[%d]xs/ys 须等长非空", lsErrCode)
+		return nil, artErr(lsErrCode, "xs/ys 须等长非空")
 	}
 	degF, err := acNum(args, "degree", 3)
 	if err != nil {
@@ -43,7 +42,7 @@ func RunDeepHPMs(args map[string]any) (any, error) {
 	}
 	degree := int(math.Round(degF))
 	if degree < 1 || degree > 6 {
-		return nil, fmt.Errorf("[%d]degree 须在 [1,6] 内", lsErrCode)
+		return nil, artErr(lsErrCode, "degree 须在 [1,6] 内")
 	}
 	resDegF, err := acNum(args, "residualDegree", 2)
 	if err != nil {
@@ -51,7 +50,7 @@ func RunDeepHPMs(args map[string]any) (any, error) {
 	}
 	resDegree := int(math.Round(resDegF))
 	if resDegree < 1 || resDegree > 6 {
-		return nil, fmt.Errorf("[%d]residualDegree 须在 [1,6] 内", lsErrCode)
+		return nil, artErr(lsErrCode, "residualDegree 须在 [1,6] 内")
 	}
 	predictXs, err := acFloatSlice(args, "predictXs", false)
 	if err != nil {
