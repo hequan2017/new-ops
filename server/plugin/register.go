@@ -11,6 +11,7 @@ import (
 	_ "github.com/hequan2017/new-ops/server/plugin/dbops"
 	_ "github.com/hequan2017/new-ops/server/plugin/eduadmin"
 	_ "github.com/hequan2017/new-ops/server/plugin/crossauth"
+	_ "github.com/hequan2017/new-ops/server/plugin/email"
 	_ "github.com/hequan2017/new-ops/server/plugin/exam"
 	_ "github.com/hequan2017/new-ops/server/plugin/fanhua"
 	_ "github.com/hequan2017/new-ops/server/plugin/gpu"

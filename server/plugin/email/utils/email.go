@@ -6,7 +6,7 @@ import (
 	"net/smtp"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/plugin/email/global"
+	"github.com/hequan2017/new-ops/server/global"
 
 	"github.com/jordan-wright/email"
 )
@@ -29,7 +29,7 @@ func Email(To, subject string, body string) error {
 //@return: error
 
 func ErrorToEmail(subject string, body string) error {
-	to := strings.Split(global.GlobalConfig.To, ",")
+	to := strings.Split(global.GVA_CONFIG.Email.To, ",")
 	if to[len(to)-1] == "" { // 判断切片的最后一个元素是否为空,为空则移除
 		to = to[:len(to)-1]
 	}
@@ -43,7 +43,7 @@ func ErrorToEmail(subject string, body string) error {
 //@return: error
 
 func EmailTest(subject string, body string) error {
-	to := []string{global.GlobalConfig.To}
+	to := []string{global.GVA_CONFIG.Email.To}
 	return send(to, subject, body)
 }
 
@@ -54,13 +54,13 @@ func EmailTest(subject string, body string) error {
 //@return: error
 
 func send(to []string, subject string, body string) error {
-	from := global.GlobalConfig.From
-	nickname := global.GlobalConfig.Nickname
-	secret := global.GlobalConfig.Secret
-	host := global.GlobalConfig.Host
-	port := global.GlobalConfig.Port
-	isSSL := global.GlobalConfig.IsSSL
-	isLoginAuth := global.GlobalConfig.IsLoginAuth
+	from := global.GVA_CONFIG.Email.From
+	nickname := global.GVA_CONFIG.Email.Nickname
+	secret := global.GVA_CONFIG.Email.Secret
+	host := global.GVA_CONFIG.Email.Host
+	port := global.GVA_CONFIG.Email.Port
+	isSSL := global.GVA_CONFIG.Email.IsSSL
+	isLoginAuth := global.GVA_CONFIG.Email.IsLoginAuth
 
 	var auth smtp.Auth
 	if isLoginAuth {
