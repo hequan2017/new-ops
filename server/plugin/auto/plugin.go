@@ -21,6 +21,6 @@ func (p *plugin) Register(engine *gin.Engine) {
 	initialize.Api(ctx)
 	initialize.Menu(ctx)
 	initialize.Dictionary(ctx)
-	initialize.Gorm(ctx)
+	// 表结构由底座 RegisterTables 统一迁移（原插件内 model 为底座同表名冗余副本，已清除）
 	initialize.Router(engine)
 }
