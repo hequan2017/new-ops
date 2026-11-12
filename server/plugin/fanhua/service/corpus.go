@@ -9,8 +9,13 @@ import (
 	"fmt"
 	"strings"
 
+	"gorm.io/gorm"
+
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/fanhua/repo"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/csvx"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
@@ -20,6 +25,32 @@ const (
 	ErrCodeImportFormat   = 2602
 	ErrCodeCorpusField    = 2603
 )
+
+// ErrCodeFanhuaStore 存储层统一包装码（段内未用码 2606）：裸 gorm 错误经 errx.Wrap 携带分段码
+const ErrCodeFanhuaStore = 2606
+
+// FanhuaService fanhua 服务（依赖注入：db 为 nil 时惰性回退底座全局库——
+// 包级单例构造早于底座建库，禁止在构造期捕获 GVA_DB）
+type FanhuaService struct {
+	db   *gorm.DB
+	repo repo.Repo
+}
+
+// NewFanhuaService 构造：显式传 db 供单测内存库注入，生产传 nil
+func NewFanhuaService(db *gorm.DB) *FanhuaService {
+	return &FanhuaService{db: db}
+}
+
+// dbh 当前会话：显式注入优先，否则底座全局库
+func (s *FanhuaService) dbh() *gorm.DB {
+	if s.db != nil {
+		return s.db
+	}
+	return global.GVA_DB
+}
+
+// FanhuaApp 服务单例出口（繁花域服务聚合）
+var FanhuaApp = NewFanhuaService(nil)
 
 // CorpusSources 语料来源白名单
 var CorpusSources = []string{"新闻", "社交", "文学", "对照", "舆情", "城市"}
@@ -57,7 +88,7 @@ func parseCorpusImport(format, content string) ([]model.FanhuaCorpus, []RowError
 	case "csv":
 		return parseCorpusCSV(content)
 	default:
-		return nil, nil, fmt.Errorf("[%d]导入格式仅支持 jsonl/csv", ErrCodeImportFormat)
+		return nil, nil, errx.New(ErrCodeImportFormat, "导入格式仅支持 jsonl/csv")
 	}
 }
 
@@ -107,7 +138,7 @@ func parseCorpusCSV(content string) ([]model.FanhuaCorpus, []RowError, error) {
 	reader.FieldsPerRecord = 4
 	records, err := reader.ReadAll()
 	if err != nil {
-		return nil, nil, fmt.Errorf("[%d]CSV 解析失败: %w", ErrCodeImportFormat, err)
+		return nil, nil, errx.Wrap(ErrCodeImportFormat, "CSV 解析失败", err)
 	}
 	var list []model.FanhuaCorpus
 	var errs []RowError
@@ -125,11 +156,6 @@ func parseCorpusCSV(content string) ([]model.FanhuaCorpus, []RowError, error) {
 	return list, errs, nil
 }
 
-// FanhuaApp 服务单例出口（繁花域服务聚合）
-var FanhuaApp = new(FanhuaService)
-
-type FanhuaService struct{}
-
 // ImportCorpora 批量导入（解析→合法行批量入库→错误行报告）
 func (s *FanhuaService) ImportCorpora(format, content string) (map[string]any, error) {
 	list, rowErrs, err := parseCorpusImport(format, content)
@@ -137,8 +163,8 @@ func (s *FanhuaService) ImportCorpora(format, content string) (map[string]any, e
 		return nil, err
 	}
 	if len(list) > 0 {
-		if err := global.GVA_DB.CreateInBatches(list, 200).Error; err != nil {
-			return nil, err
+		if err := s.repo.CreateCorporaBatch(s.dbh(), list, 200); err != nil {
+			return nil, errx.Wrap(ErrCodeFanhuaStore, "批量写库语料失败", err)
 		}
 	}
 	return map[string]any{"inserted": len(list), "failedRows": rowErrs}, nil
@@ -147,32 +173,35 @@ func (s *FanhuaService) ImportCorpora(format, content string) (map[string]any, e
 // SaveCorpus 新建/更新语料
 func (s *FanhuaService) SaveCorpus(in *model.FanhuaCorpus) (*model.FanhuaCorpus, error) {
 	if _, reason := corpusFromFields(in.Source, in.Title, in.Lang, in.Content, 0); reason != "" {
-		return nil, fmt.Errorf("[%d]%s", ErrCodeCorpusSource, reason)
+		return nil, errx.New(ErrCodeCorpusSource, reason)
 	}
+	db := s.dbh()
 	if in.ID > 0 {
-		var exist model.FanhuaCorpus
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]语料不存在", ErrCodeCorpusNotFound)
+		exist, err := s.repo.FindCorpus(db, in.ID)
+		if err != nil {
+			return nil, errx.New(ErrCodeCorpusNotFound, "语料不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdateCorpusColumns(db, exist.ID, map[string]any{
 			"source": in.Source, "title": in.Title, "content": in.Content, "lang": in.Lang, "meta_json": in.MetaJSON,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeFanhuaStore, "更新语料失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateCorpus(db, in); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "创建语料失败", err)
 	}
 	return in, nil
 }
 
 // DeleteCorpus 删除语料（软删除）
 func (s *FanhuaService) DeleteCorpus(id uint) error {
-	res := global.GVA_DB.Delete(&model.FanhuaCorpus{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteCorpus(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeFanhuaStore, "删除语料失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]语料不存在", ErrCodeCorpusNotFound)
+	if rows == 0 {
+		return errx.New(ErrCodeCorpusNotFound, "语料不存在")
 	}
 	return nil
 }
@@ -185,53 +214,33 @@ func (s *FanhuaService) GetCorpora(source, lang, keyword string, page, pageSize 
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaCorpus{})
-	if source != "" {
-		if !ValidSource(source) {
-			return nil, 0, fmt.Errorf("[%d]不支持的来源: %s", ErrCodeCorpusSource, source)
-		}
-		db = db.Where("source = ?", source)
+	if source != "" && !ValidSource(source) {
+		return nil, 0, errx.New(ErrCodeCorpusSource, "不支持的来源: "+source)
 	}
-	if lang != "" {
-		db = db.Where("lang = ?", lang)
+	kw := strings.TrimSpace(keyword)
+	list, total, err := s.repo.CorpusList(s.dbh(), source, lang, kw, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询语料失败", err)
 	}
-	if kw := strings.TrimSpace(keyword); kw != "" {
-		db = db.Where("title LIKE ? OR content LIKE ?", "%"+kw+"%", "%"+kw+"%")
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.FanhuaCorpus
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
-// corporaToCSV 语料 CSV（纯函数，测试锚点，对齐 exam I07 口径）
+// corporaToCSV 语料 CSV（纯函数，测试锚点，I07 口径）：复用 csvx.Builder 全字段清洗
+// （换行折空格先于逗号转全角）。fanhua 原实现仅清洗 title/content，csvx 为全字段清洗超集，
+// 既有测试未覆盖差异字段（source/lang 无逗号/换行样本），口径兼容。
 func corporaToCSV(list []model.FanhuaCorpus) string {
-	var sb strings.Builder
-	sb.WriteString("来源,标题,语种,内容\n")
+	b := csvx.New("来源", "标题", "语种", "内容")
 	for _, c := range list {
-		content := strings.ReplaceAll(c.Content, "\n", " ")
-		content = strings.ReplaceAll(content, ",", "，")
-		title := strings.ReplaceAll(c.Title, ",", "，")
-		sb.WriteString(fmt.Sprintf("%s,%s,%s,%s\n", c.Source, title, c.Lang, content))
+		b.Row(c.Source, c.Title, c.Lang, c.Content)
 	}
-	return sb.String()
+	return b.String()
 }
 
 // ExportCorpora 语料 CSV 导出（来源/语种过滤，倒序）
 func (s *FanhuaService) ExportCorpora(source, lang string) (string, error) {
-	db := global.GVA_DB.Model(&model.FanhuaCorpus{})
-	if source != "" {
-		db = db.Where("source = ?", source)
-	}
-	if lang != "" {
-		db = db.Where("lang = ?", lang)
-	}
-	var list []model.FanhuaCorpus
-	if err := db.Order("id DESC").Limit(5000).Find(&list).Error; err != nil {
-		return "", err
+	list, err := s.repo.CorporaForExport(s.dbh(), source, lang)
+	if err != nil {
+		return "", errx.Wrap(ErrCodeFanhuaStore, "扫描语料导出失败", err)
 	}
 	return corporaToCSV(list), nil
 }

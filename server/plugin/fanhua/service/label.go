@@ -4,16 +4,15 @@
 package service
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
 const (
-	ErrCodeLabelParam   = 2613
+	ErrCodeLabelParam    = 2613
 	ErrCodeLabelNotFound = 2614
 )
 
@@ -54,7 +53,7 @@ func assignSplit(id uint, trainRatio float64) string {
 // validateRatio 比例白名单
 func validateRatio(r float64) error {
 	if r < 0.1 || r > 0.9 {
-		return fmt.Errorf("[%d]trainRatio 须在 [0.1,0.9] 内", ErrCodeLabelParam)
+		return errx.New(ErrCodeLabelParam, "trainRatio 须在 [0.1,0.9] 内")
 	}
 	return nil
 }
@@ -67,12 +66,13 @@ func (s *FanhuaService) BuildTextLabels(trainRatio float64, limit int) (map[stri
 	if limit < 1 || limit > 1000 {
 		limit = 100
 	}
-	var corpora []model.FanhuaCorpus
-	if err := global.GVA_DB.Order("id").Limit(limit).Find(&corpora).Error; err != nil {
-		return nil, err
+	db := s.dbh()
+	corpora, err := s.repo.CorporaForLabeling(db, limit)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "扫描语料失败", err)
 	}
 	if len(corpora) == 0 {
-		return nil, fmt.Errorf("[%d]语料库为空，无可标注数据", ErrCodeLabelParam)
+		return nil, errx.New(ErrCodeLabelParam, "语料库为空，无可标注数据")
 	}
 	labels := make([]model.FanhuaTextLabel, 0, len(corpora))
 	for _, c := range corpora {
@@ -83,8 +83,8 @@ func (s *FanhuaService) BuildTextLabels(trainRatio float64, limit int) (map[stri
 			AutoSentiment: sentimentRule(c.Content),
 		})
 	}
-	if err := global.GVA_DB.CreateInBatches(labels, 200).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateTextLabelsBatch(db, labels, 200); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "批量写标注失败", err)
 	}
 	return map[string]any{"created": len(labels)}, nil
 }
@@ -92,19 +92,22 @@ func (s *FanhuaService) BuildTextLabels(trainRatio float64, limit int) (map[stri
 // UpdateLabel 人工改标（情感/划分覆盖，置 Labeled）
 func (s *FanhuaService) UpdateLabel(id uint, sentiment, split string) (*model.FanhuaTextLabel, error) {
 	if sentiment != "正面" && sentiment != "中立" && sentiment != "负面" {
-		return nil, fmt.Errorf("[%d]情感标签须为 正面/中立/负面", ErrCodeLabelParam)
+		return nil, errx.New(ErrCodeLabelParam, "情感标签须为 正面/中立/负面")
 	}
 	if split != "train" && split != "test" && split != "none" {
-		return nil, fmt.Errorf("[%d]划分须为 train/test/none", ErrCodeLabelParam)
+		return nil, errx.New(ErrCodeLabelParam, "划分须为 train/test/none")
 	}
-	var label model.FanhuaTextLabel
-	if err := global.GVA_DB.First(&label, id).Error; err != nil {
-		return nil, fmt.Errorf("[%d]标注记录不存在", ErrCodeLabelNotFound)
+	db := s.dbh()
+	label, err := s.repo.FindTextLabel(db, id)
+	if err != nil {
+		return nil, errx.New(ErrCodeLabelNotFound, "标注记录不存在")
 	}
-	err := global.GVA_DB.Model(&label).Updates(map[string]any{
+	if err := s.repo.UpdateTextLabelColumns(db, label.ID, map[string]any{
 		"sentiment": sentiment, "split": split, "labeled": true,
-	}).Error
-	return &label, err
+	}); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "更新标注失败", err)
+	}
+	return label, nil
 }
 
 // GetTextLabels 标注列表（划分/情感过滤，倒序分页）
@@ -115,35 +118,18 @@ func (s *FanhuaService) GetTextLabels(split, sentiment string, page, pageSize in
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaTextLabel{})
-	if split != "" {
-		db = db.Where("split = ?", split)
+	list, total, err := s.repo.TextLabelList(s.dbh(), split, sentiment, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询标注失败", err)
 	}
-	if sentiment != "" {
-		db = db.Where("sentiment = ? OR (sentiment = '' AND auto_sentiment = ?)", sentiment, sentiment)
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.FanhuaTextLabel
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // LabelStats 标注分布统计（划分×情感 聚合）
 func (s *FanhuaService) LabelStats() (map[string]any, error) {
-	type row struct {
-		Split     string `json:"split"`
-		Sentiment string `json:"sentiment"`
-		Count     int64  `json:"count"`
-	}
-	var rows []row
-	err := global.GVA_DB.Model(&model.FanhuaTextLabel{}).
-		Select("split, COALESCE(NULLIF(sentiment, ''), auto_sentiment) as sentiment, COUNT(*) as count").
-		Group("split, sentiment").Find(&rows).Error
+	rows, err := s.repo.LabelDistribution(s.dbh())
 	if err != nil {
-		return nil, err
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "聚合标注分布失败", err)
 	}
 	return map[string]any{"distribution": rows}, nil
 }

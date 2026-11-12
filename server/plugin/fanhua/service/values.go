@@ -4,16 +4,15 @@
 package service
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
 const (
-	ErrCodeValuesParam   = 2619
+	ErrCodeValuesParam    = 2619
 	ErrCodeValuesNotFound = 2620
 )
 
@@ -69,11 +68,11 @@ func computeHealth(text string, words []model.FanhuaSensitiveWord) healthResult 
 // GetHealth 健康度评估（读取启用词表）
 func (s *FanhuaService) GetHealth(text string) (*healthResult, error) {
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("[%d]评估文本必填", ErrCodeValuesParam)
+		return nil, errx.New(ErrCodeValuesParam, "评估文本必填")
 	}
-	var words []model.FanhuaSensitiveWord
-	if err := global.GVA_DB.Where("enabled = ?", true).Limit(5000).Find(&words).Error; err != nil {
-		return nil, err
+	words, err := s.repo.EnabledWords(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询敏感词失败", err)
 	}
 	out := computeHealth(text, words)
 	return &out, nil
@@ -82,7 +81,7 @@ func (s *FanhuaService) GetHealth(text string) (*healthResult, error) {
 // SaveWord 新建/更新敏感词
 func (s *FanhuaService) SaveWord(in *model.FanhuaSensitiveWord) (*model.FanhuaSensitiveWord, error) {
 	if strings.TrimSpace(in.Word) == "" {
-		return nil, fmt.Errorf("[%d]敏感词必填", ErrCodeValuesParam)
+		return nil, errx.New(ErrCodeValuesParam, "敏感词必填")
 	}
 	if in.Action != "block" && in.Action != "replace" {
 		in.Action = "block"
@@ -90,31 +89,34 @@ func (s *FanhuaService) SaveWord(in *model.FanhuaSensitiveWord) (*model.FanhuaSe
 	if in.Weight < 1 || in.Weight > 100 {
 		in.Weight = 10
 	}
+	db := s.dbh()
 	if in.ID > 0 {
-		var exist model.FanhuaSensitiveWord
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]敏感词不存在", ErrCodeValuesNotFound)
+		exist, err := s.repo.FindSensitiveWord(db, in.ID)
+		if err != nil {
+			return nil, errx.New(ErrCodeValuesNotFound, "敏感词不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdateSensitiveWordColumns(db, exist.ID, map[string]any{
 			"word": in.Word, "action": in.Action, "replacement": in.Replacement,
 			"weight": in.Weight, "enabled": in.Enabled,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeFanhuaStore, "更新敏感词失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateSensitiveWord(db, in); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "创建敏感词失败", err)
 	}
 	return in, nil
 }
 
 // DeleteWord 删除敏感词（软删除）
 func (s *FanhuaService) DeleteWord(id uint) error {
-	res := global.GVA_DB.Delete(&model.FanhuaSensitiveWord{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteSensitiveWord(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeFanhuaStore, "删除敏感词失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]敏感词不存在", ErrCodeValuesNotFound)
+	if rows == 0 {
+		return errx.New(ErrCodeValuesNotFound, "敏感词不存在")
 	}
 	return nil
 }
@@ -127,36 +129,30 @@ func (s *FanhuaService) GetWords(action string, page, pageSize int) ([]model.Fan
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaSensitiveWord{})
-	if action != "" {
-		if action != "block" && action != "replace" {
-			return nil, 0, fmt.Errorf("[%d]动作须为 block/replace", ErrCodeValuesParam)
-		}
-		db = db.Where("action = ?", action)
+	if action != "" && action != "block" && action != "replace" {
+		return nil, 0, errx.New(ErrCodeValuesParam, "动作须为 block/replace")
 	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
+	list, total, err := s.repo.WordList(s.dbh(), action, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询敏感词失败", err)
 	}
-	var list []model.FanhuaSensitiveWord
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // GetTemplates 合规表达模板列表
 func (s *FanhuaService) GetTemplates() ([]model.FanhuaComplianceTemplate, error) {
-	var list []model.FanhuaComplianceTemplate
-	err := global.GVA_DB.Order("id").Find(&list).Error
-	return list, err
+	list, err := s.repo.ComplianceTemplatesAll(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询合规模板失败", err)
+	}
+	return list, nil
 }
 
 // GetConflictCases 价值观冲突案例列表
 func (s *FanhuaService) GetConflictCases(lang string) ([]model.FanhuaConflictCase, error) {
-	db := global.GVA_DB.Model(&model.FanhuaConflictCase{})
-	if lang != "" {
-		db = db.Where("lang = ?", lang)
+	list, err := s.repo.ConflictCasesByLang(s.dbh(), lang)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询冲突案例失败", err)
 	}
-	var list []model.FanhuaConflictCase
-	err := db.Order("id").Limit(200).Find(&list).Error
-	return list, err
+	return list, nil
 }

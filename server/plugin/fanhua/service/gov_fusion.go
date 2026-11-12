@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
@@ -16,8 +16,8 @@ const ErrCodeFusionParam = 2630
 
 // govSuggestionRules 治理建议规则（叶指标名→建议模板，得分<60 触发）
 var govSuggestionRules = map[string]string{
-	"空气质量": "加强扬尘与机动车排放管控，加密空气质量监测点位",
-	"噪声水平": "开展夜间施工与商业噪声专项治理",
+	"空气质量":  "加强扬尘与机动车排放管控，加密空气质量监测点位",
+	"噪声水平":  "开展夜间施工与商业噪声专项治理",
 	"设施可达性": "补齐 15 分钟生活圈缺项设施，优化 POI 布局",
 	"服务满意度": "开展物业与社区服务满意度专项提升",
 	"街景美观度": "推进街景整治与店招统一美化",
@@ -63,10 +63,10 @@ func collectLeafScores(roots []*indicatorNode) map[string]float64 {
 // SaveGovPhoto 登记社区照片元数据
 func (s *FanhuaService) SaveGovPhoto(in *model.FanhuaGovPhoto) (*model.FanhuaGovPhoto, error) {
 	if strings.TrimSpace(in.Region) == "" || strings.TrimSpace(in.Path) == "" {
-		return nil, fmt.Errorf("[%d]区域与照片路径必填", ErrCodeFusionParam)
+		return nil, errx.New(ErrCodeFusionParam, "区域与照片路径必填")
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateGovPhoto(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "登记照片失败", err)
 	}
 	return in, nil
 }
@@ -74,15 +74,12 @@ func (s *FanhuaService) SaveGovPhoto(in *model.FanhuaGovPhoto) (*model.FanhuaGov
 // FusionQuery 三源融合查询（数据点分源统计+照片+画像+建议）
 func (s *FanhuaService) FusionQuery(region, period string) (map[string]any, error) {
 	if strings.TrimSpace(region) == "" {
-		return nil, fmt.Errorf("[%d]区域必填", ErrCodeFusionParam)
+		return nil, errx.New(ErrCodeFusionParam, "区域必填")
 	}
-	pointDB := global.GVA_DB.Model(&model.FanhuaGovDataPoint{}).Where("region = ?", region)
-	if period != "" {
-		pointDB = pointDB.Where("period = ?", period)
-	}
-	var points []model.FanhuaGovDataPoint
-	if err := pointDB.Find(&points).Error; err != nil {
-		return nil, err
+	db := s.dbh()
+	points, err := s.repo.GovDataPointsByRegion(db, region, period)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询区域数据点失败", err)
 	}
 	// 分源统计（questionnaire/poi/sensor 计数与均值）
 	type srcStat struct {
@@ -104,17 +101,13 @@ func (s *FanhuaService) FusionQuery(region, period string) (map[string]any, erro
 		}
 	}
 	// 照片源
-	photoDB := global.GVA_DB.Model(&model.FanhuaGovPhoto{}).Where("region = ?", region)
-	if period != "" {
-		photoDB = photoDB.Where("shot_at LIKE ?", period+"%")
+	photos, err := s.repo.GovPhotosByRegion(db, region, period)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询区域照片失败", err)
 	}
-	var photos []model.FanhuaGovPhoto
-	if err := photoDB.Order("id DESC").Limit(20).Find(&photos).Error; err != nil {
-		return nil, err
-	}
-	var photoTotal int64
-	if err := global.GVA_DB.Model(&model.FanhuaGovPhoto{}).Where("region = ?", region).Count(&photoTotal).Error; err != nil {
-		return nil, err
+	photoTotal, err := s.repo.GovPhotoCountByRegion(db, region)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "统计区域照片失败", err)
 	}
 	// 画像（复用 N11）
 	profile, err := s.GetRegionProfile(region, period)
@@ -122,9 +115,9 @@ func (s *FanhuaService) FusionQuery(region, period string) (map[string]any, erro
 		return nil, err
 	}
 	// 治理建议
-	var list []model.FanhuaGovIndicator
-	if err := global.GVA_DB.Order("id").Find(&list).Error; err != nil {
-		return nil, err
+	list, err := s.repo.GovIndicatorsAll(db)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询治理指标失败", err)
 	}
 	roots := buildIndicatorTree(list)
 	for _, r := range roots {

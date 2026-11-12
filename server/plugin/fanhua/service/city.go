@@ -4,16 +4,15 @@
 package service
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
 const (
-	ErrCodeGovParam   = 2621
+	ErrCodeGovParam    = 2621
 	ErrCodeGovNotFound = 2622
 )
 
@@ -75,9 +74,9 @@ func scoreTree(n *indicatorNode, points []model.FanhuaGovDataPoint) float64 {
 
 // GetIndicatorTree 指标树
 func (s *FanhuaService) GetIndicatorTree() ([]*indicatorNode, error) {
-	var list []model.FanhuaGovIndicator
-	if err := global.GVA_DB.Order("id").Find(&list).Error; err != nil {
-		return nil, err
+	list, err := s.repo.GovIndicatorsAll(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询治理指标失败", err)
 	}
 	return buildIndicatorTree(list), nil
 }
@@ -85,36 +84,39 @@ func (s *FanhuaService) GetIndicatorTree() ([]*indicatorNode, error) {
 // SaveIndicator 新建/更新指标
 func (s *FanhuaService) SaveIndicator(in *model.FanhuaGovIndicator) (*model.FanhuaGovIndicator, error) {
 	if strings.TrimSpace(in.Name) == "" {
-		return nil, fmt.Errorf("[%d]指标名必填", ErrCodeGovParam)
+		return nil, errx.New(ErrCodeGovParam, "指标名必填")
 	}
 	if in.Weight < 0 {
 		in.Weight = 1
 	}
+	db := s.dbh()
 	if in.ID > 0 {
-		var exist model.FanhuaGovIndicator
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]指标不存在", ErrCodeGovNotFound)
+		exist, err := s.repo.FindGovIndicator(db, in.ID)
+		if err != nil {
+			return nil, errx.New(ErrCodeGovNotFound, "指标不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdateGovIndicatorColumns(db, exist.ID, map[string]any{
 			"name": in.Name, "parent_id": in.ParentId, "weight": in.Weight,
 			"visual": in.Visual, "desc": in.Desc,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeFanhuaStore, "更新指标失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateGovIndicator(db, in); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "创建指标失败", err)
 	}
 	return in, nil
 }
 
 // DeleteIndicator 删除指标（软删除）
 func (s *FanhuaService) DeleteIndicator(id uint) error {
-	res := global.GVA_DB.Delete(&model.FanhuaGovIndicator{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteGovIndicator(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeFanhuaStore, "删除指标失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]指标不存在", ErrCodeGovNotFound)
+	if rows == 0 {
+		return errx.New(ErrCodeGovNotFound, "指标不存在")
 	}
 	return nil
 }
@@ -122,17 +124,17 @@ func (s *FanhuaService) DeleteIndicator(id uint) error {
 // SaveDataPoint 写数据点
 func (s *FanhuaService) SaveDataPoint(in *model.FanhuaGovDataPoint) (*model.FanhuaGovDataPoint, error) {
 	if strings.TrimSpace(in.Region) == "" || strings.TrimSpace(in.Period) == "" {
-		return nil, fmt.Errorf("[%d]区域与期间必填", ErrCodeGovParam)
+		return nil, errx.New(ErrCodeGovParam, "区域与期间必填")
 	}
-	var indicator model.FanhuaGovIndicator
-	if err := global.GVA_DB.First(&indicator, in.IndicatorId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]指标不存在", ErrCodeGovNotFound)
+	db := s.dbh()
+	if _, err := s.repo.FindGovIndicator(db, in.IndicatorId); err != nil {
+		return nil, errx.New(ErrCodeGovNotFound, "指标不存在")
 	}
 	if in.Value < 0 || in.Value > 100 {
-		return nil, fmt.Errorf("[%d]指标值须在 [0,100] 内", ErrCodeGovParam)
+		return nil, errx.New(ErrCodeGovParam, "指标值须在 [0,100] 内")
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateGovDataPoint(db, in); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "写入数据点失败", err)
 	}
 	return in, nil
 }
@@ -145,38 +147,26 @@ func (s *FanhuaService) GetDataPoints(region, period string, page, pageSize int)
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaGovDataPoint{})
-	if region != "" {
-		db = db.Where("region = ?", region)
+	list, total, err := s.repo.GovDataPointList(s.dbh(), region, period, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询数据点失败", err)
 	}
-	if period != "" {
-		db = db.Where("period = ?", period)
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.FanhuaGovDataPoint
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // GetRegionProfile 社区画像（指标树加权得分）
 func (s *FanhuaService) GetRegionProfile(region, period string) (map[string]any, error) {
 	if strings.TrimSpace(region) == "" {
-		return nil, fmt.Errorf("[%d]区域必填", ErrCodeGovParam)
+		return nil, errx.New(ErrCodeGovParam, "区域必填")
 	}
-	db := global.GVA_DB.Model(&model.FanhuaGovDataPoint{}).Where("region = ?", region)
-	if period != "" {
-		db = db.Where("period = ?", period)
+	db := s.dbh()
+	points, err := s.repo.GovDataPointsByRegion(db, region, period)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询区域数据点失败", err)
 	}
-	var points []model.FanhuaGovDataPoint
-	if err := db.Find(&points).Error; err != nil {
-		return nil, err
-	}
-	var list []model.FanhuaGovIndicator
-	if err := global.GVA_DB.Order("id").Find(&list).Error; err != nil {
-		return nil, err
+	list, err := s.repo.GovIndicatorsAll(db)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询治理指标失败", err)
 	}
 	roots := buildIndicatorTree(list)
 	overall := 0.0

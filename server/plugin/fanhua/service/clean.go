@@ -8,8 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/hequan2017/new-ops/server/global"
-	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
@@ -31,9 +30,9 @@ type CleanStats struct {
 
 // CleanReport 逐条处理报告
 type CleanReport struct {
-	Index int       `json:"index"`
-	Id    uint      `json:"id"`
-	Text  string    `json:"text"`
+	Index int        `json:"index"`
+	Id    uint       `json:"id"`
+	Text  string     `json:"text"`
 	Stats CleanStats `json:"stats"`
 }
 
@@ -102,17 +101,18 @@ func BatchCleanTexts(texts []string, dedupe bool) []CleanReport {
 // CleanCorpora 语料库批量清洗（按 ID 清洗 content 并回写）
 func (s *FanhuaService) CleanCorpora(ids []uint, dedupe bool) ([]CleanReport, error) {
 	if len(ids) == 0 {
-		return nil, fmt.Errorf("[%d]语料 ID 列表不能为空", ErrCodeCleanParam)
+		return nil, errx.New(ErrCodeCleanParam, "语料 ID 列表不能为空")
 	}
+	db := s.dbh()
 	reports := make([]CleanReport, 0, len(ids))
 	for _, id := range ids {
-		var corpus model.FanhuaCorpus
-		if err := global.GVA_DB.First(&corpus, id).Error; err != nil {
-			return nil, fmt.Errorf("[%d]语料 %d 不存在", ErrCodeCleanParam, id)
+		corpus, err := s.repo.FindCorpus(db, id)
+		if err != nil {
+			return nil, errx.New(ErrCodeCleanParam, fmt.Sprintf("语料 %d 不存在", id))
 		}
 		clean, stats := CleanText(corpus.Content, dedupe)
-		if err := global.GVA_DB.Model(&corpus).Update("content", clean).Error; err != nil {
-			return nil, err
+		if err := s.repo.UpdateCorpusContent(db, corpus, clean); err != nil {
+			return nil, errx.Wrap(ErrCodeFanhuaStore, "回写清洗语料失败", err)
 		}
 		reports = append(reports, CleanReport{Index: len(reports), Id: corpus.ID, Text: clean, Stats: stats})
 	}

@@ -1,21 +1,21 @@
 // Package service fanhua：海派文化知识库（需求 3.4-15）
 // 口径：语音库条目（沪剧台词/弄堂俚语/经典朗读 × 男声/女声/童声）；
-// 组合检索=语音条目打分（查询分词 token 命中计数，复用 N05 分词口径）+ 平行语料
-// 编辑相似度召回（复用 N03 口径），双路合并返回。
+// 组合检索=语音条目打分（查询 bigram 命中计数，text.Bigrams/text.Score 公共口径）+
+// 平行语料编辑相似度召回（复用 N03 口径），双路合并返回。
 package service
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/text"
 )
 
 // 错误码（fanhua 段 2600-2699）
 const (
-	ErrCodeVoiceParam   = 2617
+	ErrCodeVoiceParam    = 2617
 	ErrCodeVoiceNotFound = 2618
 )
 
@@ -40,24 +40,15 @@ type voiceHit struct {
 	Score int `json:"score"`
 }
 
-// rankVoice 语音条目打分（纯函数，测试锚点）：查询分词 token 在标题+内容中的命中计数
+// rankVoice 语音条目打分（纯函数，测试锚点）：查询 bigram 集对标题+内容命中计数。
+// 原实现为分词 token 命中多重计数（非稳定排序），与 text.RankBigrams 的集合计数+稳定排序
+// 不等价；按去重要求改用 text.Bigrams/text.Score 公共打分原语，score>0 过滤与本地降序
+// 排序保持原口径（同分序由 sort.Slice 决定，与原实现一致）。
 func rankVoice(entries []model.FanhuaVoiceEntry, query string) []voiceHit {
-	seen := map[string]bool{}
-	var tokens []string
-	for _, t := range Segment(query) {
-		if !seen[t.Word] {
-			seen[t.Word] = true
-			tokens = append(tokens, t.Word)
-		}
-	}
+	qSet := text.Bigrams(query)
 	hits := make([]voiceHit, 0, len(entries))
 	for _, e := range entries {
-		hay := e.Title + e.Content
-		score := 0
-		for _, tk := range tokens {
-			score += strings.Count(hay, tk)
-		}
-		if score > 0 {
+		if score := text.Score(qSet, e.Title+e.Content); score > 0 {
 			hits = append(hits, voiceHit{FanhuaVoiceEntry: e, Score: score})
 		}
 	}
@@ -68,27 +59,20 @@ func rankVoice(entries []model.FanhuaVoiceEntry, query string) []voiceHit {
 // SearchCulture 组合检索（语音条目 + 平行语料双路）
 func (s *FanhuaService) SearchCulture(query, category, speakerType string, topK int) (map[string]any, error) {
 	if strings.TrimSpace(query) == "" {
-		return nil, fmt.Errorf("[%d]检索词必填", ErrCodeVoiceParam)
+		return nil, errx.New(ErrCodeVoiceParam, "检索词必填")
 	}
 	if category != "" && !validIn(VoiceCategories, category) {
-		return nil, fmt.Errorf("[%d]不支持的分类: %s", ErrCodeVoiceParam, category)
+		return nil, errx.New(ErrCodeVoiceParam, "不支持的分类: "+category)
 	}
 	if speakerType != "" && !validIn(SpeakerTypes, speakerType) {
-		return nil, fmt.Errorf("[%d]不支持的声部: %s", ErrCodeVoiceParam, speakerType)
+		return nil, errx.New(ErrCodeVoiceParam, "不支持的声部: "+speakerType)
 	}
 	if topK < 1 || topK > 50 {
 		topK = 5
 	}
-	db := global.GVA_DB.Model(&model.FanhuaVoiceEntry{}).Limit(2000)
-	if category != "" {
-		db = db.Where("category = ?", category)
-	}
-	if speakerType != "" {
-		db = db.Where("speaker_type = ?", speakerType)
-	}
-	var entries []model.FanhuaVoiceEntry
-	if err := db.Find(&entries).Error; err != nil {
-		return nil, err
+	entries, err := s.repo.VoiceEntriesScan(s.dbh(), category, speakerType)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "扫描语音条目失败", err)
 	}
 	voiceHits := rankVoice(entries, query)
 	if len(voiceHits) > topK {
@@ -104,40 +88,43 @@ func (s *FanhuaService) SearchCulture(query, category, speakerType string, topK 
 // SaveVoiceEntry 新建/更新语音条目
 func (s *FanhuaService) SaveVoiceEntry(in *model.FanhuaVoiceEntry) (*model.FanhuaVoiceEntry, error) {
 	if strings.TrimSpace(in.Title) == "" || strings.TrimSpace(in.Content) == "" {
-		return nil, fmt.Errorf("[%d]标题与内容必填", ErrCodeVoiceParam)
+		return nil, errx.New(ErrCodeVoiceParam, "标题与内容必填")
 	}
 	if !validIn(VoiceCategories, in.Category) {
-		return nil, fmt.Errorf("[%d]分类须在白名单内", ErrCodeVoiceParam)
+		return nil, errx.New(ErrCodeVoiceParam, "分类须在白名单内")
 	}
 	if !validIn(SpeakerTypes, in.SpeakerType) {
 		in.SpeakerType = "女声"
 	}
+	db := s.dbh()
 	if in.ID > 0 {
-		var exist model.FanhuaVoiceEntry
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]语音条目不存在", ErrCodeVoiceNotFound)
+		exist, err := s.repo.FindVoiceEntry(db, in.ID)
+		if err != nil {
+			return nil, errx.New(ErrCodeVoiceNotFound, "语音条目不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdateVoiceEntryColumns(db, exist.ID, map[string]any{
 			"title": in.Title, "category": in.Category, "content": in.Content,
 			"speaker_type": in.SpeakerType, "duration_sec": in.DurationSec,
 			"media_path": in.MediaPath, "text_source": in.TextSource,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeFanhuaStore, "更新语音条目失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateVoiceEntry(db, in); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "创建语音条目失败", err)
 	}
 	return in, nil
 }
 
 // DeleteVoiceEntry 删除语音条目（软删除）
 func (s *FanhuaService) DeleteVoiceEntry(id uint) error {
-	res := global.GVA_DB.Delete(&model.FanhuaVoiceEntry{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteVoiceEntry(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeFanhuaStore, "删除语音条目失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]语音条目不存在", ErrCodeVoiceNotFound)
+	if rows == 0 {
+		return errx.New(ErrCodeVoiceNotFound, "语音条目不存在")
 	}
 	return nil
 }
@@ -150,21 +137,12 @@ func (s *FanhuaService) GetVoiceEntries(category, speakerType string, page, page
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaVoiceEntry{})
-	if category != "" {
-		if !validIn(VoiceCategories, category) {
-			return nil, 0, fmt.Errorf("[%d]不支持的分类: %s", ErrCodeVoiceParam, category)
-		}
-		db = db.Where("category = ?", category)
+	if category != "" && !validIn(VoiceCategories, category) {
+		return nil, 0, errx.New(ErrCodeVoiceParam, "不支持的分类: "+category)
 	}
-	if speakerType != "" {
-		db = db.Where("speaker_type = ?", speakerType)
+	list, total, err := s.repo.VoiceEntryList(s.dbh(), category, speakerType, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询语音条目失败", err)
 	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.FanhuaVoiceEntry
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

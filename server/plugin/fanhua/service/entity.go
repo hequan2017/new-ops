@@ -5,17 +5,16 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
 const (
-	ErrCodeEntityParam = 2611
+	ErrCodeEntityParam    = 2611
 	ErrCodeEntityNotFound = 2612
 )
 
@@ -112,17 +111,18 @@ func entityMatch(text string, entities []model.FanhuaEntity) []EntityHitTerm {
 // AnnotateText 实体标注（匹配→结果落库）
 func (s *FanhuaService) AnnotateText(text string, corpusId uint) (map[string]any, error) {
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("[%d]标注文本必填", ErrCodeEntityParam)
+		return nil, errx.New(ErrCodeEntityParam, "标注文本必填")
 	}
-	var entities []model.FanhuaEntity
-	if err := global.GVA_DB.Limit(5000).Find(&entities).Error; err != nil {
-		return nil, err
+	db := s.dbh()
+	entities, err := s.repo.EntitiesScan(db)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "扫描实体失败", err)
 	}
 	hits := entityMatch(text, entities)
 	b, _ := json.Marshal(hits)
 	rec := &model.FanhuaEntityHit{CorpusId: corpusId, Text: text, HitsJSON: string(b)}
-	if err := global.GVA_DB.Create(rec).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateEntityHit(db, rec); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "落标注记录失败", err)
 	}
 	return map[string]any{"record": rec, "hits": hits}, nil
 }
@@ -130,38 +130,41 @@ func (s *FanhuaService) AnnotateText(text string, corpusId uint) (map[string]any
 // SaveEntity 新建/更新实体
 func (s *FanhuaService) SaveEntity(in *model.FanhuaEntity) (*model.FanhuaEntity, error) {
 	if strings.TrimSpace(in.Term) == "" || !ValidEntityCategory(in.Category) {
-		return nil, fmt.Errorf("[%d]词条必填且分类须在白名单内", ErrCodeEntityParam)
+		return nil, errx.New(ErrCodeEntityParam, "词条必填且分类须在白名单内")
 	}
 	if strings.TrimSpace(in.AliasJSON) != "" {
 		var aliases []string
 		if err := json.Unmarshal([]byte(in.AliasJSON), &aliases); err != nil {
-			return nil, fmt.Errorf("[%d]别名须为字符串 JSON 数组", ErrCodeEntityParam)
+			return nil, errx.New(ErrCodeEntityParam, "别名须为字符串 JSON 数组")
 		}
 	}
+	db := s.dbh()
 	if in.ID > 0 {
-		var exist model.FanhuaEntity
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]实体不存在", ErrCodeEntityNotFound)
+		exist, err := s.repo.FindEntity(db, in.ID)
+		if err != nil {
+			return nil, errx.New(ErrCodeEntityNotFound, "实体不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdateEntityColumns(db, exist.ID, map[string]any{
 			"category": in.Category, "term": in.Term, "alias_json": in.AliasJSON, "desc": in.Desc,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeFanhuaStore, "更新实体失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateEntity(db, in); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "创建实体失败", err)
 	}
 	return in, nil
 }
 
 // DeleteEntity 删除实体（软删除）
 func (s *FanhuaService) DeleteEntity(id uint) error {
-	res := global.GVA_DB.Delete(&model.FanhuaEntity{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteEntity(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeFanhuaStore, "删除实体失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]实体不存在", ErrCodeEntityNotFound)
+	if rows == 0 {
+		return errx.New(ErrCodeEntityNotFound, "实体不存在")
 	}
 	return nil
 }
@@ -174,20 +177,14 @@ func (s *FanhuaService) GetEntities(category string, page, pageSize int) ([]mode
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaEntity{})
-	if category != "" {
-		if !ValidEntityCategory(category) {
-			return nil, 0, fmt.Errorf("[%d]不支持的分类: %s", ErrCodeEntityParam, category)
-		}
-		db = db.Where("category = ?", category)
+	if category != "" && !ValidEntityCategory(category) {
+		return nil, 0, errx.New(ErrCodeEntityParam, "不支持的分类: "+category)
 	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
+	list, total, err := s.repo.EntityList(s.dbh(), category, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询实体失败", err)
 	}
-	var list []model.FanhuaEntity
-	err := db.Order("category, id").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // GetEntityHits 标注记录列表（倒序分页）
@@ -198,12 +195,9 @@ func (s *FanhuaService) GetEntityHits(page, pageSize int) ([]model.FanhuaEntityH
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaEntityHit{})
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
+	list, total, err := s.repo.EntityHitList(s.dbh(), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询标注记录失败", err)
 	}
-	var list []model.FanhuaEntityHit
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

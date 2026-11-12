@@ -5,12 +5,11 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
@@ -34,11 +33,11 @@ func riskLevel(res healthResult) string {
 // AuditValues 价值观审查（词表→健康度→分级→预警→日志）
 func (s *FanhuaService) AuditValues(text string) (*model.FanhuaValuesAuditLog, error) {
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("[%d]审查文本必填", ErrCodeAuditParam)
+		return nil, errx.New(ErrCodeAuditParam, "审查文本必填")
 	}
-	var words []model.FanhuaSensitiveWord
-	if err := global.GVA_DB.Where("enabled = ?", true).Limit(5000).Find(&words).Error; err != nil {
-		return nil, err
+	words, err := s.repo.EnabledWords(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "查询敏感词失败", err)
 	}
 	started := time.Now()
 	res := computeHealth(text, words)
@@ -51,8 +50,8 @@ func (s *FanhuaService) AuditValues(text string) (*model.FanhuaValuesAuditLog, e
 	}
 	b, _ := json.Marshal(res.Hits)
 	log.HitsJSON = string(b)
-	if err := global.GVA_DB.Create(log).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateValuesAuditLog(s.dbh(), log); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "落审查日志失败", err)
 	}
 	return log, nil
 }
@@ -65,21 +64,12 @@ func (s *FanhuaService) GetValuesAuditLogs(riskLevelFilter string, alarmOnly boo
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaValuesAuditLog{})
-	if riskLevelFilter != "" {
-		if riskLevelFilter != "高" && riskLevelFilter != "中" && riskLevelFilter != "低" {
-			return nil, 0, fmt.Errorf("[%d]风险等级须为 高/中/低", ErrCodeAuditParam)
-		}
-		db = db.Where("risk_level = ?", riskLevelFilter)
+	if riskLevelFilter != "" && riskLevelFilter != "高" && riskLevelFilter != "中" && riskLevelFilter != "低" {
+		return nil, 0, errx.New(ErrCodeAuditParam, "风险等级须为 高/中/低")
 	}
-	if alarmOnly {
-		db = db.Where("alarm = ?", true)
+	list, total, err := s.repo.ValuesAuditLogList(s.dbh(), riskLevelFilter, alarmOnly, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询审查日志失败", err)
 	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.FanhuaValuesAuditLog
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

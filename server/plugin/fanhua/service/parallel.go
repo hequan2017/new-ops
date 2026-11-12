@@ -4,11 +4,11 @@
 package service
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/csvx"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
@@ -69,7 +69,9 @@ type paraHit struct {
 	Score float64 `json:"score"`
 }
 
-// rankParallel 对照排序（纯函数，测试锚点）：普→沪相似度取 max(Pu 命中, Sh 命中)
+// rankParallel 对照排序（纯函数，测试锚点）：普→沪相似度取 max(Pu 命中, Sh 命中)。
+// 编辑相似度与 text.Bigrams/Score 的 bigram 集合计数不等价（N03 口径为连续子串编辑距离，
+// 可度量长句渐进相似；bigram 集合计数无此单调性），保留本地实现与本地排序。
 func rankParallel(rows []model.FanhuaParallel, query string, topK int) []paraHit {
 	hits := make([]paraHit, 0, len(rows))
 	for _, r := range rows {
@@ -93,7 +95,7 @@ func rankParallel(rows []model.FanhuaParallel, query string, topK int) []paraHit
 // validateParallel 保存校验（纯函数）
 func validateParallel(in *model.FanhuaParallel) error {
 	if strings.TrimSpace(in.Sh) == "" || strings.TrimSpace(in.Pu) == "" {
-		return fmt.Errorf("[%d]沪语与普通话句子必填", ErrCodeParaField)
+		return errx.New(ErrCodeParaField, "沪语与普通话句子必填")
 	}
 	return nil
 }
@@ -101,14 +103,14 @@ func validateParallel(in *model.FanhuaParallel) error {
 // SearchParallel 对照检索（普→沪 top-k）
 func (s *FanhuaService) SearchParallel(query string, topK int) ([]paraHit, error) {
 	if strings.TrimSpace(query) == "" {
-		return nil, fmt.Errorf("[%d]检索语句必填", ErrCodeParaField)
+		return nil, errx.New(ErrCodeParaField, "检索语句必填")
 	}
 	if topK < 1 || topK > 50 {
 		topK = 5
 	}
-	var rows []model.FanhuaParallel
-	if err := global.GVA_DB.Limit(5000).Find(&rows).Error; err != nil {
-		return nil, err
+	rows, err := s.repo.ParallelsScan(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "扫描平行语料失败", err)
 	}
 	return rankParallel(rows, query, topK), nil
 }
@@ -118,30 +120,33 @@ func (s *FanhuaService) SaveParallel(in *model.FanhuaParallel) (*model.FanhuaPar
 	if err := validateParallel(in); err != nil {
 		return nil, err
 	}
+	db := s.dbh()
 	if in.ID > 0 {
-		var exist model.FanhuaParallel
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]平行语料不存在", ErrCodeParaNotFound)
+		exist, err := s.repo.FindParallel(db, in.ID)
+		if err != nil {
+			return nil, errx.New(ErrCodeParaNotFound, "平行语料不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdateParallelColumns(db, exist.ID, map[string]any{
 			"sh": in.Sh, "pu": in.Pu, "en": in.En, "source": in.Source,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeFanhuaStore, "更新平行语料失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateParallel(db, in); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "创建平行语料失败", err)
 	}
 	return in, nil
 }
 
 // DeleteParallel 删除平行语料（软删除）
 func (s *FanhuaService) DeleteParallel(id uint) error {
-	res := global.GVA_DB.Delete(&model.FanhuaParallel{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteParallel(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeFanhuaStore, "删除平行语料失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]平行语料不存在", ErrCodeParaNotFound)
+	if rows == 0 {
+		return errx.New(ErrCodeParaNotFound, "平行语料不存在")
 	}
 	return nil
 }
@@ -154,42 +159,28 @@ func (s *FanhuaService) GetParallels(keyword string, page, pageSize int) ([]mode
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaParallel{})
-	if kw := strings.TrimSpace(keyword); kw != "" {
-		db = db.Where("sh LIKE ? OR pu LIKE ? OR en LIKE ?", "%"+kw+"%", "%"+kw+"%", "%"+kw+"%")
+	list, total, err := s.repo.ParallelList(s.dbh(), strings.TrimSpace(keyword), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询平行语料失败", err)
 	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.FanhuaParallel
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
-// parallelsToCSV 平行语料 CSV（纯函数，测试锚点，I07 口径：半角逗号转全角防串列）
+// parallelsToCSV 平行语料 CSV（纯函数，测试锚点，I07 口径）：复用 csvx.Builder
+// 全字段清洗（换行折空格先于逗号转全角），与原实现逐字段 clean 语义等价。
 func parallelsToCSV(list []model.FanhuaParallel) string {
-	var sb strings.Builder
-	sb.WriteString("沪语,普通话,英语,来源\n")
+	b := csvx.New("沪语", "普通话", "英语", "来源")
 	for _, r := range list {
-		clean := func(v string) string {
-			v = strings.ReplaceAll(v, "\n", " ")
-			return strings.ReplaceAll(v, ",", "，")
-		}
-		sb.WriteString(fmt.Sprintf("%s,%s,%s,%s\n", clean(r.Sh), clean(r.Pu), clean(r.En), clean(r.Source)))
+		b.Row(r.Sh, r.Pu, r.En, r.Source)
 	}
-	return sb.String()
+	return b.String()
 }
 
 // ExportParallels 平行语料 CSV 导出（来源过滤，倒序 ≤5000 行）
 func (s *FanhuaService) ExportParallels(source string) (string, error) {
-	db := global.GVA_DB.Model(&model.FanhuaParallel{})
-	if source != "" {
-		db = db.Where("source = ?", source)
-	}
-	var list []model.FanhuaParallel
-	if err := db.Order("id DESC").Limit(5000).Find(&list).Error; err != nil {
-		return "", err
+	list, err := s.repo.ParallelsForExport(s.dbh(), source)
+	if err != nil {
+		return "", errx.Wrap(ErrCodeFanhuaStore, "扫描平行语料导出失败", err)
 	}
 	return parallelsToCSV(list), nil
 }

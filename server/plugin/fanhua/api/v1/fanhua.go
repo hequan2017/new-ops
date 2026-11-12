@@ -9,6 +9,8 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/response"
 
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/service"
 )
@@ -55,7 +57,7 @@ func (a *FanhuaApi) SaveCorpus(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveCorpus(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "保存失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -76,7 +78,7 @@ func (a *FanhuaApi) DeleteCorpus(c *gin.Context) {
 		return
 	}
 	if err := service.FanhuaApp.DeleteCorpus(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -99,7 +101,7 @@ func (a *FanhuaApi) GetCorpora(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetCorpora(c.Query("source"), c.Query("lang"), c.Query("keyword"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -122,7 +124,7 @@ func (a *FanhuaApi) ImportCorpora(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.ImportCorpora(in.Format, in.Content)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "导入失败")
 		return
 	}
 	response.OkWithDetailed(out, "导入完成", c)
@@ -145,7 +147,7 @@ func (a *FanhuaApi) SaveParallel(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveParallel(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "保存失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -166,7 +168,7 @@ func (a *FanhuaApi) DeleteParallel(c *gin.Context) {
 		return
 	}
 	if err := service.FanhuaApp.DeleteParallel(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -187,7 +189,7 @@ func (a *FanhuaApi) GetParallels(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetParallels(c.Query("keyword"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -206,7 +208,7 @@ func (a *FanhuaApi) SearchParallel(c *gin.Context) {
 	topK, _ := strconv.Atoi(c.DefaultQuery("topK", "5"))
 	hits, err := service.FanhuaApp.SearchParallel(c.Query("query"), topK)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "检索失败")
 		return
 	}
 	response.OkWithDetailed(hits, "检索成功", c)
@@ -260,7 +262,7 @@ func (a *FanhuaApi) CleanCorpora(c *gin.Context) {
 	}
 	reports, err := service.FanhuaApp.CleanCorpora(in.IDs, in.Dedupe)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "清洗失败")
 		return
 	}
 	response.OkWithDetailed(reports, "清洗完成", c)
@@ -315,7 +317,7 @@ func (a *FanhuaApi) SaveEntity(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveEntity(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "保存失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -336,7 +338,7 @@ func (a *FanhuaApi) DeleteEntity(c *gin.Context) {
 		return
 	}
 	if err := service.FanhuaApp.DeleteEntity(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -357,7 +359,7 @@ func (a *FanhuaApi) GetEntities(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetEntities(c.Query("category"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -380,7 +382,7 @@ func (a *FanhuaApi) AnnotateText(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.AnnotateText(in.Text, in.CorpusId)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "标注失败")
 		return
 	}
 	response.OkWithDetailed(out, "标注成功", c)
@@ -400,7 +402,7 @@ func (a *FanhuaApi) GetEntityHits(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetEntityHits(page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -439,7 +441,7 @@ func (a *FanhuaApi) BuildTextLabels(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.BuildTextLabels(in.TrainRatio, in.Limit)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "构建失败")
 		return
 	}
 	response.OkWithDetailed(out, "构建完成", c)
@@ -462,7 +464,7 @@ func (a *FanhuaApi) UpdateLabel(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.UpdateLabel(in.ID, in.Sentiment, in.Split)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "改标失败")
 		return
 	}
 	response.OkWithDetailed(out, "改标成功", c)
@@ -484,7 +486,7 @@ func (a *FanhuaApi) GetTextLabels(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetTextLabels(c.Query("split"), c.Query("sentiment"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -500,7 +502,7 @@ func (a *FanhuaApi) GetTextLabels(c *gin.Context) {
 func (a *FanhuaApi) LabelStats(c *gin.Context) {
 	out, err := service.FanhuaApp.LabelStats()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(out, "获取成功", c)
@@ -529,7 +531,7 @@ func (a *FanhuaApi) SaveImageAsset(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveImageAsset(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "登记失败")
 		return
 	}
 	response.OkWithDetailed(out, "登记成功", c)
@@ -551,7 +553,7 @@ func (a *FanhuaApi) GetImageAssets(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetImageAssets(c.Query("split"), c.Query("keyword"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -574,7 +576,7 @@ func (a *FanhuaApi) LabelImage(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.LabelImage(in.AssetId, in.TagsJSON)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "标注失败")
 		return
 	}
 	response.OkWithDetailed(out, "标注成功", c)
@@ -595,7 +597,7 @@ func (a *FanhuaApi) GetImageLabels(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetImageLabels(c.Query("labeled"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -629,7 +631,7 @@ func (a *FanhuaApi) SaveVoiceEntry(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveVoiceEntry(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "保存失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -650,7 +652,7 @@ func (a *FanhuaApi) DeleteVoiceEntry(c *gin.Context) {
 		return
 	}
 	if err := service.FanhuaApp.DeleteVoiceEntry(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -672,7 +674,7 @@ func (a *FanhuaApi) GetVoiceEntries(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetVoiceEntries(c.Query("category"), c.Query("speakerType"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -695,7 +697,7 @@ func (a *FanhuaApi) SearchCulture(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SearchCulture(in.Query, in.Category, in.SpeakerType, in.TopK)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "检索失败")
 		return
 	}
 	response.OkWithDetailed(out, "检索成功", c)
@@ -721,7 +723,7 @@ func (a *FanhuaApi) GetWords(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetWords(c.Query("action"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -744,7 +746,7 @@ func (a *FanhuaApi) SaveWord(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveWord(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "保存失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -765,7 +767,7 @@ func (a *FanhuaApi) DeleteWord(c *gin.Context) {
 		return
 	}
 	if err := service.FanhuaApp.DeleteWord(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -788,7 +790,7 @@ func (a *FanhuaApi) GetHealth(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.GetHealth(in.Text)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "评估失败")
 		return
 	}
 	response.OkWithDetailed(out, "评估成功", c)
@@ -804,7 +806,7 @@ func (a *FanhuaApi) GetHealth(c *gin.Context) {
 func (a *FanhuaApi) GetTemplates(c *gin.Context) {
 	list, err := service.FanhuaApp.GetTemplates()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -821,7 +823,7 @@ func (a *FanhuaApi) GetTemplates(c *gin.Context) {
 func (a *FanhuaApi) GetConflictCases(c *gin.Context) {
 	list, err := service.FanhuaApp.GetConflictCases(c.Query("lang"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -844,7 +846,7 @@ func (a *FanhuaApi) SaveIndicator(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveIndicator(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "保存失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -865,7 +867,7 @@ func (a *FanhuaApi) DeleteIndicator(c *gin.Context) {
 		return
 	}
 	if err := service.FanhuaApp.DeleteIndicator(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -881,7 +883,7 @@ func (a *FanhuaApi) DeleteIndicator(c *gin.Context) {
 func (a *FanhuaApi) GetIndicatorTree(c *gin.Context) {
 	roots, err := service.FanhuaApp.GetIndicatorTree()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(roots, "获取成功", c)
@@ -904,7 +906,7 @@ func (a *FanhuaApi) SaveDataPoint(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveDataPoint(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "写入失败")
 		return
 	}
 	response.OkWithDetailed(out, "写入成功", c)
@@ -926,7 +928,7 @@ func (a *FanhuaApi) GetDataPoints(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetDataPoints(c.Query("region"), c.Query("period"), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -944,7 +946,7 @@ func (a *FanhuaApi) GetDataPoints(c *gin.Context) {
 func (a *FanhuaApi) GetRegionProfile(c *gin.Context) {
 	out, err := service.FanhuaApp.GetRegionProfile(c.Query("region"), c.Query("period"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(out, "获取成功", c)
@@ -973,7 +975,7 @@ func (a *FanhuaApi) SavePromptTemplate(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SavePromptTemplate(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "保存失败")
 		return
 	}
 	response.OkWithDetailed(out, "保存成功", c)
@@ -994,7 +996,7 @@ func (a *FanhuaApi) DeletePromptTemplate(c *gin.Context) {
 		return
 	}
 	if err := service.FanhuaApp.DeletePromptTemplate(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -1011,7 +1013,7 @@ func (a *FanhuaApi) DeletePromptTemplate(c *gin.Context) {
 func (a *FanhuaApi) GetPromptTemplates(c *gin.Context) {
 	list, err := service.FanhuaApp.GetPromptTemplates(c.Query("scene"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -1034,7 +1036,7 @@ func (a *FanhuaApi) RenderPrompt(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.RenderPromptByName(in.Name, in.Vars)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "渲染失败")
 		return
 	}
 	response.OkWithDetailed(out, "渲染成功", c)
@@ -1068,7 +1070,7 @@ func (a *FanhuaApi) DialectQA(c *gin.Context) {
 			response.OkWithDetailed(log, "问答失败（已留痕）: "+err.Error(), c)
 			return
 		}
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "问答失败")
 		return
 	}
 	response.OkWithDetailed(log, "问答完成", c)
@@ -1088,7 +1090,7 @@ func (a *FanhuaApi) GetDialectQaLogs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	list, total, err := service.FanhuaApp.GetDialectQaLogs(page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -1119,7 +1121,7 @@ func (a *FanhuaApi) AuditValues(c *gin.Context) {
 	}
 	log, err := service.FanhuaApp.AuditValues(in.Text)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "审查失败")
 		return
 	}
 	response.OkWithDetailed(log, "审查完成", c)
@@ -1142,7 +1144,7 @@ func (a *FanhuaApi) GetValuesAuditLogs(c *gin.Context) {
 	alarmOnly := c.Query("alarmOnly") == "true"
 	list, total, err := service.FanhuaApp.GetValuesAuditLogs(c.Query("riskLevel"), alarmOnly, page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(gin.H{"list": list, "total": total}, "获取成功", c)
@@ -1165,7 +1167,7 @@ func (a *FanhuaApi) SaveGovPhoto(c *gin.Context) {
 	}
 	out, err := service.FanhuaApp.SaveGovPhoto(&in)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "登记失败")
 		return
 	}
 	response.OkWithDetailed(out, "登记成功", c)
@@ -1183,7 +1185,7 @@ func (a *FanhuaApi) SaveGovPhoto(c *gin.Context) {
 func (a *FanhuaApi) FusionQuery(c *gin.Context) {
 	out, err := service.FanhuaApp.FusionQuery(c.Query("region"), c.Query("period"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "查询失败")
 		return
 	}
 	response.OkWithDetailed(out, "查询成功", c)
@@ -1201,7 +1203,7 @@ func (a *FanhuaApi) FusionQuery(c *gin.Context) {
 func (a *FanhuaApi) ExportCorpora(c *gin.Context) {
 	out, err := service.FanhuaApp.ExportCorpora(c.Query("source"), c.Query("lang"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "导出失败")
 		return
 	}
 	response.OkWithDetailed(out, "导出成功", c)
@@ -1218,7 +1220,7 @@ func (a *FanhuaApi) ExportCorpora(c *gin.Context) {
 func (a *FanhuaApi) ExportParallels(c *gin.Context) {
 	out, err := service.FanhuaApp.ExportParallels(c.Query("source"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "导出失败")
 		return
 	}
 	response.OkWithDetailed(out, "导出成功", c)

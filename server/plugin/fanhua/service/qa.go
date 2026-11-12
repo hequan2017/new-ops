@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/fanhua/model"
 	llmopsService "github.com/hequan2017/new-ops/server/plugin/llmops/service"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（fanhua 段 2600-2699）
@@ -21,6 +21,7 @@ const (
 	ErrCodeQaParam    = 2625
 	ErrCodeQaLLM      = 2626
 	ErrCodeTranslateN = 2627
+	ErrCodeQaBlocked  = 2628
 )
 
 // qaLatencyThresholdMs 响应时延阈值（需求口径 <1.2s）
@@ -31,7 +32,8 @@ type TranslateAdapter interface {
 	Translate(ctx context.Context, text, targetLang string) (string, error)
 }
 
-// NoopTranslateAdapter 默认适配器：未配置明确报错
+// NoopTranslateAdapter 默认适配器：未配置明确报错。
+// 注：此处保留 "[码]" 前缀 fmt.Errorf 口径——既有单测锚定 err.Error() 含 "[2627]"，不可改测。
 type NoopTranslateAdapter struct{}
 
 func (NoopTranslateAdapter) Translate(context.Context, string, string) (string, error) {
@@ -83,19 +85,27 @@ func ruleQaAnswer(question string, refs []paraHit) string {
 	return sb.String()
 }
 
+// truncateRunText2 错误留痕截断（500 字节）。与 text.Truncate 不等价（前者按字节硬截
+// 防 DB 列溢出、无省略号；后者按 rune 截断并加「…」），保留本地实现。
+func truncateRunText2(s string) string {
+	if len(s) > 500 {
+		return s[:500]
+	}
+	return s
+}
+
 // DialectQA 方言问答主流程（前置审查→检索注入→双引擎→日志）
 func (s *FanhuaService) DialectQA(question string, modelId uint, elderMode bool) (*model.FanhuaDialectQaLog, error) {
 	if strings.TrimSpace(question) == "" {
-		return nil, fmt.Errorf("[%d]提问必填", ErrCodeQaParam)
+		return nil, errx.New(ErrCodeQaParam, "提问必填")
 	}
-	// 前置价值观审查（N10 口径复用）
-	var words []model.FanhuaSensitiveWord
-	_ = global.GVA_DB.Where("enabled = ?", true).Limit(5000).Find(&words).Error
+	// 前置价值观审查（N10 口径复用；词表读取失败不阻断问答，与原口径一致）
+	words, _ := s.repo.EnabledWords(s.dbh())
 	health := computeHealth(question, words)
 	if health.Blocked {
 		log := &model.FanhuaDialectQaLog{Question: question, Engine: "rule", ModelId: modelId, WakeCompat: elderMode, Ok: false, ErrMsg: "提问含拦截词，已按价值观规范拒答"}
-		_ = global.GVA_DB.Create(log).Error
-		return log, fmt.Errorf("[2628]提问包含拦截词，已按价值观规范拒答")
+		_ = s.repo.CreateDialectQaLog(s.dbh(), log)
+		return log, errx.New(ErrCodeQaBlocked, "提问包含拦截词，已按价值观规范拒答")
 	}
 	// 平行语料注入
 	refs, _ := s.SearchParallel(question, 3)
@@ -106,7 +116,7 @@ func (s *FanhuaService) DialectQA(question string, modelId uint, elderMode bool)
 	if modelId > 0 {
 		content, err := qaChatFn(context.Background(), modelId, buildQaPrompt(question, refs, elderMode))
 		if err != nil {
-			execErr = fmt.Errorf("[%d]模型调用失败: %w", ErrCodeQaLLM, err)
+			execErr = errx.Wrap(ErrCodeQaLLM, "模型调用失败", err)
 		} else {
 			answer = content
 			log.Engine = "llm"
@@ -124,21 +134,13 @@ func (s *FanhuaService) DialectQA(question string, modelId uint, elderMode bool)
 	if execErr != nil {
 		log.ErrMsg = truncateRunText2(execErr.Error())
 	}
-	if err := global.GVA_DB.Create(log).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateDialectQaLog(s.dbh(), log); err != nil {
+		return nil, errx.Wrap(ErrCodeFanhuaStore, "落问答日志失败", err)
 	}
 	if execErr != nil {
 		return log, execErr
 	}
 	return log, nil
-}
-
-// truncateRunText2 错误留痕截断（500 字节）
-func truncateRunText2(s string) string {
-	if len(s) > 500 {
-		return s[:500]
-	}
-	return s
 }
 
 // GetDialectQaLogs 问答日志列表（倒序分页）
@@ -149,12 +151,9 @@ func (s *FanhuaService) GetDialectQaLogs(page, pageSize int) ([]model.FanhuaDial
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.FanhuaDialectQaLog{})
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
+	list, total, err := s.repo.DialectQaLogList(s.dbh(), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeFanhuaStore, "查询问答日志失败", err)
 	}
-	var list []model.FanhuaDialectQaLog
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
