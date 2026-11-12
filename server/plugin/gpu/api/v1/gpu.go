@@ -14,12 +14,13 @@ import (
 	"github.com/hequan2017/new-ops/server/model/common/response"
 	gpuModel "github.com/hequan2017/new-ops/server/plugin/gpu/model"
 	"github.com/hequan2017/new-ops/server/plugin/gpu/service"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/utils"
 )
 
 var GpuApi = new(gpuApi)
 
-var gpuSvc = new(service.GpuService)
+var gpuSvc = service.Service
 
 type gpuApi struct{}
 
@@ -39,7 +40,7 @@ func (a *gpuApi) CreateNode(c *gin.Context) {
 		return
 	}
 	if err := gpuSvc.CreateNode(&n); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "创建失败")
 		return
 	}
 	response.OkWithMessage("创建成功", c)
@@ -61,7 +62,7 @@ func (a *gpuApi) UpdateNode(c *gin.Context) {
 		return
 	}
 	if err := gpuSvc.UpdateNode(&n); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "更新失败")
 		return
 	}
 	response.OkWithMessage("更新成功", c)
@@ -82,7 +83,7 @@ func (a *gpuApi) DeleteNode(c *gin.Context) {
 		return
 	}
 	if err := gpuSvc.DeleteNode(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -98,7 +99,7 @@ func (a *gpuApi) DeleteNode(c *gin.Context) {
 func (a *gpuApi) ListNode(c *gin.Context) {
 	list, err := gpuSvc.GetNodeList()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -120,7 +121,7 @@ func (a *gpuApi) CreateSpec(c *gin.Context) {
 		return
 	}
 	if err := gpuSvc.CreateSpec(&sp); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "创建失败")
 		return
 	}
 	response.OkWithMessage("创建成功", c)
@@ -141,7 +142,7 @@ func (a *gpuApi) DeleteSpec(c *gin.Context) {
 		return
 	}
 	if err := gpuSvc.DeleteSpec(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "删除失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -157,7 +158,7 @@ func (a *gpuApi) DeleteSpec(c *gin.Context) {
 func (a *gpuApi) ListSpec(c *gin.Context) {
 	list, err := gpuSvc.GetSpecList()
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -185,7 +186,7 @@ func (a *gpuApi) StartInstance(c *gin.Context) {
 	inst, err := gpuSvc.StartInstance(req.NodeID, req.SpecID, req.Name,
 		utils.GetUserName(c), utils.GetUserID(c))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "开通失败")
 		return
 	}
 	response.OkWithDetailed(inst, "开通成功", c)
@@ -206,7 +207,7 @@ func (a *gpuApi) ReleaseInstance(c *gin.Context) {
 		return
 	}
 	if err := gpuSvc.ReleaseInstance(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "销毁失败")
 		return
 	}
 	response.OkWithMessage("销毁成功", c)
@@ -227,7 +228,7 @@ func (a *gpuApi) ListInstance(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.Query("pageSize"))
 	list, total, err := gpuSvc.GetInstanceList(c.Query("status"), uint(nodeID), uint(userID), page, pageSize)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "获取失败")
 		return
 	}
 	if page > 0 {
@@ -252,7 +253,7 @@ func (a *gpuApi) ExportInstance(c *gin.Context) {
 	userID, _ := strconv.ParseUint(c.Query("userId"), 10, 64)
 	list, _, err := gpuSvc.GetInstanceList(c.Query("status"), uint(nodeID), uint(userID), 0, 0)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "导出失败")
 		return
 	}
 	buf := &bytes.Buffer{}

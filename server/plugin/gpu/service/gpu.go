@@ -7,14 +7,17 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/gpu/model"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
+	"github.com/hequan2017/new-ops/server/plugin/gpu/repo"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码
 const (
+	ErrCodeGpuStore         = 1600
 	ErrCodeGpuNameRequired  = 1601
 	ErrCodeGpuDuplicate     = 1602
 	ErrCodeGpuNotFound      = 1603
@@ -23,96 +26,98 @@ const (
 	ErrCodeGpuNodeOffline   = 1606
 )
 
-func newGpuErr(code int, msg string) error { return &gpuError{Code: code, Msg: msg} }
-
-type gpuError struct {
-	Code int
-	Msg  string
+// GpuService GPU 服务（依赖注入：db 为 nil 时惰性回退底座全局库——
+// 包级单例构造早于底座建库，禁止在构造期捕获 GVA_DB）
+type GpuService struct {
+	db   *gorm.DB
+	repo *repo.Repo
 }
 
-func (e *gpuError) Error() string { return e.Msg }
+// NewGpuService 构造：显式传 db 供单测内存库注入，生产传 nil
+func NewGpuService(db *gorm.DB) *GpuService {
+	return &GpuService{db: db, repo: new(repo.Repo)}
+}
 
-// GpuService GPU 服务
-type GpuService struct{}
+// dbh 当前会话：显式注入优先，否则底座全局库
+func (s *GpuService) dbh() *gorm.DB {
+	if s.db != nil {
+		return s.db
+	}
+	return global.GVA_DB
+}
 
 // canAllocate 配额校验（纯逻辑，可单测）：total - used >= want
 func canAllocate(total, used, want int) bool {
 	return want > 0 && total-used >= want
 }
 
-// nodeUsageAgg 节点占用聚合行（单节点与批量共用列口径）
-type nodeUsageAgg struct {
-	NodeID uint
-	Gpu    int
-	Cpu    int
-	Mem    int
-}
-
-// nodeUsage 节点当前占用量（运行中实例汇总）
-func nodeUsage(tx *gorm.DB, nodeID uint) (gpu, cpu, mem int, err error) {
-	var a nodeUsageAgg
-	err = tx.Model(&model.GpuInstance{}).
-		Select("COALESCE(SUM(gpu_allocated),0) as gpu, COALESCE(SUM(cpu_allocated),0) as cpu, COALESCE(SUM(mem_alloc_gb),0) as mem").
-		Where("node_id = ? AND status = ?", nodeID, model.InstRunning).
-		Scan(&a).Error
-	return a.Gpu, a.Cpu, a.Mem, err
-}
-
 // CreateNode 注册算力节点
 func (s *GpuService) CreateNode(n *model.GpuNode) error {
 	if strings.TrimSpace(n.Name) == "" || n.GpuTotal <= 0 {
-		return newGpuErr(ErrCodeGpuNameRequired, "节点名称与 GPU 卡数必填")
+		return errx.New(ErrCodeGpuNameRequired, "节点名称与 GPU 卡数必填")
 	}
-	var count int64
-	global.GVA_DB.Model(&model.GpuNode{}).Where("name = ?", n.Name).Count(&count)
+	db := s.dbh()
+	count, err := s.repo.NodeCountByName(db, n.Name)
+	if err != nil {
+		return errx.Wrap(ErrCodeGpuStore, "查询节点失败", err)
+	}
 	if count > 0 {
-		return newGpuErr(ErrCodeGpuDuplicate, "节点已存在: "+n.Name)
+		return errx.New(ErrCodeGpuDuplicate, "节点已存在: "+n.Name)
 	}
 	if n.Status == "" {
 		n.Status = model.NodeOnline
 	}
-	return global.GVA_DB.Create(n).Error
+	if err := s.repo.CreateNode(db, n); err != nil {
+		return errx.Wrap(ErrCodeGpuStore, "创建节点失败", err)
+	}
+	return nil
 }
 
 // UpdateNode 更新节点
 func (s *GpuService) UpdateNode(n *model.GpuNode) error {
 	if n == nil || n.ID == 0 {
-		return newGpuErr(ErrCodeGpuNameRequired, "节点ID不能为空")
+		return errx.New(ErrCodeGpuNameRequired, "节点ID不能为空")
 	}
 	// 缩容校验须与 StartInstance 同一把行锁互斥：原 SUM 为无锁读，校验与更新之间存在窗口——
 	// 并发开通插入新实例并提交后，仍可把总量改到低于实际已用量，打破防超卖不变量
-	return global.GVA_DB.Transaction(func(tx *gorm.DB) error {
-		var row model.GpuNode
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, n.ID).Error; err != nil {
-			return newGpuErr(ErrCodeGpuNotFound, "节点不存在")
-		}
-		gpuUsed, cpuUsed, memUsed, err := nodeUsage(tx, n.ID)
+	err := s.dbh().Transaction(func(tx *gorm.DB) error {
+		row, err := s.repo.FindNodeForUpdate(tx, n.ID)
 		if err != nil {
-			return fmt.Errorf("查询节点占用失败: %w", err)
+			return errx.New(ErrCodeGpuNotFound, "节点不存在")
 		}
-		if n.GpuTotal < gpuUsed || n.CpuTotal < cpuUsed || n.MemTotalGb < memUsed {
-			return newGpuErr(ErrCodeGpuOversold, "总量不可低于运行中实例的已分配量")
+		usage, err := s.repo.NodeUsage(tx, n.ID)
+		if err != nil {
+			return errx.Wrap(ErrCodeGpuStore, "查询节点占用失败", err)
 		}
-		return tx.Model(&model.GpuNode{}).Where("id = ?", n.ID).Updates(map[string]any{
+		if n.GpuTotal < usage.Gpu || n.CpuTotal < usage.Cpu || n.MemTotalGb < usage.Mem {
+			return errx.New(ErrCodeGpuOversold, "总量不可低于运行中实例的已分配量")
+		}
+		return s.repo.UpdateNodeColumns(tx, row.ID, map[string]any{
 			"name": n.Name, "gpu_model": n.GpuModel, "gpu_total": n.GpuTotal,
 			"cpu_total": n.CpuTotal, "mem_total_gb": n.MemTotalGb,
 			"status": n.Status, "notes": n.Notes,
-		}).Error
+		})
 	})
+	return err
 }
 
 // DeleteNode 删除节点（有运行中实例拒绝）
 func (s *GpuService) DeleteNode(id uint) error {
-	var running int64
-	global.GVA_DB.Model(&model.GpuInstance{}).
-		Where("node_id = ? AND status = ?", id, model.InstRunning).Count(&running)
-	if running > 0 {
-		return newGpuErr(ErrCodeGpuOversold, fmt.Sprintf("仍有 %d 个运行中实例，不可删除", running))
+	db := s.dbh()
+	running, err := s.repo.RunningInstanceCount(db, id)
+	if err != nil {
+		return errx.Wrap(ErrCodeGpuStore, "查询运行中实例失败", err)
 	}
-	return global.GVA_DB.Delete(&model.GpuNode{}, id).Error
+	if running > 0 {
+		return errx.New(ErrCodeGpuOversold, fmt.Sprintf("仍有 %d 个运行中实例，不可删除", running))
+	}
+	if err := s.repo.DeleteNode(db, id); err != nil {
+		return errx.Wrap(ErrCodeGpuStore, "删除节点失败", err)
+	}
+	return nil
 }
 
-// GetNodeList 节点列表（含余量计算）
+// NodeWithUsage 节点列表行（含余量）
 type NodeWithUsage struct {
 	model.GpuNode
 	GpuUsed int `json:"gpuUsed"`
@@ -120,28 +125,21 @@ type NodeWithUsage struct {
 	MemUsed int `json:"memUsed"`
 }
 
+// GetNodeList 节点列表（含余量计算）
 func (s *GpuService) GetNodeList() ([]NodeWithUsage, error) {
-	var nodes []model.GpuNode
-	if err := global.GVA_DB.Order("id DESC").Find(&nodes).Error; err != nil {
-		return nil, fmt.Errorf("查询节点列表失败: %w", err)
+	db := s.dbh()
+	nodes, err := s.repo.NodeList(db)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeGpuStore, "查询节点列表失败", err)
 	}
 	// 一次 GROUP BY 批量取占用（原逐节点查询的 N+1）
-	usage := map[uint]nodeUsageAgg{}
-	if len(nodes) > 0 {
-		ids := make([]uint, 0, len(nodes))
-		for _, n := range nodes {
-			ids = append(ids, n.ID)
-		}
-		var rows []nodeUsageAgg
-		if err := global.GVA_DB.Model(&model.GpuInstance{}).
-			Select("node_id, COALESCE(SUM(gpu_allocated),0) as gpu, COALESCE(SUM(cpu_allocated),0) as cpu, COALESCE(SUM(mem_alloc_gb),0) as mem").
-			Where("node_id IN ? AND status = ?", ids, model.InstRunning).
-			Group("node_id").Scan(&rows).Error; err != nil {
-			return nil, fmt.Errorf("查询节点占用聚合失败: %w", err)
-		}
-		for _, r := range rows {
-			usage[r.NodeID] = r
-		}
+	ids := make([]uint, 0, len(nodes))
+	for _, n := range nodes {
+		ids = append(ids, n.ID)
+	}
+	usage, err := s.repo.NodeUsageBatch(db, ids)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeGpuStore, "查询节点占用聚合失败", err)
 	}
 	out := make([]NodeWithUsage, 0, len(nodes))
 	for _, n := range nodes {
@@ -154,62 +152,73 @@ func (s *GpuService) GetNodeList() ([]NodeWithUsage, error) {
 // CreateSpec 创建规格
 func (s *GpuService) CreateSpec(sp *model.GpuSpec) error {
 	if strings.TrimSpace(sp.Name) == "" || sp.GpuCount <= 0 {
-		return newGpuErr(ErrCodeGpuNameRequired, "规格名称与 GPU 卡数必填")
+		return errx.New(ErrCodeGpuNameRequired, "规格名称与 GPU 卡数必填")
 	}
-	var count int64
-	global.GVA_DB.Model(&model.GpuSpec{}).Where("name = ?", sp.Name).Count(&count)
+	db := s.dbh()
+	count, err := s.repo.SpecCountByName(db, sp.Name)
+	if err != nil {
+		return errx.Wrap(ErrCodeGpuStore, "查询规格失败", err)
+	}
 	if count > 0 {
-		return newGpuErr(ErrCodeGpuDuplicate, "规格已存在: "+sp.Name)
+		return errx.New(ErrCodeGpuDuplicate, "规格已存在: "+sp.Name)
 	}
-	return global.GVA_DB.Create(sp).Error
+	if err := s.repo.CreateSpec(db, sp); err != nil {
+		return errx.Wrap(ErrCodeGpuStore, "创建规格失败", err)
+	}
+	return nil
 }
 
 // DeleteSpec 删除规格
 func (s *GpuService) DeleteSpec(id uint) error {
-	return global.GVA_DB.Delete(&model.GpuSpec{}, id).Error
+	if err := s.repo.DeleteSpec(s.dbh(), id); err != nil {
+		return errx.Wrap(ErrCodeGpuStore, "删除规格失败", err)
+	}
+	return nil
 }
 
 // GetSpecList 规格列表
 func (s *GpuService) GetSpecList() ([]model.GpuSpec, error) {
-	var list []model.GpuSpec
-	err := global.GVA_DB.Order("id DESC").Find(&list).Error
-	return list, err
+	list, err := s.repo.SpecList(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeGpuStore, "查询规格列表失败", err)
+	}
+	return list, nil
 }
 
 // StartInstance 开通实例：事务内行锁节点 → 防超卖校验 → 台账落库
 // 容器实际创建联动 container 插件（后续场次），当前为资源分配台账模式。
 func (s *GpuService) StartInstance(nodeID, specID uint, name, creator string, userID uint) (*model.GpuInstance, error) {
-	var spec model.GpuSpec
-	if err := global.GVA_DB.First(&spec, specID).Error; err != nil {
-		return nil, newGpuErr(ErrCodeGpuNotFound, "规格不存在")
+	db := s.dbh()
+	spec, err := s.repo.FindSpec(db, specID)
+	if err != nil {
+		return nil, errx.New(ErrCodeGpuNotFound, "规格不存在")
 	}
 	if name == "" {
 		name = fmt.Sprintf("gpu-%s-%d", spec.Name, time.Now().Unix()%100000)
 	}
 	var inst *model.GpuInstance
-	err := global.GVA_DB.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 行锁节点（防并发超卖的关键）——gorm:query_option 是 jinzhu/gorm v1 语法，
-		// gorm.io/gorm 下被静默忽略（锁根本没加），必须走 clause.Locking
-		var node model.GpuNode
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			First(&node, nodeID).Error; err != nil {
-			return newGpuErr(ErrCodeGpuNotFound, "节点不存在")
+		// gorm.io/gorm 下被静默忽略（锁根本没加），必须走 clause.Locking（repo 内 WithRowLock）
+		node, err := s.repo.FindNodeForUpdate(tx, nodeID)
+		if err != nil {
+			return errx.New(ErrCodeGpuNotFound, "节点不存在")
 		}
 		if node.Status != model.NodeOnline {
-			return newGpuErr(ErrCodeGpuNodeOffline, "节点离线，不可开通")
+			return errx.New(ErrCodeGpuNodeOffline, "节点离线，不可开通")
 		}
-		gpuUsed, cpuUsed, memUsed, err := nodeUsage(tx, nodeID)
+		usage, err := s.repo.NodeUsage(tx, node.ID)
 		if err != nil {
-			return fmt.Errorf("查询节点占用失败: %w", err)
+			return errx.Wrap(ErrCodeGpuStore, "查询节点占用失败", err)
 		}
-		if !canAllocate(node.GpuTotal, gpuUsed, spec.GpuCount) ||
-			!canAllocate(node.CpuTotal, cpuUsed, spec.CpuCores) ||
-			!canAllocate(node.MemTotalGb, memUsed, spec.MemGb) {
-			return newGpuErr(ErrCodeGpuOversold,
+		if !canAllocate(node.GpuTotal, usage.Gpu, spec.GpuCount) ||
+			!canAllocate(node.CpuTotal, usage.Cpu, spec.CpuCores) ||
+			!canAllocate(node.MemTotalGb, usage.Mem, spec.MemGb) {
+			return errx.New(ErrCodeGpuOversold,
 				fmt.Sprintf("节点 %s 资源不足：GPU 余 %d 需 %d，CPU 余 %d 需 %d，内存余 %dG 需 %dG",
-					node.Name, node.GpuTotal-gpuUsed, spec.GpuCount,
-					node.CpuTotal-cpuUsed, spec.CpuCores,
-					node.MemTotalGb-memUsed, spec.MemGb))
+					node.Name, node.GpuTotal-usage.Gpu, spec.GpuCount,
+					node.CpuTotal-usage.Cpu, spec.CpuCores,
+					node.MemTotalGb-usage.Mem, spec.MemGb))
 		}
 		inst = &model.GpuInstance{
 			NodeID: node.ID, NodeName: node.Name,
@@ -218,62 +227,43 @@ func (s *GpuService) StartInstance(nodeID, specID uint, name, creator string, us
 			GpuAllocated: spec.GpuCount, CpuAllocated: spec.CpuCores, MemAllocGb: spec.MemGb,
 			Status: model.InstRunning, Creator: creator, UserID: userID,
 		}
-		return tx.Create(inst).Error
-	})
-	if err != nil {
-		return nil, fmt.Errorf("开通实例失败: %w", err)
+		return s.repo.CreateInstance(tx, inst)
+	}); err != nil {
+		return nil, err
 	}
 	return inst, nil
 }
 
 // ReleaseInstance 销毁实例：标记状态释放配额
 func (s *GpuService) ReleaseInstance(id uint) error {
-	var inst model.GpuInstance
-	if err := global.GVA_DB.First(&inst, id).Error; err != nil {
-		return newGpuErr(ErrCodeGpuNotFound, "实例不存在")
+	db := s.dbh()
+	inst, err := s.repo.FindInstance(db, id)
+	if err != nil {
+		return errx.New(ErrCodeGpuNotFound, "实例不存在")
 	}
 	if inst.Status != model.InstRunning {
-		return newGpuErr(ErrCodeGpuStructInvalid, "实例非运行中状态")
+		return errx.New(ErrCodeGpuStructInvalid, "实例非运行中状态")
 	}
 	// 条件更新替代检查后更新：并发重复释放（双击/重试）都过状态检查时，
 	// 后提交者会覆盖前者的 released_at 致审计时间戳失真；携带状态条件天然幂等
-	now := time.Now()
-	res := global.GVA_DB.Model(&model.GpuInstance{}).
-		Where("id = ? AND status = ?", id, model.InstRunning).
-		Updates(map[string]any{"status": model.InstReleased, "released_at": &now})
-	if res.Error != nil {
-		return res.Error
+	affected, err := s.repo.ReleaseInstanceIfRunning(db, id, time.Now())
+	if err != nil {
+		return errx.Wrap(ErrCodeGpuStore, "销毁实例失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return newGpuErr(ErrCodeGpuStructInvalid, "实例非运行中状态（可能已被并发释放）")
+	if affected == 0 {
+		return errx.New(ErrCodeGpuStructInvalid, "实例非运行中状态（可能已被并发释放）")
 	}
 	return nil
 }
 
-// GetInstanceList 实例台账分页（nodeId/userId/status 过滤；page≤0 视为全量兼容旧调用，上限 500）
+// GetInstanceList 实例台账分页（nodeId/userId/status 过滤；page<=0 视为全量兼容旧调用，上限 500）
 // 原硬编码 Limit(500) 无分页无过滤：台账含已销毁记录持续增长，第 501 条起静默不可见
 func (s *GpuService) GetInstanceList(status string, nodeID, userID uint, page, pageSize int) (list []model.GpuInstance, total int64, err error) {
-	db := global.GVA_DB.Model(&model.GpuInstance{})
-	if status != "" {
-		db = db.Where("status = ?", status)
+	list, total, err = s.repo.InstanceList(s.dbh(), repo.InstanceFilter{
+		Status: status, NodeID: nodeID, UserID: userID, Page: page, Size: pageSize,
+	})
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeGpuStore, "查询实例台账失败", err)
 	}
-	if nodeID > 0 {
-		db = db.Where("node_id = ?", nodeID)
-	}
-	if userID > 0 {
-		db = db.Where("user_id = ?", userID)
-	}
-	if err = db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	if page > 0 {
-		if pageSize <= 0 || pageSize > 100 {
-			pageSize = 20
-		}
-		db = db.Offset((page - 1) * pageSize).Limit(pageSize)
-	} else {
-		db = db.Limit(500)
-	}
-	err = db.Order("id DESC").Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
