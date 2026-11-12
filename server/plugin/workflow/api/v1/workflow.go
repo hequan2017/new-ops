@@ -8,6 +8,7 @@ import (
 
 	"github.com/hequan2017/new-ops/server/model/common/request"
 	"github.com/hequan2017/new-ops/server/model/common/response"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	wfModel "github.com/hequan2017/new-ops/server/plugin/workflow/model"
 	"github.com/hequan2017/new-ops/server/plugin/workflow/service"
 	"github.com/hequan2017/new-ops/server/utils"
@@ -15,7 +16,7 @@ import (
 
 var WorkflowApi = new(workflowApi)
 
-var wfSvc = new(service.WorkflowService)
+var wfSvc = service.Service
 
 type workflowApi struct{}
 
@@ -35,7 +36,7 @@ func (a *workflowApi) CreateDefinition(c *gin.Context) {
 		return
 	}
 	if err := wfSvc.CreateDefinition(&d); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithMessage("创建成功", c)
@@ -57,7 +58,7 @@ func (a *workflowApi) UpdateDefinition(c *gin.Context) {
 		return
 	}
 	if err := wfSvc.UpdateDefinition(&d); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithMessage("更新成功", c)
@@ -82,7 +83,7 @@ func (a *workflowApi) ToggleDefinition(c *gin.Context) {
 		return
 	}
 	if err := wfSvc.ToggleDefinition(req.ID, req.Enabled); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	msg := "已停用"
@@ -107,7 +108,7 @@ func (a *workflowApi) DeleteDefinition(c *gin.Context) {
 		return
 	}
 	if err := wfSvc.DeleteDefinition(uint(id)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -124,7 +125,7 @@ func (a *workflowApi) DeleteDefinition(c *gin.Context) {
 func (a *workflowApi) ListDefinitions(c *gin.Context) {
 	list, err := wfSvc.GetDefinitionList(c.Query("keyword"))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(list, "获取成功", c)
@@ -153,7 +154,7 @@ func (a *workflowApi) StartInstance(c *gin.Context) {
 	ins, err := wfSvc.StartInstance(req.DefinitionID, req.Title, req.BizType, req.Params,
 		utils.GetUserName(c), utils.GetUserID(c))
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(ins, "发起成功", c)
@@ -181,7 +182,7 @@ func (a *workflowApi) SubmitAction(c *gin.Context) {
 		return
 	}
 	if _, err := wfSvc.SubmitAction(uint(id), action, c.Query("comment"), utils.GetUserName(c)); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithMessage("操作成功", c)
@@ -203,7 +204,7 @@ func (a *workflowApi) ListInstances(c *gin.Context) {
 	list, total, err := wfSvc.GetInstanceList(info.Page, info.PageSize, c.Query("creator"),
 		c.Query("status"), utils.GetUserID(c), utils.GetUserAuthorityId(c) == 888)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(response.PageResult{
@@ -227,7 +228,7 @@ func (a *workflowApi) GetInstanceLogs(c *gin.Context) {
 	}
 	logs, err := wfSvc.GetInstanceLogs(uint(id), utils.GetUserID(c), utils.GetUserAuthorityId(c) == 888)
 	if err != nil {
-		response.FailWithMessage(err.Error(), c)
+		errx.Respond(c, err, "操作失败")
 		return
 	}
 	response.OkWithDetailed(logs, "获取成功", c)
