@@ -2,12 +2,11 @@
 package service
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/exam/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（exam 段续用）
@@ -38,7 +37,7 @@ func CanTransitionExam(from, to string) bool {
 // ValidateExamWindow 时间窗校验（纯函数：start<end）
 func ValidateExamWindow(start, end time.Time) error {
 	if !start.Before(end) {
-		return fmt.Errorf("[%d]开考时间必须早于截止时间", ErrCodeExamWindow)
+		return examErr(ErrCodeExamWindow, "开考时间必须早于截止时间")
 	}
 	return nil
 }
@@ -55,19 +54,17 @@ type ExamIn struct {
 
 // GetExams 考试列表（状态过滤）
 func (s *ExamService) GetExams(status string) ([]model.ExamExam, error) {
-	db := global.GVA_DB.Model(&model.ExamExam{})
-	if status != "" {
-		db = db.Where("status = ?", status)
+	list, err := s.repo.ExamList(s.dbh(), status)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "查询考试列表失败", err)
 	}
-	var list []model.ExamExam
-	err := db.Order("start_time desc").Find(&list).Error
-	return list, err
+	return list, nil
 }
 
 // SaveExam 新建/更新考试（试卷须 ready；时间窗校验）
 func (s *ExamService) SaveExam(in *ExamIn) (*model.ExamExam, error) {
 	if in == nil || strings.TrimSpace(in.Name) == "" {
-		return nil, fmt.Errorf("[%d]考试名必填", ErrCodeExamWindow)
+		return nil, examErr(ErrCodeExamWindow, "考试名必填")
 	}
 	if err := ValidateExamWindow(in.StartTime, in.EndTime); err != nil {
 		return nil, err
@@ -75,76 +72,79 @@ func (s *ExamService) SaveExam(in *ExamIn) (*model.ExamExam, error) {
 	if in.DurationMin <= 0 {
 		in.DurationMin = 60
 	}
-	var paper model.ExamPaper
-	if err := global.GVA_DB.First(&paper, in.PaperId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]试卷不存在", ErrCodePaperNotFound)
+	db := s.dbh()
+	paper, err := s.repo.FindPaper(db, in.PaperId)
+	if err != nil {
+		return nil, examErr(ErrCodePaperNotFound, "试卷不存在")
 	}
 	if paper.Status != "ready" {
-		return nil, fmt.Errorf("[%d]试卷未组卷（状态 %s），请先组卷", ErrCodeExamWindow, paper.Status)
+		return nil, examErr(ErrCodeExamWindow, "试卷未组卷（状态 %s），请先组卷", paper.Status)
 	}
-	var count int64
-	q := global.GVA_DB.Model(&model.ExamExam{}).Where("name = ?", in.Name)
-	if in.ID > 0 {
-		q = q.Where("id <> ?", in.ID)
+	count, err := s.repo.CountExamsByName(db, in.Name, in.ID)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "查询考试重名失败", err)
 	}
-	q.Count(&count)
 	if count > 0 {
-		return nil, fmt.Errorf("[%d]考试名已存在", ErrCodeExamWindow)
+		return nil, examErr(ErrCodeExamWindow, "考试名已存在")
 	}
 	if in.ID > 0 {
-		var e model.ExamExam
-		if err := global.GVA_DB.First(&e, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]考试不存在", ErrCodeExamNotFound)
+		e, err := s.repo.FindExam(db, in.ID)
+		if err != nil {
+			return nil, examErr(ErrCodeExamNotFound, "考试不存在")
 		}
 		if e.Status != "draft" {
-			return nil, fmt.Errorf("[%d]仅草稿态可编辑（当前 %s）", ErrCodeExamTrans, e.Status)
+			return nil, examErr(ErrCodeExamTrans, "仅草稿态可编辑（当前 %s）", e.Status)
 		}
-		err := global.GVA_DB.Model(&e).Updates(map[string]any{
+		if err := s.repo.UpdateExamColumns(db, e.ID, map[string]any{
 			"name": in.Name, "paper_id": in.PaperId,
 			"start_time": in.StartTime, "end_time": in.EndTime, "duration_min": in.DurationMin,
-		}).Error
-		if err != nil {
-			return nil, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeExamStore, "更新考试失败", err)
 		}
-		return &e, nil
+		return e, nil
 	}
 	e := &model.ExamExam{
 		Name: in.Name, PaperId: in.PaperId, StartTime: in.StartTime,
 		EndTime: in.EndTime, DurationMin: in.DurationMin, Status: "draft",
 	}
-	if err := global.GVA_DB.Create(e).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateExam(db, e); err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "落库考试失败", err)
 	}
 	return e, nil
 }
 
 // TransitionExam 状态流转（published 须试卷 ready；ongoing 不早于开考时间软校验）
 func (s *ExamService) TransitionExam(id uint, to string) (*model.ExamExam, error) {
-	var e model.ExamExam
-	if err := global.GVA_DB.First(&e, id).Error; err != nil {
-		return nil, fmt.Errorf("[%d]考试不存在", ErrCodeExamNotFound)
+	db := s.dbh()
+	e, err := s.repo.FindExam(db, id)
+	if err != nil {
+		return nil, examErr(ErrCodeExamNotFound, "考试不存在")
 	}
 	if !CanTransitionExam(e.Status, to) {
-		return nil, fmt.Errorf("[%d]非法流转 %s → %s", ErrCodeExamTrans, e.Status, to)
+		return nil, examErr(ErrCodeExamTrans, "非法流转 %s → %s", e.Status, to)
 	}
 	if to == "ongoing" && time.Now().Before(e.StartTime) {
-		return nil, fmt.Errorf("[%d]未到开考时间（%s 开考）", ErrCodeExamWindow, e.StartTime.Format("2006-01-02 15:04"))
+		return nil, examErr(ErrCodeExamWindow, "未到开考时间（%s 开考）", e.StartTime.Format("2006-01-02 15:04"))
 	}
-	if err := global.GVA_DB.Model(&e).Update("status", to).Error; err != nil {
-		return nil, err
+	if err := s.repo.UpdateExamColumns(db, e.ID, map[string]any{"status": to}); err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "更新考试失败", err)
 	}
 	e.Status = to
-	return &e, nil
+	return e, nil
 }
 
 // DeleteExam 删除考试（仅草稿/已结束可删）
 func (s *ExamService) DeleteExam(id uint) error {
-	var e model.ExamExam
-	if err := global.GVA_DB.First(&e, id).Error; err != nil {
-		return fmt.Errorf("[%d]考试不存在", ErrCodeExamNotFound)
+	db := s.dbh()
+	e, err := s.repo.FindExam(db, id)
+	if err != nil {
+		return examErr(ErrCodeExamNotFound, "考试不存在")
 	}
 	if e.Status == "ongoing" || e.Status == "published" {
-		return fmt.Errorf("[%d]发布/进行中考试不可删除，请先结束", ErrCodeExamTrans)
+		return examErr(ErrCodeExamTrans, "发布/进行中考试不可删除，请先结束")
 	}
-	return global.GVA_DB.Delete(&e).Error
+	if _, err := s.repo.DeleteExam(db, e.ID); err != nil {
+		return errx.Wrap(ErrCodeExamStore, "删除考试失败", err)
+	}
+	return nil
 }

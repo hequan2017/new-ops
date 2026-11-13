@@ -79,7 +79,7 @@ func laplaceSample(u, scale float64) float64 {
 // 文本中数值加 Laplace 噪声（sensitivity/ε 尺度），保留 2 位小数；商业秘密口径。
 func DpMaskNumbers(text string, sensitivity, epsilon float64, rng *rand.Rand) (string, error) {
 	if epsilon <= 0 || sensitivity <= 0 {
-		return "", fmt.Errorf("[%d]sensitivity/epsilon 须为正数", ErrCodeTermParam)
+		return "", zqErr(ErrCodeTermParam, "sensitivity/epsilon 须为正数")
 	}
 	scale := sensitivity / epsilon
 	out := numPattern.ReplaceAllStringFunc(text, func(m string) string {

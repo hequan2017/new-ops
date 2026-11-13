@@ -1,6 +1,6 @@
 // Package service ziqiang：知识产权问答 API（需求 3.5-14）
-// 口径：文本+图像混合输入 → 相似专利检索——文本维度=bigram 包含率（复用 O05
-// bigramSet）、图像维度=查询 aHash 与专利关联图像语料 HashHex 的汉明相似度
+// 口径：文本+图像混合输入 → 相似专利检索——文本维度=bigram 包含率（复用 text
+// 共享 bigram 口径）、图像维度=查询 aHash 与专利关联图像语料 HashHex 的汉明相似度
 // （复用 O03 HashSimilarity）；融合排序=0.6×文本+0.4×图像（单维度可得时退化为该
 // 维度分）；法律状态字段（有效/审查中/失效/届满白名单）随命中输出；风险评估
 // 高/中/低三档纯函数，输出报告 JSON（命中+阈值+证据+免责声明）。
@@ -11,7 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/text"
 	"github.com/hequan2017/new-ops/server/plugin/ziqiang/model"
 )
 
@@ -46,20 +47,14 @@ func round4(v float64) float64 {
 	return float64(int(v*10000+0.5)) / 10000
 }
 
-// textContainment 文本维度分：查询 bigram 在文档中的包含率（纯函数，测试锚点）
+// textContainment 文本维度分：查询 bigram 在文档中的包含率（纯函数，测试锚点）。
+// 打分收敛到 text.Score（=查询 bigram 集与文档 bigram 集交集计数）。
 func textContainment(query, doc string) float64 {
-	qSet := bigramSet(query)
+	qSet := text.Bigrams(query)
 	if len(qSet) == 0 {
 		return 0
 	}
-	dSet := bigramSet(doc)
-	hit := 0
-	for bg := range qSet {
-		if dSet[bg] {
-			hit++
-		}
-	}
-	return round4(float64(hit) / float64(len(qSet)))
+	return round4(float64(text.Score(qSet, doc)) / float64(len(qSet)))
 }
 
 // fuseScores 融合分（纯函数，测试锚点）：双维度可得时 0.6×文本+0.4×图像，否则退化
@@ -114,15 +109,15 @@ func rankPatents(patents []model.ZqTextCorpus, query string, queryHash uint64, h
 
 // qaReport 侵权风险评估报告
 type qaReport struct {
-	TextProvided  bool      `json:"textProvided"`
-	ImageProvided bool      `json:"imageProvided"`
+	TextProvided  bool               `json:"textProvided"`
+	ImageProvided bool               `json:"imageProvided"`
 	Thresholds    map[string]float64 `json:"thresholds"`
-	TopMatches    []qaMatch `json:"topMatches"`
-	RiskLevel     string    `json:"riskLevel"`
-	RiskScore     float64   `json:"riskScore"`
-	Verdict       string    `json:"verdict"`
-	Evidence      []string  `json:"evidence"`
-	Disclaimer    string    `json:"disclaimer"`
+	TopMatches    []qaMatch          `json:"topMatches"`
+	RiskLevel     string             `json:"riskLevel"`
+	RiskScore     float64            `json:"riskScore"`
+	Verdict       string             `json:"verdict"`
+	Evidence      []string           `json:"evidence"`
+	Disclaimer    string             `json:"disclaimer"`
 }
 
 // assessRisk 侵权风险评估（纯函数，测试锚点）：
@@ -183,7 +178,7 @@ func assessRisk(matches []qaMatch, imageProvided bool) (level string, score floa
 // QaPatentSearch 知识产权问答：文本+图像混合输入 → 相似专利检索 + 风险评估报告
 func (s *ZiqiangService) QaPatentSearch(text, imageHash string, topK int) (*qaReport, error) {
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("[%d]查询文本必填", ErrCodeQaParam)
+		return nil, zqErr(ErrCodeQaParam, "查询文本必填")
 	}
 	if topK < 1 || topK > 20 {
 		topK = 5
@@ -196,17 +191,15 @@ func (s *ZiqiangService) QaPatentSearch(text, imageHash string, topK int) (*qaRe
 			return nil, err
 		}
 	}
-	var patents []model.ZqTextCorpus
-	if err := global.GVA_DB.Model(&model.ZqTextCorpus{}).
-		Where("type = ?", "专利").Order("id ASC").Limit(2000).Find(&patents).Error; err != nil {
-		return nil, err
+	patents, err := s.repo.PatentScan(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "扫描专利语料失败", err)
 	}
 	imgHashByCorpus := map[uint]uint64{}
 	if hasQueryHash {
-		var imgs []model.ZqImageCorpus
-		if err := global.GVA_DB.Model(&model.ZqImageCorpus{}).
-			Where("hash_hex <> ''").Order("id ASC").Limit(2000).Find(&imgs).Error; err != nil {
-			return nil, err
+		imgs, err := s.repo.ImageHashScan(s.dbh())
+		if err != nil {
+			return nil, errx.Wrap(ErrCodeZqStore, "扫描图像语料失败", err)
 		}
 		for _, im := range imgs {
 			if h, err := parseHashHex(im.HashHex); err == nil {

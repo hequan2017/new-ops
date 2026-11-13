@@ -5,17 +5,16 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/ziqiang/model"
 )
 
 // 错误码（ziqiang 段 2700-2799）
 const (
-	ErrCodePromptParam   = 2716
+	ErrCodePromptParam    = 2716
 	ErrCodePromptNotFound = 2717
 )
 
@@ -56,7 +55,7 @@ func renderPrompt(tpl string, vars map[string]string) (string, error) {
 		}
 	}
 	if len(missing) > 0 {
-		return "", fmt.Errorf("[%d]缺失占位变量: %s", ErrCodePromptParam, strings.Join(missing, ","))
+		return "", zqErr(ErrCodePromptParam, "缺失占位变量: %s", strings.Join(missing, ","))
 	}
 	return varPattern.ReplaceAllStringFunc(tpl, func(m string) string {
 		name := varPattern.FindStringSubmatch(m)[1]
@@ -67,10 +66,10 @@ func renderPrompt(tpl string, vars map[string]string) (string, error) {
 // SavePromptTemplate 新建/更新模板（vars 自动解析，场景/步号白名单校验）
 func (s *ZiqiangService) SavePromptTemplate(in *model.ZqPromptTemplate) (*model.ZqPromptTemplate, error) {
 	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.Content) == "" {
-		return nil, fmt.Errorf("[%d]模板名与内容必填", ErrCodePromptParam)
+		return nil, zqErr(ErrCodePromptParam, "模板名与内容必填")
 	}
 	if !validPromptScene(in.Scene) {
-		return nil, fmt.Errorf("[%d]场景须为 多模态双验证/引导式对话", ErrCodePromptParam)
+		return nil, zqErr(ErrCodePromptParam, "场景须为 多模态双验证/引导式对话")
 	}
 	if in.Step < 1 || in.Step > 3 {
 		in.Step = 1
@@ -79,53 +78,53 @@ func (s *ZiqiangService) SavePromptTemplate(in *model.ZqPromptTemplate) (*model.
 	b, _ := json.Marshal(vars)
 	in.Vars = string(b)
 	if in.ID > 0 {
-		var exist model.ZqPromptTemplate
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]模板不存在", ErrCodePromptNotFound)
+		exist, err := s.repo.FindPromptTemplate(s.dbh(), in.ID)
+		if err != nil {
+			return nil, zqErr(ErrCodePromptNotFound, "模板不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdatePromptTemplateColumns(s.dbh(), exist.ID, map[string]any{
 			"name": in.Name, "scene": in.Scene, "step": in.Step,
 			"content": in.Content, "vars": in.Vars, "enabled": in.Enabled,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return exist, errx.Wrap(ErrCodeZqStore, "更新模板失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreatePromptTemplate(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "落库模板失败", err)
 	}
 	return in, nil
 }
 
 // DeletePromptTemplate 删除模板（软删除）
 func (s *ZiqiangService) DeletePromptTemplate(id uint) error {
-	res := global.GVA_DB.Delete(&model.ZqPromptTemplate{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeletePromptTemplate(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeZqStore, "删除模板失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]模板不存在", ErrCodePromptNotFound)
+	if rows == 0 {
+		return zqErr(ErrCodePromptNotFound, "模板不存在")
 	}
 	return nil
 }
 
 // GetPromptTemplates 模板列表（场景过滤，步号升序）
 func (s *ZiqiangService) GetPromptTemplates(scene string) ([]model.ZqPromptTemplate, error) {
-	db := global.GVA_DB.Model(&model.ZqPromptTemplate{})
-	if scene != "" {
-		if !validPromptScene(scene) {
-			return nil, fmt.Errorf("[%d]场景须为 多模态双验证/引导式对话", ErrCodePromptParam)
-		}
-		db = db.Where("scene = ?", scene)
+	if scene != "" && !validPromptScene(scene) {
+		return nil, zqErr(ErrCodePromptParam, "场景须为 多模态双验证/引导式对话")
 	}
-	var list []model.ZqPromptTemplate
-	err := db.Order("scene, step, id").Limit(500).Find(&list).Error
-	return list, err
+	list, err := s.repo.PromptTemplateList(s.dbh(), scene)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "查询模板列表失败", err)
+	}
+	return list, nil
 }
 
 // RenderPromptByName 按模板名渲染（返回渲染结果与解析出的占位变量）
 func (s *ZiqiangService) RenderPromptByName(name string, vars map[string]string) (map[string]any, error) {
-	var tpl model.ZqPromptTemplate
-	if err := global.GVA_DB.Where("name = ?", name).First(&tpl).Error; err != nil {
-		return nil, fmt.Errorf("[%d]模板不存在: %s", ErrCodePromptNotFound, name)
+	tpl, err := s.repo.FindPromptTemplateByName(s.dbh(), name)
+	if err != nil {
+		return nil, zqErr(ErrCodePromptNotFound, "模板不存在: %s", name)
 	}
 	rendered, err := renderPrompt(tpl.Content, vars)
 	if err != nil {

@@ -4,8 +4,9 @@
 package service
 
 import (
-	"fmt"
 	"unicode"
+
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/text"
 )
 
 // 错误码（ziqiang 段 2700-2799）
@@ -103,26 +104,17 @@ type PlagiarismHit struct {
 	Containment float64 `json:"containment"`
 }
 
-// bigramSet 文本 bigram 集合（rune 级）
-func bigramSet(text string) map[string]bool {
-	runes := []rune(text)
-	set := make(map[string]bool, len(runes))
-	for i := 0; i+1 < len(runes); i++ {
-		set[string(runes[i:i+2])] = true
-	}
-	return set
-}
-
 // SlidingPlagiarism 隐性抄袭识别（纯函数，测试锚点）：
 // 可疑文本按 window 滑窗（步长 window/2），窗口 bigram 对源 bigram 集合包含率 ≥ threshold 即命中。
+// bigram 集合复用 text.Bigrams 共享口径（rune 级相邻二元组）。
 func SlidingPlagiarism(src, susp string, window int, threshold float64) ([]PlagiarismHit, error) {
 	if window < 10 || window > 200 {
-		return nil, fmt.Errorf("[%d]窗口须在 [10,200] 内", ErrCodeLegalParam)
+		return nil, zqErr(ErrCodeLegalParam, "窗口须在 [10,200] 内")
 	}
 	if threshold < 0.3 || threshold > 1 {
-		return nil, fmt.Errorf("[%d]阈值须在 [0.3,1] 内", ErrCodeLegalParam)
+		return nil, zqErr(ErrCodeLegalParam, "阈值须在 [0.3,1] 内")
 	}
-	srcSet := bigramSet(src)
+	srcSet := text.Bigrams(src)
 	runes := []rune(susp)
 	step := window / 2
 	var hits []PlagiarismHit
@@ -135,10 +127,10 @@ func SlidingPlagiarism(src, susp string, window int, threshold float64) ([]Plagi
 		if len([]rune(win)) < 10 {
 			break
 		}
-		winSet := bigramSet(win)
+		winSet := text.Bigrams(win)
 		contained := 0
 		for bg := range winSet {
-			if srcSet[bg] {
+			if _, ok := srcSet[bg]; ok {
 				contained++
 			}
 		}

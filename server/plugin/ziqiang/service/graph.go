@@ -4,16 +4,15 @@
 package service
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/ziqiang/model"
 )
 
 // 错误码（ziqiang 段 2700-2799）
 const (
-	ErrCodeGraphParam   = 2710
+	ErrCodeGraphParam    = 2710
 	ErrCodeGraphNotFound = 2711
 )
 
@@ -32,9 +31,9 @@ func ValidEntityCategory2(c string) bool {
 
 // graphPath BFS 路径
 type graphPath struct {
-	NodeIds []uint          `json:"nodeIds"`
+	NodeIds []uint           `json:"nodeIds"`
 	Nodes   []model.ZqEntity `json:"nodes"`
-	Edges   []model.ZqEdge  `json:"edges"`
+	Edges   []model.ZqEdge   `json:"edges"`
 }
 
 // bfsPaths BFS 多跳（纯函数，测试锚点）：返回 start 可达的最短路径（hop ≤ maxHops）
@@ -90,92 +89,91 @@ func idsToNodes(ids []uint, nodes map[uint]model.ZqEntity) []model.ZqEntity {
 // SaveEntity 新建/更新实体
 func (s *ZiqiangService) SaveEntity(in *model.ZqEntity) (*model.ZqEntity, error) {
 	if strings.TrimSpace(in.Name) == "" || !ValidEntityCategory2(in.Category) {
-		return nil, fmt.Errorf("[%d]实体名必填且分类须在白名单内", ErrCodeGraphParam)
+		return nil, zqErr(ErrCodeGraphParam, "实体名必填且分类须在白名单内")
 	}
 	if in.ID > 0 {
-		var exist model.ZqEntity
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]实体不存在", ErrCodeGraphNotFound)
+		exist, err := s.repo.FindEntity(s.dbh(), in.ID)
+		if err != nil {
+			return nil, zqErr(ErrCodeGraphNotFound, "实体不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdateEntityColumns(s.dbh(), exist.ID, map[string]any{
 			"name": in.Name, "category": in.Category, "kind": in.Kind, "desc": in.Desc,
-		}).Error
-		return &exist, err
+		}); err != nil {
+			return exist, errx.Wrap(ErrCodeZqStore, "更新实体失败", err)
+		}
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateEntity(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "落库实体失败", err)
 	}
 	return in, nil
 }
 
 // DeleteEntity 删除实体（软删除）
 func (s *ZiqiangService) DeleteEntity(id uint) error {
-	res := global.GVA_DB.Delete(&model.ZqEntity{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteEntity(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeZqStore, "删除实体失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]实体不存在", ErrCodeGraphNotFound)
+	if rows == 0 {
+		return zqErr(ErrCodeGraphNotFound, "实体不存在")
 	}
 	return nil
 }
 
 // GetEntities 实体列表（分类过滤）
 func (s *ZiqiangService) GetEntities(category string) ([]model.ZqEntity, error) {
-	db := global.GVA_DB.Model(&model.ZqEntity{})
-	if category != "" {
-		if !ValidEntityCategory2(category) {
-			return nil, fmt.Errorf("[%d]不支持的分类: %s", ErrCodeGraphParam, category)
-		}
-		db = db.Where("category = ?", category)
+	if category != "" && !ValidEntityCategory2(category) {
+		return nil, zqErr(ErrCodeGraphParam, "不支持的分类: %s", category)
 	}
-	var list []model.ZqEntity
-	err := db.Order("id").Limit(500).Find(&list).Error
-	return list, err
+	list, err := s.repo.EntityList(s.dbh(), category, 500)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "查询实体失败", err)
+	}
+	return list, nil
 }
 
 // SaveEdge 新建关系边（禁自环）
 func (s *ZiqiangService) SaveEdge(in *model.ZqEdge) (*model.ZqEdge, error) {
 	if in.FromId == 0 || in.ToId == 0 || in.FromId == in.ToId {
-		return nil, fmt.Errorf("[%d]关系边两端须为不同实体", ErrCodeGraphParam)
+		return nil, zqErr(ErrCodeGraphParam, "关系边两端须为不同实体")
 	}
 	if strings.TrimSpace(in.Relation) == "" {
-		return nil, fmt.Errorf("[%d]关系名必填", ErrCodeGraphParam)
+		return nil, zqErr(ErrCodeGraphParam, "关系名必填")
 	}
-	var from, to model.ZqEntity
-	if err := global.GVA_DB.First(&from, in.FromId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]起点实体不存在", ErrCodeGraphNotFound)
+	if _, err := s.repo.FindEntity(s.dbh(), in.FromId); err != nil {
+		return nil, zqErr(ErrCodeGraphNotFound, "起点实体不存在")
 	}
-	if err := global.GVA_DB.First(&to, in.ToId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]终点实体不存在", ErrCodeGraphNotFound)
+	if _, err := s.repo.FindEntity(s.dbh(), in.ToId); err != nil {
+		return nil, zqErr(ErrCodeGraphNotFound, "终点实体不存在")
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateEdge(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "落库关系边失败", err)
 	}
 	return in, nil
 }
 
 // DeleteEdge 删除关系边
 func (s *ZiqiangService) DeleteEdge(id uint) error {
-	res := global.GVA_DB.Delete(&model.ZqEdge{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteEdge(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeZqStore, "删除关系边失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]关系边不存在", ErrCodeGraphNotFound)
+	if rows == 0 {
+		return zqErr(ErrCodeGraphNotFound, "关系边不存在")
 	}
 	return nil
 }
 
 // GetGraph 全图（节点+边）
 func (s *ZiqiangService) GetGraph() (map[string]any, error) {
-	var nodes []model.ZqEntity
-	if err := global.GVA_DB.Order("id").Limit(1000).Find(&nodes).Error; err != nil {
-		return nil, err
+	nodes, err := s.repo.EntityList(s.dbh(), "", 1000)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "查询图谱节点失败", err)
 	}
-	var edges []model.ZqEdge
-	if err := global.GVA_DB.Order("id").Limit(5000).Find(&edges).Error; err != nil {
-		return nil, err
+	edges, err := s.repo.EdgeList(s.dbh(), 5000)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "查询图谱边失败", err)
 	}
 	return map[string]any{"nodes": nodes, "edges": edges}, nil
 }
@@ -183,23 +181,22 @@ func (s *ZiqiangService) GetGraph() (map[string]any, error) {
 // GraphBFS 多跳推理
 func (s *ZiqiangService) GraphBFS(startId uint, maxHops int) ([]graphPath, error) {
 	if maxHops < 1 || maxHops > 6 {
-		return nil, fmt.Errorf("[%d]跳数须在 [1,6] 内", ErrCodeGraphParam)
+		return nil, zqErr(ErrCodeGraphParam, "跳数须在 [1,6] 内")
 	}
-	var start model.ZqEntity
-	if err := global.GVA_DB.First(&start, startId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]起点实体不存在", ErrCodeGraphNotFound)
+	if _, err := s.repo.FindEntity(s.dbh(), startId); err != nil {
+		return nil, zqErr(ErrCodeGraphNotFound, "起点实体不存在")
 	}
-	var nodes []model.ZqEntity
-	if err := global.GVA_DB.Limit(1000).Find(&nodes).Error; err != nil {
-		return nil, err
+	nodes, err := s.repo.EntityList(s.dbh(), "", 1000)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "查询图谱节点失败", err)
 	}
 	nodeMap := map[uint]model.ZqEntity{}
 	for _, n := range nodes {
 		nodeMap[n.ID] = n
 	}
-	var edges []model.ZqEdge
-	if err := global.GVA_DB.Limit(5000).Find(&edges).Error; err != nil {
-		return nil, err
+	edges, err := s.repo.EdgeList(s.dbh(), 5000)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "查询图谱边失败", err)
 	}
 	return bfsPaths(nodeMap, edges, startId, maxHops), nil
 }

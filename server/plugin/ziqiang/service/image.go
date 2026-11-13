@@ -6,36 +6,35 @@ package service
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/binary"
-	"fmt"
+	"encoding/hex"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
 	"math/bits"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/ziqiang/model"
 )
 
 // 错误码（ziqiang 段 2700-2799）
 const (
-	ErrCodeZqImgParam   = 2704
+	ErrCodeZqImgParam    = 2704
 	ErrCodeZqImgNotFound = 2705
-	ErrCodeZqImgDecode  = 2706
+	ErrCodeZqImgDecode   = 2706
 )
 
 // AHash 8×8 均值阈值感知哈希（纯函数，测试锚点）
 func AHash(data []byte) (uint64, error) {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return 0, fmt.Errorf("[%d]图像解码失败: %w", ErrCodeZqImgDecode, err)
+		return 0, zqWrapErr(ErrCodeZqImgDecode, "图像解码失败", err)
 	}
 	bounds := img.Bounds()
 	w, h := bounds.Dx(), bounds.Dy()
 	if w < 8 || h < 8 {
-		return 0, fmt.Errorf("[%d]图像尺寸过小（≥8×8）", ErrCodeZqImgDecode)
+		return 0, zqErr(ErrCodeZqImgDecode, "图像尺寸过小（≥8×8）")
 	}
 	gray := make([]float64, 64)
 	for gy := 0; gy < 8; gy++ {
@@ -81,7 +80,7 @@ func HashSimilarity(a, b uint64) float64 {
 func parseHashHex(s string) (uint64, error) {
 	raw, err := hex.DecodeString(strings.TrimSpace(s))
 	if err != nil || len(raw) != 8 {
-		return 0, fmt.Errorf("[%d]哈希须为 16 位十六进制", ErrCodeZqImgParam)
+		return 0, zqErr(ErrCodeZqImgParam, "哈希须为 16 位十六进制")
 	}
 	return binary.BigEndian.Uint64(raw), nil
 }
@@ -89,12 +88,12 @@ func parseHashHex(s string) (uint64, error) {
 // SaveImageCorpus 登记图像鉴权语料（imageData base64 可选，传入即算 aHash）
 func (s *ZiqiangService) SaveImageCorpus(in *model.ZqImageCorpus, imageDataB64 string) (*model.ZqImageCorpus, error) {
 	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.Path) == "" {
-		return nil, fmt.Errorf("[%d]名称与路径必填", ErrCodeZqImgParam)
+		return nil, zqErr(ErrCodeZqImgParam, "名称与路径必填")
 	}
 	if strings.TrimSpace(imageDataB64) != "" {
 		raw, err := base64.StdEncoding.DecodeString(imageDataB64)
 		if err != nil {
-			return nil, fmt.Errorf("[%d]imageData 须为 base64: %w", ErrCodeZqImgParam, err)
+			return nil, zqWrapErr(ErrCodeZqImgParam, "imageData 须为 base64", err)
 		}
 		h, err := AHash(raw)
 		if err != nil {
@@ -102,34 +101,19 @@ func (s *ZiqiangService) SaveImageCorpus(in *model.ZqImageCorpus, imageDataB64 s
 		}
 		in.HashHex = AHashHex(h)
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateImageCorpus(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "落库图像语料失败", err)
 	}
 	return in, nil
 }
 
 // GetImageCorpora 图像语料列表（图库/关键字过滤，倒序分页）
 func (s *ZiqiangService) GetImageCorpora(gallery, keyword string, page, pageSize int) ([]model.ZqImageCorpus, int64, error) {
-	if page < 1 {
-		page = 1
+	list, total, err := s.repo.ImageCorpusList(s.dbh(), gallery, strings.TrimSpace(keyword), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeZqStore, "查询图像语料列表失败", err)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
-	db := global.GVA_DB.Model(&model.ZqImageCorpus{})
-	if gallery != "" {
-		db = db.Where("gallery = ?", gallery)
-	}
-	if kw := strings.TrimSpace(keyword); kw != "" {
-		db = db.Where("name LIKE ?", "%"+kw+"%")
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ZqImageCorpus
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // CompareResult 比对结果
@@ -153,12 +137,12 @@ func (s *ZiqiangService) CompareHashes(hashA, hashB string) (*CompareResult, err
 
 // CompareWithCorpus 与库内语料哈希比对
 func (s *ZiqiangService) CompareWithCorpus(corpusId uint, hashHex string) (*CompareResult, error) {
-	var corpus model.ZqImageCorpus
-	if err := global.GVA_DB.First(&corpus, corpusId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]图像语料不存在", ErrCodeZqImgNotFound)
+	corpus, err := s.repo.FindImageCorpus(s.dbh(), corpusId)
+	if err != nil {
+		return nil, zqErr(ErrCodeZqImgNotFound, "图像语料不存在")
 	}
 	if corpus.HashHex == "" {
-		return nil, fmt.Errorf("[%d]该语料未计算 aHash", ErrCodeZqImgParam)
+		return nil, zqErr(ErrCodeZqImgParam, "该语料未计算 aHash")
 	}
 	return s.CompareHashes(hashHex, corpus.HashHex)
 }

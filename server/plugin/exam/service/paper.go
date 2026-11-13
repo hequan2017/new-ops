@@ -5,14 +5,13 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/exam/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（exam 段续用）
@@ -40,21 +39,21 @@ type PaperRule struct {
 func ParsePaperRule(raw string) (*PaperRule, error) {
 	var rule PaperRule
 	if err := json.Unmarshal([]byte(raw), &rule); err != nil {
-		return nil, fmt.Errorf("[%d]组卷规则解析失败: %w", ErrCodePaperRule, err)
+		return nil, examWrapErr(ErrCodePaperRule, "组卷规则解析失败", err)
 	}
 	if len(rule.Sections) == 0 || len(rule.Sections) > paperMaxSections {
-		return nil, fmt.Errorf("[%d]规则节数须为 1-%d", ErrCodePaperRule, paperMaxSections)
+		return nil, examErr(ErrCodePaperRule, "规则节数须为 1-%d", paperMaxSections)
 	}
 	for i := range rule.Sections {
 		s := &rule.Sections[i]
 		if !ValidQuestionType(s.Type) {
-			return nil, fmt.Errorf("[%d]第 %d 节题型非法: %s", ErrCodePaperRule, i+1, s.Type)
+			return nil, examErr(ErrCodePaperRule, "第 %d 节题型非法: %s", i+1, s.Type)
 		}
 		if s.Count <= 0 {
-			return nil, fmt.Errorf("[%d]第 %d 节抽题数须 ≥1", ErrCodePaperRule, i+1)
+			return nil, examErr(ErrCodePaperRule, "第 %d 节抽题数须 ≥1", i+1)
 		}
 		if s.MaxDifficulty < 0 || s.MaxDifficulty > 5 {
-			return nil, fmt.Errorf("[%d]第 %d 节难度上限非法", ErrCodePaperRule, i+1)
+			return nil, examErr(ErrCodePaperRule, "第 %d 节难度上限非法", i+1)
 		}
 	}
 	return &rule, nil
@@ -81,7 +80,7 @@ func PickQuestions(pool []model.ExamQuestion, rule *PaperRule, rng *rand.Rand) (
 			candidates = append(candidates, q)
 		}
 		if len(candidates) < sec.Count {
-			return nil, 0, fmt.Errorf("[%d]第 %d 节(%s)题量不足：需 %d 仅 %d", ErrCodePaperLack, si+1, sec.Type, sec.Count, len(candidates))
+			return nil, 0, examErr(ErrCodePaperLack, "第 %d 节(%s)题量不足：需 %d 仅 %d", si+1, sec.Type, sec.Count, len(candidates))
 		}
 		rng.Shuffle(len(candidates), func(i, j int) { candidates[i], candidates[j] = candidates[j], candidates[i] })
 		for _, q := range candidates[:sec.Count] {
@@ -95,63 +94,63 @@ func PickQuestions(pool []model.ExamQuestion, rule *PaperRule, rng *rand.Rand) (
 
 // GetPapers 试卷列表
 func (s *ExamService) GetPapers() ([]model.ExamPaper, error) {
-	var list []model.ExamPaper
-	err := global.GVA_DB.Order("id desc").Find(&list).Error
-	return list, err
+	list, err := s.repo.PaperList(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "查询试卷列表失败", err)
+	}
+	return list, nil
 }
 
 // SavePaper 保存试卷（规则即检）
 func (s *ExamService) SavePaper(in *model.ExamPaper) (*model.ExamPaper, error) {
 	if in == nil || strings.TrimSpace(in.Name) == "" {
-		return nil, fmt.Errorf("[%d]试卷名必填", ErrCodePaperRule)
+		return nil, examErr(ErrCodePaperRule, "试卷名必填")
 	}
 	if _, err := ParsePaperRule(in.RuleJSON); err != nil {
 		return nil, err
 	}
-	var count int64
-	q := global.GVA_DB.Model(&model.ExamPaper{}).Where("name = ?", in.Name)
-	if in.ID > 0 {
-		q = q.Where("id <> ?", in.ID)
+	count, err := s.repo.CountPapersByName(s.dbh(), in.Name, in.ID)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "查询试卷重名失败", err)
 	}
-	q.Count(&count)
 	if count > 0 {
-		return nil, fmt.Errorf("[%d]试卷名已存在", ErrCodePaperRule)
+		return nil, examErr(ErrCodePaperRule, "试卷名已存在")
 	}
 	if in.ID > 0 {
-		var p model.ExamPaper
-		if err := global.GVA_DB.First(&p, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]试卷不存在", ErrCodePaperNotFound)
-		}
-		err := global.GVA_DB.Model(&p).Updates(map[string]any{
-			"name": in.Name, "rule_json": in.RuleJSON, "status": "draft",
-		}).Error
+		p, err := s.repo.FindPaper(s.dbh(), in.ID)
 		if err != nil {
-			return nil, err
+			return nil, examErr(ErrCodePaperNotFound, "试卷不存在")
 		}
-		return &p, nil
+		if err := s.repo.UpdatePaperColumns(s.dbh(), p.ID, map[string]any{
+			"name": in.Name, "rule_json": in.RuleJSON, "status": "draft",
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeExamStore, "更新试卷失败", err)
+		}
+		return p, nil
 	}
 	if in.Status == "" {
 		in.Status = "draft"
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreatePaper(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "落库试卷失败", err)
 	}
 	return in, nil
 }
 
 // ComposePaper 组卷：按规则抽题，锁定 ID 与总分
 func (s *ExamService) ComposePaper(paperId uint) (*model.ExamPaper, error) {
-	var p model.ExamPaper
-	if err := global.GVA_DB.First(&p, paperId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]试卷不存在", ErrCodePaperNotFound)
+	db := s.dbh()
+	p, err := s.repo.FindPaper(db, paperId)
+	if err != nil {
+		return nil, examErr(ErrCodePaperNotFound, "试卷不存在")
 	}
 	rule, err := ParsePaperRule(p.RuleJSON)
 	if err != nil {
 		return nil, err
 	}
-	var pool []model.ExamQuestion
-	if err := global.GVA_DB.Find(&pool).Error; err != nil {
-		return nil, err
+	pool, err := s.repo.QuestionsAll(db)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "查询题库失败", err)
 	}
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	ids, total, err := PickQuestions(pool, rule, rng)
@@ -162,24 +161,23 @@ func (s *ExamService) ComposePaper(paperId uint) (*model.ExamPaper, error) {
 	for i, id := range ids {
 		idStrs[i] = strconv.FormatUint(uint64(id), 10)
 	}
-	err = global.GVA_DB.Model(&p).Updates(map[string]any{
+	if err := s.repo.UpdatePaperColumns(db, p.ID, map[string]any{
 		"question_ids": strings.Join(idStrs, ","), "total_score": total, "status": "ready",
-	}).Error
-	if err != nil {
-		return nil, err
+	}); err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "更新试卷失败", err)
 	}
 	p.QuestionIds, p.TotalScore, p.Status = strings.Join(idStrs, ","), total, "ready"
-	return &p, nil
+	return p, nil
 }
 
 // DeletePaper 删除试卷（软删除）
 func (s *ExamService) DeletePaper(id uint) error {
-	res := global.GVA_DB.Delete(&model.ExamPaper{}, id)
-	if res.Error != nil {
-		return res.Error
+	n, err := s.repo.DeletePaper(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeExamStore, "删除试卷失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]试卷不存在", ErrCodePaperNotFound)
+	if n == 0 {
+		return examErr(ErrCodePaperNotFound, "试卷不存在")
 	}
 	return nil
 }

@@ -3,11 +3,10 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
 	"github.com/hequan2017/new-ops/server/plugin/exam/model"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 )
 
 // 错误码（exam 段 2400-2499）
@@ -39,15 +38,15 @@ func NeedsOptions(t string) bool {
 // validateQuestion 单题校验（导入与保存共用）
 func validateQuestion(q *model.ExamQuestion) error {
 	if !ValidQuestionType(q.Type) {
-		return fmt.Errorf("[%d]不支持的题型: %s", ErrCodeQTypeBad, q.Type)
+		return examErr(ErrCodeQTypeBad, "不支持的题型: %s", q.Type)
 	}
 	if strings.TrimSpace(q.Stem) == "" {
-		return fmt.Errorf("[%d]题干不能为空", ErrCodeQStem)
+		return examErr(ErrCodeQStem, "题干不能为空")
 	}
 	if NeedsOptions(q.Type) {
 		var opts []string
 		if err := json.Unmarshal([]byte(q.OptionsJSON), &opts); err != nil || len(opts) < 2 {
-			return fmt.Errorf("[%d]选择类题型须提供 ≥2 个选项", ErrCodeQStem)
+			return examErr(ErrCodeQStem, "选择类题型须提供 ≥2 个选项")
 		}
 	}
 	if q.Score <= 0 {
@@ -62,12 +61,11 @@ func validateQuestion(q *model.ExamQuestion) error {
 	return nil
 }
 
-// ExamService 服务单例
-var ExamApp = new(ExamService)
-
-type ExamService struct{}
+// ExamService 与 ExamApp 单例定义见 enter.go（依赖注入口径）
 
 // GetQuestions 题目列表（题型/知识点过滤，分页）
+// 分页口径：page≤0 回第一页、pageSize 缺省 20 / 上限 100——归一后与 data.Page 等价，
+// 归一在 service 完成，repo 侧直接走共享分页。
 func (s *ExamService) GetQuestions(page, pageSize int, qType, knowledgePoint string) ([]model.ExamQuestion, int64, error) {
 	if page <= 0 {
 		page = 1
@@ -75,23 +73,14 @@ func (s *ExamService) GetQuestions(page, pageSize int, qType, knowledgePoint str
 	if pageSize <= 0 || pageSize > 100 {
 		pageSize = 20
 	}
-	db := global.GVA_DB.Model(&model.ExamQuestion{})
-	if qType != "" {
-		if !ValidQuestionType(qType) {
-			return nil, 0, fmt.Errorf("[%d]不支持的题型: %s", ErrCodeQTypeBad, qType)
-		}
-		db = db.Where("type = ?", qType)
+	if qType != "" && !ValidQuestionType(qType) {
+		return nil, 0, examErr(ErrCodeQTypeBad, "不支持的题型: %s", qType)
 	}
-	if knowledgePoint != "" {
-		db = db.Where("knowledge_point = ?", knowledgePoint)
+	list, total, err := s.repo.QuestionList(s.dbh(), page, pageSize, qType, knowledgePoint)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeExamStore, "查询题目列表失败", err)
 	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ExamQuestion
-	err := db.Order("id desc").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // SaveQuestion 新建/更新题目
@@ -100,34 +89,33 @@ func (s *ExamService) SaveQuestion(in *model.ExamQuestion) (*model.ExamQuestion,
 		return nil, err
 	}
 	if in.ID > 0 {
-		var q model.ExamQuestion
-		if err := global.GVA_DB.First(&q, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]题目不存在", ErrCodeQNotFound)
+		q, err := s.repo.FindQuestion(s.dbh(), in.ID)
+		if err != nil {
+			return nil, examErr(ErrCodeQNotFound, "题目不存在")
 		}
-		err := global.GVA_DB.Model(&q).Updates(map[string]any{
+		if err := s.repo.UpdateQuestionColumns(s.dbh(), q.ID, map[string]any{
 			"type": in.Type, "stem": in.Stem, "options_json": in.OptionsJSON,
 			"answer": in.Answer, "score": in.Score, "knowledge_point": in.KnowledgePoint,
 			"difficulty": in.Difficulty,
-		}).Error
-		if err != nil {
-			return nil, err
+		}); err != nil {
+			return nil, errx.Wrap(ErrCodeExamStore, "更新题目失败", err)
 		}
-		return &q, nil
+		return q, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateQuestion(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeExamStore, "落库题目失败", err)
 	}
 	return in, nil
 }
 
 // DeleteQuestion 删除题目（软删除）
 func (s *ExamService) DeleteQuestion(id uint) error {
-	res := global.GVA_DB.Delete(&model.ExamQuestion{}, id)
-	if res.Error != nil {
-		return res.Error
+	n, err := s.repo.DeleteQuestion(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeExamStore, "删除题目失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]题目不存在", ErrCodeQNotFound)
+	if n == 0 {
+		return examErr(ErrCodeQNotFound, "题目不存在")
 	}
 	return nil
 }
@@ -173,7 +161,7 @@ func ParseQuestionJSONL(content string) ([]model.ExamQuestion, int, error) {
 		out = append(out, q)
 	}
 	if len(out) == 0 {
-		return nil, skipped, fmt.Errorf("[%d]无有效题目（跳过 %d 行）", ErrCodeQImport, skipped)
+		return nil, skipped, examErr(ErrCodeQImport, "无有效题目（跳过 %d 行）", skipped)
 	}
 	return out, skipped, nil
 }
@@ -184,8 +172,8 @@ func (s *ExamService) ImportQuestions(content string) (imported, skipped int, er
 	if err != nil {
 		return 0, skipped, err
 	}
-	if err := global.GVA_DB.CreateInBatches(questions, 500).Error; err != nil {
-		return 0, skipped, err
+	if err := s.repo.CreateQuestionsBatch(s.dbh(), questions); err != nil {
+		return 0, skipped, errx.Wrap(ErrCodeExamStore, "批量落库题目失败", err)
 	}
 	return len(questions), skipped, nil
 }

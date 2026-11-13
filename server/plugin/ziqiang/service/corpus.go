@@ -9,16 +9,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/ziqiang/model"
 )
 
 // 错误码（ziqiang 段 2700-2799）
 const (
-	ErrCodeZqType      = 2700
-	ErrCodeZqNotFound  = 2701
-	ErrCodeZqImport    = 2702
-	ErrCodeZqPairBad   = 2703
+	ErrCodeZqType     = 2700
+	ErrCodeZqNotFound = 2701
+	ErrCodeZqImport   = 2702
+	ErrCodeZqPairBad  = 2703
 )
 
 // TextTypes 语料类型白名单
@@ -48,7 +48,7 @@ func parseTextImport(format, content string) ([]model.ZqTextCorpus, []ZqRowError
 	case "csv":
 		return parseTextCSV(content)
 	default:
-		return nil, nil, fmt.Errorf("[%d]导入格式仅支持 jsonl/csv", ErrCodeZqImport)
+		return nil, nil, zqErr(ErrCodeZqImport, "导入格式仅支持 jsonl/csv")
 	}
 }
 
@@ -96,7 +96,7 @@ func parseTextCSV(content string) ([]model.ZqTextCorpus, []ZqRowError, error) {
 	reader.FieldsPerRecord = 4
 	records, err := reader.ReadAll()
 	if err != nil {
-		return nil, nil, fmt.Errorf("[%d]CSV 解析失败: %w", ErrCodeZqImport, err)
+		return nil, nil, zqWrapErr(ErrCodeZqImport, "CSV 解析失败", err)
 	}
 	var list []model.ZqTextCorpus
 	var errs []ZqRowError
@@ -114,11 +114,6 @@ func parseTextCSV(content string) ([]model.ZqTextCorpus, []ZqRowError, error) {
 	return list, errs, nil
 }
 
-// ZiqiangApp 服务单例出口（自强域服务聚合）
-var ZiqiangApp = new(ZiqiangService)
-
-type ZiqiangService struct{}
-
 // ImportTextCorpora 批量导入文本语料
 func (s *ZiqiangService) ImportTextCorpora(format, content string) (map[string]any, error) {
 	list, rowErrs, err := parseTextImport(format, content)
@@ -126,8 +121,8 @@ func (s *ZiqiangService) ImportTextCorpora(format, content string) (map[string]a
 		return nil, err
 	}
 	if len(list) > 0 {
-		if err := global.GVA_DB.CreateInBatches(list, 200).Error; err != nil {
-			return nil, err
+		if err := s.repo.CreateTexts(s.dbh(), list); err != nil {
+			return nil, errx.Wrap(ErrCodeZqStore, "批量落库语料失败", err)
 		}
 	}
 	return map[string]any{"inserted": len(list), "failedRows": rowErrs}, nil
@@ -136,111 +131,92 @@ func (s *ZiqiangService) ImportTextCorpora(format, content string) (map[string]a
 // SaveTextCorpus 新建/更新语料（法律状态白名单，缺省有效）
 func (s *ZiqiangService) SaveTextCorpus(in *model.ZqTextCorpus) (*model.ZqTextCorpus, error) {
 	if _, reason := corpusFromRow(in.Type, in.Title, fmt.Sprintf("%v", in.AigcFlag), in.Content); reason != "" {
-		return nil, fmt.Errorf("[%d]%s", ErrCodeZqType, reason)
+		return nil, zqErr(ErrCodeZqType, "%s", reason)
 	}
 	if !ValidLegalStatus(in.LegalStatus) {
 		in.LegalStatus = "有效"
 	}
 	if in.ID > 0 {
-		var exist model.ZqTextCorpus
-		if err := global.GVA_DB.First(&exist, in.ID).Error; err != nil {
-			return nil, fmt.Errorf("[%d]语料不存在", ErrCodeZqNotFound)
+		exist, err := s.repo.FindText(s.dbh(), in.ID)
+		if err != nil {
+			return nil, zqErr(ErrCodeZqNotFound, "语料不存在")
 		}
-		err := global.GVA_DB.Model(&exist).Updates(map[string]any{
+		if err := s.repo.UpdateTextColumns(s.dbh(), exist.ID, map[string]any{
 			"type": in.Type, "title": in.Title, "content": in.Content, "aigc_flag": in.AigcFlag,
 			"source": in.Source, "legal_status": in.LegalStatus, "image_corpus_id": in.ImageCorpusId,
-		}).Error
-		if err == nil {
-			exist.LegalStatus = in.LegalStatus
-			exist.ImageCorpusId = in.ImageCorpusId
+		}); err != nil {
+			return exist, errx.Wrap(ErrCodeZqStore, "更新语料失败", err)
 		}
-		return &exist, err
+		exist.LegalStatus = in.LegalStatus
+		exist.ImageCorpusId = in.ImageCorpusId
+		return exist, nil
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateText(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "落库语料失败", err)
 	}
 	return in, nil
 }
 
 // DeleteTextCorpus 删除语料（软删除）
 func (s *ZiqiangService) DeleteTextCorpus(id uint) error {
-	res := global.GVA_DB.Delete(&model.ZqTextCorpus{}, id)
-	if res.Error != nil {
-		return res.Error
+	rows, err := s.repo.DeleteText(s.dbh(), id)
+	if err != nil {
+		return errx.Wrap(ErrCodeZqStore, "删除语料失败", err)
 	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("[%d]语料不存在", ErrCodeZqNotFound)
+	if rows == 0 {
+		return zqErr(ErrCodeZqNotFound, "语料不存在")
 	}
 	return nil
 }
 
 // GetTextCorpora 语料列表（类型/AIGC 过滤，倒序分页）
 func (s *ZiqiangService) GetTextCorpora(ztype string, aigc string, keyword string, page, pageSize int) ([]model.ZqTextCorpus, int64, error) {
-	if page < 1 {
-		page = 1
+	if ztype != "" && !ValidTextType(ztype) {
+		return nil, 0, zqErr(ErrCodeZqType, "不支持的类型: %s", ztype)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
+	var aigcFlag *bool
+	switch aigc {
+	case "yes":
+		v := true
+		aigcFlag = &v
+	case "no":
+		v := false
+		aigcFlag = &v
 	}
-	db := global.GVA_DB.Model(&model.ZqTextCorpus{})
-	if ztype != "" {
-		if !ValidTextType(ztype) {
-			return nil, 0, fmt.Errorf("[%d]不支持的类型: %s", ErrCodeZqType, ztype)
-		}
-		db = db.Where("type = ?", ztype)
+	list, total, err := s.repo.TextList(s.dbh(), ztype, aigcFlag, strings.TrimSpace(keyword), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeZqStore, "查询语料列表失败", err)
 	}
-	if aigc == "yes" {
-		db = db.Where("aigc_flag = ?", true)
-	} else if aigc == "no" {
-		db = db.Where("aigc_flag = ?", false)
-	}
-	if kw := strings.TrimSpace(keyword); kw != "" {
-		db = db.Where("title LIKE ? OR content LIKE ?", "%"+kw+"%", "%"+kw+"%")
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ZqTextCorpus
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // SaveComparePair 保存对比样本对（人创/AIGC 成对校验）
 func (s *ZiqiangService) SaveComparePair(in *model.ZqComparePair) (*model.ZqComparePair, error) {
 	if in.HumanCorpusId == 0 || in.AigcCorpusId == 0 || in.HumanCorpusId == in.AigcCorpusId {
-		return nil, fmt.Errorf("[%d]须为不同的人创/AIGC 语料成对", ErrCodeZqPairBad)
+		return nil, zqErr(ErrCodeZqPairBad, "须为不同的人创/AIGC 语料成对")
 	}
-	var human, aigc model.ZqTextCorpus
-	if err := global.GVA_DB.First(&human, in.HumanCorpusId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]人创语料不存在", ErrCodeZqNotFound)
+	human, err := s.repo.FindText(s.dbh(), in.HumanCorpusId)
+	if err != nil {
+		return nil, zqErr(ErrCodeZqNotFound, "人创语料不存在")
 	}
-	if err := global.GVA_DB.First(&aigc, in.AigcCorpusId).Error; err != nil {
-		return nil, fmt.Errorf("[%d]AIGC 语料不存在", ErrCodeZqNotFound)
+	aigc, err := s.repo.FindText(s.dbh(), in.AigcCorpusId)
+	if err != nil {
+		return nil, zqErr(ErrCodeZqNotFound, "AIGC 语料不存在")
 	}
 	if human.AigcFlag || !aigc.AigcFlag {
-		return nil, fmt.Errorf("[%d]样本对须为 人创(非AIGC)+AIGC 组合", ErrCodeZqPairBad)
+		return nil, zqErr(ErrCodeZqPairBad, "样本对须为 人创(非AIGC)+AIGC 组合")
 	}
-	if err := global.GVA_DB.Create(in).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateComparePair(s.dbh(), in); err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "落库对比样本对失败", err)
 	}
 	return in, nil
 }
 
 // GetComparePairs 对比样本对列表（倒序分页）
 func (s *ZiqiangService) GetComparePairs(page, pageSize int) ([]model.ZqComparePair, int64, error) {
-	if page < 1 {
-		page = 1
+	list, total, err := s.repo.ComparePairList(s.dbh(), page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeZqStore, "查询对比样本对列表失败", err)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
-	db := global.GVA_DB.Model(&model.ZqComparePair{})
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ZqComparePair
-	err := db.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }

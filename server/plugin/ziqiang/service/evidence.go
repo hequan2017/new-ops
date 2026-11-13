@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hequan2017/new-ops/server/global"
+	"github.com/hequan2017/new-ops/server/plugin/plugin-tool/errx"
 	"github.com/hequan2017/new-ops/server/plugin/ziqiang/model"
 )
 
 // 错误码（ziqiang 段 2700-2799）
 const (
-	ErrCodeEvidenceParam   = 2714
+	ErrCodeEvidenceParam    = 2714
 	ErrCodeEvidenceNotFound = 2715
 )
 
@@ -84,14 +84,14 @@ func verifyChain(blocks []model.ZqEvidence) []chainIssue {
 // AppendEvidence 追加存证块（链式：取当前最高块，height+1，prevHash 接其 BlockHash）
 func (s *ZiqiangService) AppendEvidence(payload, bizKey string) (*model.ZqEvidence, error) {
 	if strings.TrimSpace(payload) == "" {
-		return nil, fmt.Errorf("[%d]存证原文必填", ErrCodeEvidenceParam)
+		return nil, zqErr(ErrCodeEvidenceParam, "存证原文必填")
 	}
 	var prev model.ZqEvidence
-	_ = global.GVA_DB.Model(&model.ZqEvidence{}).Order("height DESC").First(&prev).Error // 空链时 prev 为零值→创世块
+	_ = s.repo.LatestEvidence(s.dbh(), &prev) // 空链时 prev 为零值→创世块
 	block := chainAppend(&prev, payload, time.Now().Unix())
 	block.BizKey = bizKey
-	if err := global.GVA_DB.Create(&block).Error; err != nil {
-		return nil, err
+	if err := s.repo.CreateEvidence(s.dbh(), &block); err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "落库存证块失败", err)
 	}
 	return &block, nil
 }
@@ -105,9 +105,9 @@ type ChainReport struct {
 
 // VerifyChain 链完整性校验（篡改检测报告）
 func (s *ZiqiangService) VerifyChain() (*ChainReport, error) {
-	var blocks []model.ZqEvidence
-	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Order("height ASC").Limit(10000).Find(&blocks).Error; err != nil {
-		return nil, err
+	blocks, err := s.repo.EvidenceChainScan(s.dbh(), "")
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "扫描存证链失败", err)
 	}
 	issues := verifyChain(blocks)
 	return &ChainReport{OK: len(issues) == 0, Blocks: len(blocks), Issues: issues}, nil
@@ -123,13 +123,13 @@ type ChainHead struct {
 
 // ChainHead 链头摘要（最新块高/块哈希/总量）
 func (s *ZiqiangService) ChainHead() (*ChainHead, error) {
-	var total int64
-	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Count(&total).Error; err != nil {
-		return nil, err
+	total, err := s.repo.CountEvidence(s.dbh())
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "统计存证块失败", err)
 	}
 	head := &ChainHead{Height: -1, BlockHash: GenesisPrevHash, Total: total}
 	var last model.ZqEvidence
-	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Order("height DESC").First(&last).Error; err == nil {
+	if err := s.repo.LatestEvidence(s.dbh(), &last); err == nil {
 		head.Height = last.Height
 		head.BlockHash = last.BlockHash
 		head.LastAt = last.Timestamp
@@ -140,12 +140,11 @@ func (s *ZiqiangService) ChainHead() (*ChainHead, error) {
 // VerifyBizChain 业务号局部核验（该业务全部块按块高重算，口径同全链校验）
 func (s *ZiqiangService) VerifyBizChain(bizKey string) (*ChainReport, error) {
 	if strings.TrimSpace(bizKey) == "" {
-		return nil, fmt.Errorf("[%d]业务号必填", ErrCodeEvidenceParam)
+		return nil, zqErr(ErrCodeEvidenceParam, "业务号必填")
 	}
-	var blocks []model.ZqEvidence
-	if err := global.GVA_DB.Model(&model.ZqEvidence{}).Where("biz_key = ?", bizKey).
-		Order("height ASC").Limit(10000).Find(&blocks).Error; err != nil {
-		return nil, err
+	blocks, err := s.repo.EvidenceChainScan(s.dbh(), bizKey)
+	if err != nil {
+		return nil, errx.Wrap(ErrCodeZqStore, "扫描存证链失败", err)
 	}
 	issues := verifyChain(blocks)
 	return &ChainReport{OK: len(issues) == 0, Blocks: len(blocks), Issues: issues}, nil
@@ -153,30 +152,18 @@ func (s *ZiqiangService) VerifyBizChain(bizKey string) (*ChainReport, error) {
 
 // GetEvidenceList 存证列表（业务号过滤，块高升序分页）
 func (s *ZiqiangService) GetEvidenceList(bizKey string, page, pageSize int) ([]model.ZqEvidence, int64, error) {
-	if page < 1 {
-		page = 1
+	list, total, err := s.repo.EvidenceList(s.dbh(), bizKey, page, pageSize)
+	if err != nil {
+		return nil, 0, errx.Wrap(ErrCodeZqStore, "查询存证列表失败", err)
 	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
-	db := global.GVA_DB.Model(&model.ZqEvidence{})
-	if bizKey != "" {
-		db = db.Where("biz_key = ?", bizKey)
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var list []model.ZqEvidence
-	err := db.Order("height ASC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
-	return list, total, err
+	return list, total, nil
 }
 
 // GetEvidence 存证详情
 func (s *ZiqiangService) GetEvidence(id uint) (*model.ZqEvidence, error) {
-	var b model.ZqEvidence
-	if err := global.GVA_DB.First(&b, id).Error; err != nil {
-		return nil, fmt.Errorf("[%d]存证不存在", ErrCodeEvidenceNotFound)
+	b, err := s.repo.FindEvidence(s.dbh(), id)
+	if err != nil {
+		return nil, zqErr(ErrCodeEvidenceNotFound, "存证不存在")
 	}
-	return &b, nil
+	return b, nil
 }
